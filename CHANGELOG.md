@@ -1,6 +1,10 @@
 # Changelog
 
-## v1.6.9 - 2026/03/??
+## v1.6.10~rc1 - 2026/03/??
+
+- [UI] Fix multiselect settings not correctly displaying or applying their values in the template editor and the service creation wizard.
+
+## v1.6.9 - 2026/03/13
 
 - [SECURITY] Implement `SafeFileSystemCache` for Web UI session storage with token regeneration on privilege changes, preventing session fixation attacks.
 - [SECURITY] Sanitize uploaded filenames in the Web UI to strip path separators, null bytes, and control characters, preventing path traversal attacks.
