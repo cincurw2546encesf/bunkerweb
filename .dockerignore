@@ -9,3 +9,4 @@ tests/
 **/Dockerfile
 src/common/README*.md
 src/common/core/*/README*.md
+**/CLAUDE.md
