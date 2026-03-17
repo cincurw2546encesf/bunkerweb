@@ -2,6 +2,7 @@
 
 ## v1.6.10~rc1 - 2026/03/??
 
+- [BUGFIX] Disable Gunicorn 25.1.0 control socket to prevent worker deadlock caused by fork in multi-threaded master process (UI, TMP-UI, API).
 - [UI] Fix multiselect settings not correctly displaying or applying their values in the template editor and the service creation wizard.
 
 ## v1.6.9 - 2026/03/13
