@@ -555,6 +555,12 @@ def on_starting(server):
     )
     set_secure_permissions(UI_DATA_FILE)
 
+    # Check if Redis is enabled via environment variable or database before closing DB
+    use_redis = getenv("USE_REDIS", "no").lower() == "yes"
+    if not use_redis:
+        db_config = DB.get_config(global_only=True, methods=False, filtered_settings=("USE_REDIS",))
+        use_redis = db_config.get("USE_REDIS", "no") == "yes"
+
     DB.close()  # Close local DB connections before fork to prevent fd leaks
 
     LOGGER.info(
@@ -564,7 +570,7 @@ def on_starting(server):
 
     UI_SESSIONS_CACHE.mkdir(parents=True, exist_ok=True)
 
-    if getenv("USE_REDIS", "no").lower() != "yes":
+    if not use_redis:
         LOGGER.warning("Using filesystem session backend — consider enabling Redis (USE_REDIS=yes) for better multi-worker stability")
 
     if TMP_PID_FILE.is_file():
