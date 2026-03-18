@@ -3324,7 +3324,7 @@ services:
   bw-mcp:
     image: bunkerity/bunkerweb-mcp:v0.1.0
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       BUNKERWEB_BASE_URL: "http://bw-api:8888"
       BUNKERWEB_API_TOKEN: "my-bearer-token-for-mcp"

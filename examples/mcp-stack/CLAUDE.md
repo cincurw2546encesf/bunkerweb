@@ -10,7 +10,7 @@ For comprehensive BunkerWeb documentation, see [docs.bunkerweb.io](https://docs.
 docker compose up -d
 ```
 
-Then add the MCP server to your AI assistant (see `.mcp.json` in this directory).
+Then configure your AI assistant to use the MCP server. For Claude Code, copy `.mcp.json` to your project root or to `~/.claude/.mcp.json` for global access.
 
 ## Key Concepts
 
@@ -40,7 +40,7 @@ Example: *"Review @config://global and suggest security hardening improvements"*
 ## Tool Safety Guide
 
 ### Safe (read-only)
-`ping`, `health`, `list_*`, `get_*`, `search_bunkerweb_docs`, and `@` resources.
+`ping`, `health`, `list_*`, `get_*`, and `@` resources.
 
 ### Modifying (auto-applied by BunkerWeb)
 `create_*`, `update_*`, `global_config_update`, `ban_ip`, `jobs_run`. No manual reload needed — BunkerWeb applies changes automatically.
@@ -59,9 +59,8 @@ Example: *"Review @config://global and suggest security hardening improvements"*
 ### Investigate a security incident
 
 1. Read `@bans://active` — look for patterns (country, ASN, timing)
-2. Use `search_bunkerweb_docs` for relevant WAF tuning guidance
-3. `ban_ip` with a meaningful `reason` and appropriate expiry
-4. Add custom ModSecurity rules via `config_create` (type: `modsec-crs`) if needed
+2. `ban_ip` with a meaningful `reason` and appropriate expiry
+3. Add custom ModSecurity rules via `config_create` (type: `modsec-crs`) if needed
 
 ### Refresh threat intelligence
 
@@ -74,15 +73,6 @@ Example: *"Review @config://global and suggest security hardening improvements"*
 1. `cache_delete_file` to remove the bad file
 2. `jobs_run` to regenerate it
 3. Verify via `cache_list`
-
-## Semantic Search
-
-The `search_bunkerweb_docs` tool provides semantic search over BunkerWeb documentation. Use it when you need configuration examples, feature explanations, or troubleshooting guidance. Supports English and French queries.
-
-Key parameters:
-- `query`: Natural language question (required)
-- `min_score`: Relevance threshold 0-1 (default `0.2`, use `0.4`+ for precise results)
-- `category`: Filter by `"api"`, `"features"`, `"plugins"`, or `"integrations"`
 
 ## Troubleshooting
 
