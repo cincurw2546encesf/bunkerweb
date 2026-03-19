@@ -2765,6 +2765,35 @@ LOG_LEVEL_1=error
         name: bw-db
     ```
 
+=== "Kubernetes"
+
+    **Default behavior**: Logs are written to `stderr` and visible via `kubectl logs`.
+
+    **Example**: Enable the built-in syslog sidecar in the Helm chart to collect logs for the Web UI (requires BunkerWeb 1.6.7+).
+
+    ```yaml
+    ui:
+      logs:
+        # Enable log collection sidecar
+        enabled: true
+
+        # Syslog address for log forwarding
+        # Automatically set to Sidecar service if empty
+        syslogAddress: ""
+
+        # Syslog-ng container for log collection
+        repository: docker.io/balabit/syslog-ng
+        pullPolicy: Always
+        tag: 4.8.0
+
+        # Persistent storage for logs
+        persistence:
+          size: 5Gi
+          storageClass: ""
+    ```
+
+    See the full [logging.yaml example](https://github.com/bunkerity/bunkerweb-helm/blob/dev/examples/logging.yaml) in the [bunkerity/bunkerweb-helm repository](https://github.com/bunkerity/bunkerweb-helm).
+
 ### Syslog-ng configuration
 
 Here is an example of a `syslog-ng.conf` file that you can use to forward the logs to a file:

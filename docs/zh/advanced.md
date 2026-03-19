@@ -2763,6 +2763,35 @@ LOG_LEVEL_1=error
         name: bw-db
     ```
 
+=== "Kubernetes"
+
+    **默认行为**：日志写入 `stderr`，可通过 `kubectl logs` 查看。
+
+    **示例**：在 Helm chart 中启用内置的 syslog sidecar 以收集 Web UI 的日志（需要 BunkerWeb 1.6.7+）。
+
+    ```yaml
+    ui:
+      logs:
+        # 启用日志收集 sidecar
+        enabled: true
+
+        # 日志转发的 syslog 地址
+        # 如果为空，将自动设置为 Sidecar 服务
+        syslogAddress: ""
+
+        # 用于日志收集的 syslog-ng 容器
+        repository: docker.io/balabit/syslog-ng
+        pullPolicy: Always
+        tag: 4.8.0
+
+        # 日志的持久化存储
+        persistence:
+          size: 5Gi
+          storageClass: ""
+    ```
+
+    查看 [bunkerity/bunkerweb-helm 仓库](https://github.com/bunkerity/bunkerweb-helm) 中的完整 [logging.yaml 示例](https://github.com/bunkerity/bunkerweb-helm/blob/dev/examples/logging.yaml)。
+
 ### Syslog-ng 配置
 
 下面是一个可将日志转发到文件的 `syslog-ng.conf` 示例：

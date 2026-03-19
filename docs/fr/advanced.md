@@ -2765,6 +2765,35 @@ LOG_LEVEL_1=error
         name: bw-db
     ```
 
+=== "Kubernetes"
+
+    **Comportement par défaut** : Les journaux sont écrits sur `stderr` et visibles via `kubectl logs`.
+
+    **Exemple** : Activer le sidecar syslog intégré dans le chart Helm pour collecter les journaux pour l'interface Web (nécessite BunkerWeb 1.6.7+).
+
+    ```yaml
+    ui:
+      logs:
+        # Activer le sidecar de collecte de journaux
+        enabled: true
+
+        # Adresse syslog pour le transfert des journaux
+        # Automatiquement défini sur le service Sidecar si vide
+        syslogAddress: ""
+
+        # Conteneur syslog-ng pour la collecte de journaux
+        repository: docker.io/balabit/syslog-ng
+        pullPolicy: Always
+        tag: 4.8.0
+
+        # Stockage persistant pour les journaux
+        persistence:
+          size: 5Gi
+          storageClass: ""
+    ```
+
+    Consultez l'[exemple complet logging.yaml](https://github.com/bunkerity/bunkerweb-helm/blob/dev/examples/logging.yaml) dans le [dépôt bunkerity/bunkerweb-helm](https://github.com/bunkerity/bunkerweb-helm).
+
 ### Configuration de syslog-ng
 
 Voici un exemple de fichier `syslog-ng.conf` que vous pouvez utiliser pour rediriger les journaux vers un fichier :

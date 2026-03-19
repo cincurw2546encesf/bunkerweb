@@ -2766,6 +2766,35 @@ LOG_LEVEL_1=error
         name: bw-db
     ```
 
+=== "Kubernetes"
+
+    **Comportamiento predeterminado**: Los registros se escriben en `stderr` y son visibles mediante `kubectl logs`.
+
+    **Ejemplo**: Habilitar el sidecar syslog integrado en el chart de Helm para recopilar registros para la interfaz web (requiere BunkerWeb 1.6.7+).
+
+    ```yaml
+    ui:
+      logs:
+        # Habilitar sidecar de recopilación de registros
+        enabled: true
+
+        # Dirección syslog para reenvío de registros
+        # Se configura automáticamente al servicio Sidecar si está vacío
+        syslogAddress: ""
+
+        # Contenedor syslog-ng para recopilación de registros
+        repository: docker.io/balabit/syslog-ng
+        pullPolicy: Always
+        tag: 4.8.0
+
+        # Almacenamiento persistente para registros
+        persistence:
+          size: 5Gi
+          storageClass: ""
+    ```
+
+    Consulte el [ejemplo completo logging.yaml](https://github.com/bunkerity/bunkerweb-helm/blob/dev/examples/logging.yaml) en el [repositorio bunkerity/bunkerweb-helm](https://github.com/bunkerity/bunkerweb-helm).
+
 ### Configuración de syslog-ng
 
 Aquí tienes un ejemplo de un archivo `syslog-ng.conf` que puedes usar para reenviar los registros a un archivo:

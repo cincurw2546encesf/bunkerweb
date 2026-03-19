@@ -2766,6 +2766,35 @@ LOG_LEVEL_1=error
         name: bw-db
     ```
 
+=== "Kubernetes"
+
+    **Standardverhalten**: Protokolle werden nach `stderr` geschrieben und sind über `kubectl logs` sichtbar.
+
+    **Beispiel**: Aktivieren Sie den integrierten Syslog-Sidecar im Helm-Chart, um Protokolle für die Web-UI zu sammeln (erfordert BunkerWeb 1.6.7+).
+
+    ```yaml
+    ui:
+      logs:
+        # Protokollsammlungs-Sidecar aktivieren
+        enabled: true
+
+        # Syslog-Adresse für Protokollweiterleitung
+        # Wird automatisch auf den Sidecar-Service gesetzt, wenn leer
+        syslogAddress: ""
+
+        # Syslog-ng-Container für Protokollsammlung
+        repository: docker.io/balabit/syslog-ng
+        pullPolicy: Always
+        tag: 4.8.0
+
+        # Persistenter Speicher für Protokolle
+        persistence:
+          size: 5Gi
+          storageClass: ""
+    ```
+
+    Sehen Sie das vollständige [logging.yaml-Beispiel](https://github.com/bunkerity/bunkerweb-helm/blob/dev/examples/logging.yaml) im [bunkerity/bunkerweb-helm-Repository](https://github.com/bunkerity/bunkerweb-helm).
+
 ### Syslog-ng-Konfiguration
 
 Hier ein Beispiel für eine `syslog-ng.conf`-Datei, die Sie verwenden können, um die Protokolle in eine Datei weiterzuleiten:
