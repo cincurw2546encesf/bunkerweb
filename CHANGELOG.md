@@ -4,6 +4,8 @@
 
 - [BUGFIX] Disable Gunicorn 25.1.0 control socket to prevent worker deadlock caused by fork in multi-threaded master process (UI, TMP-UI, API).
 - [UI] Fix multiselect settings not correctly displaying or applying their values in the template editor and the service creation wizard.
+- [UI] Check database for `USE_REDIS` setting before showing the filesystem session backend warning, so Redis configured via the Web UI is correctly detected.
+- [UI/SECURITY] Replace unbounded "All" option in DataTable page length menus with capped values (500, 1000) across all pages, and clamp server-side `length`/`start` parameters to prevent OOM from oversized requests.
 
 ## v1.6.9 - 2026/03/13
 
