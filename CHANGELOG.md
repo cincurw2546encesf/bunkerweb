@@ -7,6 +7,7 @@
 - [BUGFIX] Fix template settings not propagating to services after template edits. Stale form values were stored as explicit overrides when saving a service, permanently blocking template propagation for affected settings. Template custom config changes are now also correctly flagged for scheduler regeneration.
 - [UI/SECURITY] Replace unbounded "All" option in DataTable page length menus with capped values (500, 1000) across all pages, and clamp server-side `length`/`start` parameters to prevent OOM from oversized requests.
 - [UI] Fix multiselect settings not correctly displaying or applying their values in the template editor and the service creation wizard.
+- [UI] Fix multiselect and multivalue settings resetting to default values when all options are unchecked, by preserving empty string as a valid value across Jinja2 rendering, jQuery initialization, and the template editor module.
 - [UI] Check database for `USE_REDIS` setting before showing the filesystem session backend warning, so Redis configured via the Web UI is correctly detected.
 
 ## v1.6.9 - 2026/03/13

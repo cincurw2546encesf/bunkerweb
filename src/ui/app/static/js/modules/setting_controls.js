@@ -2,6 +2,12 @@ const controlRegistry = new WeakMap();
 
 const normalizeDefaultValue = (entry, rawValue) => {
   if (typeof rawValue === "undefined" || rawValue === null || rawValue === "") {
+    // For multiselect and multivalue, empty string is a valid value meaning
+    // "no options selected" — do not fall back to the default.
+    const type = (entry?.type || "").toLowerCase();
+    if (rawValue === "" && (type === "multiselect" || type === "multivalue")) {
+      return "";
+    }
     if (Object.prototype.hasOwnProperty.call(entry || {}, "default")) {
       const fallback = entry.default;
       if (typeof fallback === "string") return fallback;
