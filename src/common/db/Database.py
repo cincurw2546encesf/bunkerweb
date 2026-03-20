@@ -5206,6 +5206,12 @@ class Database:
                 {Plugins.config_changed: True}, synchronize_session=False
             )
 
+            with suppress(ProgrammingError, OperationalError):
+                metadata = session.query(Metadata).get(1)
+                if metadata is not None:
+                    metadata.custom_configs_changed = True
+                    metadata.last_custom_configs_change = datetime.now().astimezone()
+
             try:
                 session.commit()
             except BaseException as e:
@@ -5236,6 +5242,12 @@ class Database:
             session.query(Plugins).filter(Plugins.id.in_(set(plugin.id for plugin in session.query(Plugins).with_entities(Plugins.id).all()))).update(
                 {Plugins.config_changed: True}, synchronize_session=False
             )
+
+            with suppress(ProgrammingError, OperationalError):
+                metadata = session.query(Metadata).get(1)
+                if metadata is not None:
+                    metadata.custom_configs_changed = True
+                    metadata.last_custom_configs_change = datetime.now().astimezone()
 
             try:
                 session.commit()
