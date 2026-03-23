@@ -1188,6 +1188,57 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mcp-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      MCP server
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MCP server">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Features
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-compose-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Docker Compose Example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-with-claude-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using with Claude Code
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kubernetes-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Kubernetes Integration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#migration-pro" class="md-nav__link">
     <span class="md-ellipsis">
       Migration (PRO)
@@ -1231,7 +1282,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#features_1" class="md-nav__link">
     <span class="md-ellipsis">
       Features
     </span>
@@ -1273,7 +1324,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#features_1" class="md-nav__link">
+  <a href="#features_2" class="md-nav__link">
     <span class="md-ellipsis">
       Features
     </span>
@@ -1297,7 +1348,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#features_2" class="md-nav__link">
+  <a href="#features_3" class="md-nav__link">
     <span class="md-ellipsis">
       Features
     </span>
@@ -1321,7 +1372,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#features_3" class="md-nav__link">
+  <a href="#features_4" class="md-nav__link">
     <span class="md-ellipsis">
       Features
     </span>
@@ -1372,7 +1423,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#features_4" class="md-nav__link">
+  <a href="#features_5" class="md-nav__link">
     <span class="md-ellipsis">
       Features
     </span>
@@ -1564,7 +1615,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#features_5" class="md-nav__link">
+  <a href="#features_6" class="md-nav__link">
     <span class="md-ellipsis">
       Features
     </span>
@@ -4155,7 +4206,7 @@ LOG_LEVEL=notice
 LOG_LEVEL_1=error
 </code></pre></div>
 <h3 id="integration-defaults-examples">Integration Defaults &amp; Examples</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="19:2"><input checked="checked" id="__tabbed_19_1" name="__tabbed_19" type="radio" /><input id="__tabbed_19_2" name="__tabbed_19" type="radio" /><div class="tabbed-labels"><label for="__tabbed_19_1">Linux</label><label for="__tabbed_19_2">Docker / Autoconf / Swarm</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="19:3"><input checked="checked" id="__tabbed_19_1" name="__tabbed_19" type="radio" /><input id="__tabbed_19_2" name="__tabbed_19" type="radio" /><input id="__tabbed_19_3" name="__tabbed_19" type="radio" /><div class="tabbed-labels"><label for="__tabbed_19_1">Linux</label><label for="__tabbed_19_2">Docker / Autoconf / Swarm</label><label for="__tabbed_19_3">Kubernetes</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p><strong>Default behavior</strong>: <code>LOG_TYPES="file"</code>. Logs are written to <code>/var/log/bunkerweb/*.log</code>.</p>
@@ -4297,6 +4348,30 @@ ERROR_LOG_1=syslog:server=unix:/dev/log,tag=bunkerweb
 <span class="w">  </span><span class="nt">bw-db</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-db</span>
 </code></pre></div>
+</div>
+<div class="tabbed-block">
+<p><strong>Default behavior</strong>: Logs are written to <code>stderr</code> and visible via <code>kubectl logs</code>.</p>
+<p><strong>Example</strong>: Enable the built-in syslog sidecar in the Helm chart to collect logs for the Web UI (requires BunkerWeb 1.6.7+).</p>
+<div class="highlight"><pre><span></span><code><span class="nt">ui</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">logs</span><span class="p">:</span>
+<span class="w">    </span><span class="c1"># Enable log collection sidecar</span>
+<span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="w">    </span><span class="c1"># Syslog address for log forwarding</span>
+<span class="w">    </span><span class="c1"># Automatically set to Sidecar service if empty</span>
+<span class="w">    </span><span class="nt">syslogAddress</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+
+<span class="w">    </span><span class="c1"># Syslog-ng container for log collection</span>
+<span class="w">    </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">docker.io/balabit/syslog-ng</span>
+<span class="w">    </span><span class="nt">pullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Always</span>
+<span class="w">    </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.8.0</span>
+
+<span class="w">    </span><span class="c1"># Persistent storage for logs</span>
+<span class="w">    </span><span class="nt">persistence</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5Gi</span>
+<span class="w">      </span><span class="nt">storageClass</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+</code></pre></div>
+<p>See the full <a href="https://github.com/bunkerity/bunkerweb-helm/blob/dev/examples/logging.yaml">logging.yaml example</a> in the <a href="https://github.com/bunkerity/bunkerweb-helm">bunkerity/bunkerweb-helm repository</a>.</p>
 </div>
 </div>
 </div>
@@ -4943,6 +5018,120 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 </div>
 </div>
 </div>
+<h2 id="mcp-server">MCP server</h2>
+<p>The <strong>BunkerWeb MCP server</strong> enables AI assistants like <strong>Claude Code</strong> and <strong>Claude Desktop</strong> to manage your BunkerWeb installation through the <a href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Requirement</p>
+<p>The MCP server requires the <strong>BunkerWeb external API</strong> (<code>bunkerity/bunkerweb-api</code>) to be deployed. It communicates with BunkerWeb exclusively through this API.</p>
+</div>
+<h3 id="features">Features</h3>
+<ul>
+<li><strong>37 tools</strong> for managing instances, services, configs, bans, plugins, jobs, and cache</li>
+<li><strong>MCP resources</strong> for read-only access (<code>@config://global</code>, <code>@bans://active</code>, etc.)</li>
+<li><strong>Multiple transports</strong>: Stdio, HTTP, WebSocket</li>
+</ul>
+<h3 id="docker-compose-example">Docker Compose Example</h3>
+<p>A complete example is available in <a href="https://github.com/bunkerity/bunkerweb/tree/vtesting/examples/mcp-stack"><code>examples/mcp-stack/</code></a>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">bw-api</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bunkerity/bunkerweb-api:testing</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">API_TOKEN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;my-bearer-token-for-mcp&quot;</span>
+<span class="w">      </span><span class="nt">DATABASE_URI</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mariadb+pymysql://bunkerweb:changeme@bw-db:3306/db&quot;</span>
+<span class="w">      </span><span class="nt">FORWARDED_ALLOW_IPS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16&quot;</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-universe</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-db</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-mcp</span>
+
+<span class="w">  </span><span class="nt">bw-mcp</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bunkerity/bunkerweb-mcp:v0.1.0</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;127.0.0.1:8080:8080&quot;</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">BUNKERWEB_BASE_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://bw-api:8888&quot;</span>
+<span class="w">      </span><span class="nt">BUNKERWEB_API_TOKEN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;my-bearer-token-for-mcp&quot;</span>
+<span class="w">      </span><span class="nt">BUNKERWEB_LOG_LEVEL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">INFO</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-mcp</span>
+</code></pre></div>
+<h3 id="using-with-claude-code">Using with Claude Code</h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="28:1"><input checked="checked" id="__tabbed_28_1" name="__tabbed_28" type="radio" /><div class="tabbed-labels"><label for="__tabbed_28_1">Project Configuration</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Add a <code>.mcp.json</code> file to your project root (or to <code>~/.claude/.mcp.json</code> for global configuration):</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bunkerweb&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://127.0.0.1:8080/mcp/&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Example queries:</p>
+<div class="highlight"><pre><span></span><code>&gt; List all BunkerWeb instances
+&gt; Show me the current bans
+&gt; Review @config://global for security improvements
+</code></pre></div>
+<h3 id="kubernetes-integration">Kubernetes Integration</h3>
+<p>The MCP server can be deployed alongside BunkerWeb using the official Helm chart. A complete example is available in <a href="https://github.com/bunkerity/bunkerweb-helm/blob/main/examples/mcp-integration.yaml"><code>examples/mcp-integration.yaml</code></a>.</p>
+<h4 id="helm-values">Helm Values</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">mcp</span><span class="p">:</span>
+<span class="w">  </span><span class="c1"># Enable the MCP server</span>
+<span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="w">  </span><span class="c1"># Container image configuration</span>
+<span class="w">  </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">docker.io/bunkerity/bunkerweb-mcp</span>
+<span class="w">  </span><span class="nt">tag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v0.1.0</span>
+
+<span class="w">  </span><span class="c1"># MCP server settings</span>
+<span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">logLevel</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INFO&quot;</span>
+<span class="w">    </span><span class="nt">enableDnsRebindingProtection</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">allowedHosts</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;localhost,127.0.0.1,mcp.example.com&quot;</span>
+<span class="w">    </span><span class="nt">cacheEnabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="w">  </span><span class="c1"># Credentials for MCP to authenticate with the BunkerWeb API</span>
+<span class="w">  </span><span class="nt">secrets</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">bunkerwebApiToken</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-secure-api-token-here&quot;</span>
+
+<span class="w">  </span><span class="c1"># Ingress configuration (optional)</span>
+<span class="w">  </span><span class="nt">ingress</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">    </span><span class="nt">ingressClassName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bunkerweb&quot;</span>
+<span class="w">    </span><span class="nt">serverName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mcp.example.com&quot;</span>
+<span class="w">    </span><span class="nt">annotations</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">bunkerweb.io/AUTO_LETS_ENCRYPT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="w">      </span><span class="nt">bunkerweb.io/USE_REVERSE_PROXY</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="w">      </span><span class="nt">bunkerweb.io/REVERSE_PROXY_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/&quot;</span>
+<span class="w">      </span><span class="nt">bunkerweb.io/REVERSE_PROXY_HOST</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://mcp-bunkerweb.bunkerweb.svc.cluster.local:8080&quot;</span>
+<span class="w">      </span><span class="c1"># SECURITY: Restrict access to trusted IPs only</span>
+<span class="w">      </span><span class="nt">bunkerweb.io/USE_WHITELIST</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="w">      </span><span class="nt">bunkerweb.io/WHITELIST_IP</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;10.0.0.0/8</span><span class="nv"> </span><span class="s">192.168.0.0/16&quot;</span>
+</code></pre></div>
+<h4 id="deployment">Deployment</h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Deploy BunkerWeb with MCP enabled</span>
+helm<span class="w"> </span>install<span class="w"> </span>bunkerweb<span class="w"> </span>bunkerweb/bunkerweb<span class="w"> </span>-f<span class="w"> </span>mcp-integration.yaml
+
+<span class="c1"># Access MCP locally via port-forward (recommended for security)</span>
+kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunkerweb<span class="w"> </span><span class="m">8080</span>:8080
+
+<span class="c1"># Configure Claude Code with http://localhost:8080/mcp</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Security</p>
+<p>The MCP server has no built-in authentication for the <code>/mcp</code> endpoint. Secure access using:</p>
+<ul>
+<li><strong>IP whitelisting</strong> via BunkerWeb annotations (<code>USE_WHITELIST</code>, <code>WHITELIST_IP</code>)</li>
+<li><strong>Network policies</strong> to restrict pod-to-pod communication</li>
+<li><strong>Port-forward</strong> instead of exposing externally (recommended for development)</li>
+</ul>
+</div>
+<p>For full documentation, visit the <a href="https://github.com/bunkerity/mcp-bunkerweb">BunkerWeb MCP repository</a>.</p>
 <h2 id="migration-pro">Migration <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)</h2>
 <p>STREAM support <img alt="✅" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/2705.svg" title=":white_check_mark:" /></p>
 <p>The Migration plugin <strong>revolutionizes</strong> BunkerWeb configuration transfers between instances with its <strong>user-friendly web interface</strong>, simplifying the entire migration journey. Whether you're upgrading systems, scaling infrastructure, or transitioning environments, this tool empowers you to effortlessly transfer <strong>settings, preferences, and data</strong> with unmatched ease and confidence. Say goodbye to cumbersome manual processes and hello to a <strong>seamless, hassle-free migration experience</strong>.</p>
@@ -4960,7 +5149,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 </ul>
 <h3 id="create-a-migration-file">Create a migration file</h3>
 <p>To manually create a migration file, execute the following command:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="28:2"><input checked="checked" id="__tabbed_28_1" name="__tabbed_28" type="radio" /><input id="__tabbed_28_2" name="__tabbed_28" type="radio" /><div class="tabbed-labels"><label for="__tabbed_28_1">Linux</label><label for="__tabbed_28_2">Docker</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="29:2"><input checked="checked" id="__tabbed_29_1" name="__tabbed_29" type="radio" /><input id="__tabbed_29_2" name="__tabbed_29" type="radio" /><div class="tabbed-labels"><label for="__tabbed_29_1">Linux</label><label for="__tabbed_29_2">Docker</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code>bwcli<span class="w"> </span>plugin<span class="w"> </span>migration<span class="w"> </span>create<span class="w"> </span>/path/to/migration/file
@@ -4992,7 +5181,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 <div class="highlight"><pre><span></span><code><span class="k">ALTER</span><span class="w"> </span><span class="k">USER</span><span class="w"> </span><span class="s1">&#39;yourusername&#39;</span><span class="o">@</span><span class="s1">&#39;localhost&#39;</span><span class="w"> </span><span class="n">IDENTIFIED</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="n">mysql_native_password</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="s1">&#39;youpassword&#39;</span><span class="p">;</span>
 </code></pre></div>
 <p>If you're using the Docker integration, you can add the following command to the <code>docker-compose.yml</code> file to automatically change the authentication plugin:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="29:2"><input checked="checked" id="__tabbed_29_1" name="__tabbed_29" type="radio" /><input id="__tabbed_29_2" name="__tabbed_29" type="radio" /><div class="tabbed-labels"><label for="__tabbed_29_1">MariaDB</label><label for="__tabbed_29_2">MySQL</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="30:2"><input checked="checked" id="__tabbed_30_1" name="__tabbed_30" type="radio" /><input id="__tabbed_30_2" name="__tabbed_30" type="radio" /><div class="tabbed-labels"><label for="__tabbed_30_1">MariaDB</label><label for="__tabbed_30_2">MySQL</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="nt">bw-db</span><span class="p">:</span>
@@ -5013,7 +5202,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 </div>
 <h3 id="initialize-a-migration">Initialize a migration</h3>
 <p>To manually initialize a migration, execute the following command:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="30:3"><input checked="checked" id="__tabbed_30_1" name="__tabbed_30" type="radio" /><input id="__tabbed_30_2" name="__tabbed_30" type="radio" /><input id="__tabbed_30_3" name="__tabbed_30" type="radio" /><div class="tabbed-labels"><label for="__tabbed_30_1">Linux</label><label for="__tabbed_30_2">Docker</label><label for="__tabbed_30_3">All-in-one</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="31:3"><input checked="checked" id="__tabbed_31_1" name="__tabbed_31" type="radio" /><input id="__tabbed_31_2" name="__tabbed_31" type="radio" /><input id="__tabbed_31_3" name="__tabbed_31" type="radio" /><div class="tabbed-labels"><label for="__tabbed_31_1">Linux</label><label for="__tabbed_31_2">Docker</label><label for="__tabbed_31_3">All-in-one</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code>bwcli<span class="w"> </span>plugin<span class="w"> </span>migration<span class="w"> </span>migrate<span class="w"> </span>/path/to/migration/file
@@ -5054,7 +5243,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 <p>STREAM support <img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/274c.svg" title=":x:" /></p>
 <p>The <strong>Anti DDoS</strong> Plugin provides advanced protection against Distributed Denial of Service (DDoS) attacks by monitoring, analyzing, and filtering suspicious traffic in real-time.</p>
 <p>By employing a <strong>sliding window mechanism</strong>, the plugin maintains an in-memory dictionary of request timestamps to detect abnormal traffic spikes from individual IP addresses. Based on the configured security mode, it can either block offending connections or log the suspicious activity for further review.</p>
-<h3 id="features">Features</h3>
+<h3 id="features_1">Features</h3>
 <ul>
 <li><strong>Real-Time Traffic Analysis:</strong> Continuously monitors incoming requests to detect potential DDoS attacks.</li>
 <li><strong>Sliding Window Mechanism:</strong> Tracks recent request activity within a configurable time window.</li>
@@ -5134,7 +5323,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 
 <p>The User Management Plugin offers a robust interface for administering user accounts within your system.</p>
 <p>With this plugin, administrators can effortlessly create, update, and disable user accounts, manage user roles, toggle two-factor authentication (2FA), and view detailed user information such as last login timestamps and account statuses (active or inactive). Designed with security and ease-of-use in mind, this plugin simplifies routine user management tasks while ensuring compliance and auditability.</p>
-<h3 id="features_1">Features</h3>
+<h3 id="features_2">Features</h3>
 <ul>
 <li><strong>User Account Operations:</strong> Import in CSV/XSLX format, Create, edit, and delete user accounts with ease.</li>
 <li><strong>Role-Based Access Control:</strong> Assign and modify user roles to manage permissions and access levels.</li>
@@ -5163,7 +5352,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 </p>
 
 <p>The Easy Resolve Plugin lets you quickly remediate false positives and recurring issues directly from the Reports page. It turns guided "Resolve" actions into safe, scoped configuration updates—without manual editing.</p>
-<h3 id="features_2">Features</h3>
+<h3 id="features_3">Features</h3>
 <ul>
 <li>One‑click actions from Reports and report details.</li>
 <li>Context‑aware suggestions for ModSecurity, blacklist, DNSBL, Rate limiting, Allowed HTTP methods and whitelisted/blacklisted Country.</li>
@@ -5182,7 +5371,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 </p>
 
 <p>The Load Balancer Plugin turns BunkerWeb into a traffic director with guardrails. Declare upstream pools once, point your reverse proxy at them, and let health-aware balancing keep users on responsive backends. Sticky cookie mode issues a <code>BWLBID</code> cookie automatically so sessions stay anchored where you want them.</p>
-<h3 id="features_3">Features</h3>
+<h3 id="features_4">Features</h3>
 <ul>
 <li>Per-upstream blocks: name pools and reuse them across reverse proxy hosts.</li>
 <li>Flexible balancing: round-robin by default, or sticky via IP or signed cookie.</li>
@@ -5369,7 +5558,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 </ul>
 <h2 id="custom-pages-pro">Custom Pages <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)</h2>
 <p>The Custom Pages plugin lets you replace BunkerWeb's built-in pages (error pages, default server page, and antibot challenge pages) with your own custom HTML or Lua templates. This allows you to maintain consistent branding across all user-facing pages served by BunkerWeb.</p>
-<h3 id="features_4">Features</h3>
+<h3 id="features_5">Features</h3>
 <ul>
 <li><strong>Per-service custom error pages</strong> and <strong>antibot challenge pages</strong> (captcha, JavaScript check, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).</li>
 <li><strong>Global custom default server page</strong> for the fallback/default vhost.</li>
@@ -5691,7 +5880,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 <span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
 </code></pre></div>
 <h3 id="examples">Examples</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="31:3"><input checked="checked" id="__tabbed_31_1" name="__tabbed_31" type="radio" /><input id="__tabbed_31_2" name="__tabbed_31" type="radio" /><input id="__tabbed_31_3" name="__tabbed_31" type="radio" /><div class="tabbed-labels"><label for="__tabbed_31_1">Custom Error Page</label><label for="__tabbed_31_2">Custom Captcha Page</label><label for="__tabbed_31_3">Custom Default Server Page</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="32:3"><input checked="checked" id="__tabbed_32_1" name="__tabbed_32" type="radio" /><input id="__tabbed_32_2" name="__tabbed_32" type="radio" /><input id="__tabbed_32_3" name="__tabbed_32" type="radio" /><div class="tabbed-labels"><label for="__tabbed_32_1">Custom Error Page</label><label for="__tabbed_32_2">Custom Captcha Page</label><label for="__tabbed_32_3">Custom Default Server Page</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Create a custom error page template at <code>/etc/bunkerweb/templates/error.html</code>:</p>
@@ -5882,7 +6071,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class=
 </div>
 </div>
 <h3 id="deployment-examples">Deployment Examples</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="32:3"><input checked="checked" id="__tabbed_32_1" name="__tabbed_32" type="radio" /><input id="__tabbed_32_2" name="__tabbed_32" type="radio" /><input id="__tabbed_32_3" name="__tabbed_32" type="radio" /><div class="tabbed-labels"><label for="__tabbed_32_1">Linux</label><label for="__tabbed_32_2">Docker</label><label for="__tabbed_32_3">Kubernetes</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="33:3"><input checked="checked" id="__tabbed_33_1" name="__tabbed_33" type="radio" /><input id="__tabbed_33_2" name="__tabbed_33" type="radio" /><input id="__tabbed_33_3" name="__tabbed_33" type="radio" /><div class="tabbed-labels"><label for="__tabbed_33_1">Linux</label><label for="__tabbed_33_2">Docker</label><label for="__tabbed_33_3">Kubernetes</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <ol>
@@ -6249,7 +6438,7 @@ chmod<span class="w"> </span><span class="m">770</span><span class="w"> </span>t
 <li>At NGINX init time, the plugin compiles routes from the cached spec and stores them in shared internal storage.</li>
 <li>During request processing, the plugin matches the request against compiled routes and applies validation.</li>
 </ol>
-<h3 id="features_5">Features</h3>
+<h3 id="features_6">Features</h3>
 <ul>
 <li>Path and method validation with a <code>405</code> response when the method is not allowed.</li>
 <li>Optional parameter validation for query, header, cookie, and path parameters.</li>

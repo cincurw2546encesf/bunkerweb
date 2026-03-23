@@ -9432,7 +9432,7 @@ TrustedMonitor/\d+\.\d+
 <p>Führen Sie die folgenden Schritte aus, um ModSecurity zu konfigurieren und zu verwenden:</p>
 <ol>
 <li><strong>Aktivieren Sie die Funktion:</strong> ModSecurity ist standardmäßig aktiviert. Dies kann mit der Einstellung <code>USE_MODSECURITY</code> gesteuert werden.</li>
-<li><strong>Wählen Sie eine CRS-Version:</strong> Wählen Sie eine Version des OWASP Core Rule Set (v3, v4 oder nightly).</li>
+<li><strong>Wählen Sie eine CRS-Version:</strong> Wählen Sie eine Version des OWASP Core Rule Set (v3 oder v4).</li>
 <li><strong>Plugins hinzufügen:</strong> Aktivieren Sie optional CRS-Plugins, um die Regelabdeckung zu verbessern.</li>
 <li><strong>Überwachen und anpassen:</strong> Verwenden Sie Protokolle und die <a href="../web-ui/">Web-Benutzeroberfläche</a>, um Falsch-Positive zu identifizieren und die Einstellungen anzupassen.</li>
 </ol>
@@ -9467,7 +9467,7 @@ TrustedMonitor/\d+\.\d+
 <td><code>4</code></td>
 <td>multisite</td>
 <td>nein</td>
-<td><strong>CRS-Version:</strong> Die Version des zu verwendenden OWASP Core Rule Set. Optionen: <code>3</code>, <code>4</code> oder <code>nightly</code>.</td>
+<td><strong>CRS-Version:</strong> Die Version des zu verwendenden OWASP Core Rule Set. Optionen: <code>3</code> oder <code>4</code>. Hinweis: <code>nightly</code> ist veraltet und verwendet standardmäßig v4.</td>
 </tr>
 <tr>
 <td><code>MODSECURITY_SEC_RULE_ENGINE</code></td>
@@ -9529,12 +9529,11 @@ TrustedMonitor/\d+\.\d+
 <p>Wählen Sie eine CRS-Version, die Ihren Sicherheitsanforderungen am besten entspricht:</p>
 <ul>
 <li><strong><code>3</code></strong>: Stabile <a href="https://github.com/coreruleset/coreruleset/releases/tag/v3.3.8">v3.3.8</a>.</li>
-<li><strong><code>4</code></strong>: Stabile <a href="https://github.com/coreruleset/coreruleset/releases/tag/v4.24.0">v4.24.0</a> (<strong>Standard</strong>).</li>
-<li><strong><code>nightly</code></strong>: <a href="https://github.com/coreruleset/coreruleset/releases/tag/nightly">Nightly-Build</a> mit den neuesten Regel-Updates.</li>
+<li><strong><code>4</code></strong>: Stabile <a href="https://github.com/coreruleset/coreruleset/releases/tag/v4.24.1">v4.24.1</a> (<strong>Standard</strong>).</li>
 </ul>
-<div class="admonition example">
-<p class="admonition-title">Nightly-Build</p>
-<p>Der <strong>Nightly-Build</strong> enthält die aktuellsten Regeln und bietet den neuesten Schutz gegen aufkommende Bedrohungen. Da er jedoch täglich aktualisiert wird und experimentelle oder ungetestete Änderungen enthalten kann, wird empfohlen, den Nightly-Build zunächst in einer <strong>Staging-Umgebung</strong> zu verwenden, bevor er in der Produktion eingesetzt wird.</p>
+<div class="admonition warning">
+<p class="admonition-title">Nightly-Build veraltet</p>
+<p>Die Option <code>nightly</code> für <code>MODSECURITY_CRS_VERSION</code> ist veraltet, da das OWASP Core Rule Set-Projekt die Nightly-Releases eingestellt hat. Wenn Ihre Konfiguration noch <code>nightly</code> verwendet, wird stattdessen CRS v4 verwendet. Bitte aktualisieren Sie Ihre Konfiguration auf <code>MODSECURITY_CRS_VERSION=4</code>.</p>
 </div>
 <div class="admonition tip">
 <p class="admonition-title">Paranoia-Stufen</p>
@@ -9622,7 +9621,7 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <p>Höhere Sicherheitseinstellungen können legitimen Verkehr blockieren. Beginnen Sie mit den Standardeinstellungen und überwachen Sie die Protokolle, bevor Sie die Sicherheitsstufen erhöhen. Seien Sie bereit, Ausnahmeregeln für die spezifischen Anforderungen Ihrer Anwendung hinzuzufügen.</p>
 </div>
 <h3 id="beispielkonfigurationen_16">Beispielkonfigurationen</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="34:6"><input checked="checked" id="__tabbed_34_1" name="__tabbed_34" type="radio" /><input id="__tabbed_34_2" name="__tabbed_34" type="radio" /><input id="__tabbed_34_3" name="__tabbed_34" type="radio" /><input id="__tabbed_34_4" name="__tabbed_34" type="radio" /><input id="__tabbed_34_5" name="__tabbed_34" type="radio" /><input id="__tabbed_34_6" name="__tabbed_34" type="radio" /><div class="tabbed-labels"><label for="__tabbed_34_1">Grundlegende Konfiguration</label><label for="__tabbed_34_2">Nur-Erkennungsmodus</label><label for="__tabbed_34_3">Erweiterte Konfiguration mit Plugins</label><label for="__tabbed_34_4">Legacy-Konfiguration</label><label for="__tabbed_34_5">Globales ModSecurity</label><label for="__tabbed_34_6">Nightly-Build mit benutzerdefinierten Plugins</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="34:5"><input checked="checked" id="__tabbed_34_1" name="__tabbed_34" type="radio" /><input id="__tabbed_34_2" name="__tabbed_34" type="radio" /><input id="__tabbed_34_3" name="__tabbed_34" type="radio" /><input id="__tabbed_34_4" name="__tabbed_34" type="radio" /><input id="__tabbed_34_5" name="__tabbed_34" type="radio" /><div class="tabbed-labels"><label for="__tabbed_34_1">Grundlegende Konfiguration</label><label for="__tabbed_34_2">Nur-Erkennungsmodus</label><label for="__tabbed_34_3">Erweiterte Konfiguration mit Plugins</label><label for="__tabbed_34_4">Legacy-Konfiguration</label><label for="__tabbed_34_5">Globales ModSecurity</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Eine Standardkonfiguration mit aktiviertem ModSecurity und CRS v4:</p>
@@ -9667,15 +9666,6 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <span class="nt">USE_MODSECURITY_CRS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
 <span class="nt">MODSECURITY_CRS_VERSION</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;4&quot;</span>
 <span class="nt">USE_MODSECURITY_GLOBAL_CRS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<p>Konfiguration mit dem Nightly-Build von CRS mit benutzerdefinierten Plugins:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">USE_MODSECURITY</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
-<span class="nt">USE_MODSECURITY_CRS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
-<span class="nt">MODSECURITY_CRS_VERSION</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;nightly&quot;</span>
-<span class="nt">USE_MODSECURITY_CRS_PLUGINS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
-<span class="nt">MODSECURITY_CRS_PLUGINS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;wordpress-rule-exclusions/v1.0.0</span><span class="nv"> </span><span class="s">https://github.com/coreruleset/dos-protection-plugin-modsecurity/archive/refs/heads/main.zip&quot;</span>
 </code></pre></div>
 </div>
 </div>
@@ -12554,6 +12544,13 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <td>global</td>
 <td>nein</td>
 <td>Update user information (email, role) from SSO headers on each login</td>
+</tr>
+<tr>
+<td><code>UI_SSO_ACCOUNT_LINKING</code></td>
+<td><code>username_or_email</code></td>
+<td>global</td>
+<td>nein</td>
+<td>How to match incoming SSO users to local accounts</td>
 </tr>
 <tr>
 <td><code>UI_SSO_LOGOUT_REDIRECT_URL</code></td>
