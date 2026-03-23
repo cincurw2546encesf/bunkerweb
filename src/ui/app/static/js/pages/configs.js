@@ -227,7 +227,8 @@ $(document).ready(function () {
     if (configNumber > 25) menu.push(25);
     if (configNumber > 50) menu.push(50);
     if (configNumber > 100) menu.push(100);
-    menu.push({ label: t("datatable.length_all", "All"), value: -1 });
+    if (configNumber > 500) menu.push(500);
+    if (configNumber > 1000) menu.push(1000);
     layout.bottomStart = {
       pageLength: { menu: menu },
       info: true,

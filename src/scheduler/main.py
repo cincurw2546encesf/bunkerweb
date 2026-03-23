@@ -31,7 +31,7 @@ for deps_path in [BUNKERWEB_PATH.joinpath(*paths).as_posix() for paths in (("dep
 
 from schedule import every as schedule_every, run_pending
 
-from common_utils import bytes_hash, dict_to_frozenset, handle_docker_secrets, add_dir_to_tar_safely, plugin_tar_exclude, plugin_tar_filter  # type: ignore
+from common_utils import bytes_hash, dict_to_frozenset, handle_docker_secrets, create_plugin_tar_gz, plugin_tar_exclude  # type: ignore
 from logger import getLogger  # type: ignore
 from Database import Database  # type: ignore
 from JobScheduler import JobScheduler
@@ -148,6 +148,8 @@ def handle_stop(signum, frame):
 
     if SCHEDULER is not None:
         SCHEDULER.clear()
+        with suppress(Exception):
+            SCHEDULER.db.close()
     stop(0)
 
 
@@ -322,20 +324,19 @@ def generate_external_plugins(original_path: Union[Path, str] = EXTERNAL_PLUGINS
             with suppress(StopIteration, IndexError, FileNotFoundError):
                 index = next(i for i, plugin in enumerate(plugins) if plugin["id"] == file.name)
 
-                with BytesIO() as plugin_content:
-                    with tar_open(fileobj=plugin_content, mode="w:gz", compresslevel=9) as tar:
-                        if file.is_dir():
-                            add_dir_to_tar_safely(tar, file, arc_root=file.name)
-                        elif file.is_file():
-                            if not plugin_tar_exclude(file.as_posix()) and access(file.as_posix(), R_OK):
-                                tar.add(file.as_posix(), arcname=file.name, recursive=False, filter=plugin_tar_filter)
-                            else:
-                                LOGGER.debug(f"Excluding file from tar: {file}")
-                    plugin_content.seek(0, 0)
-                    if bytes_hash(plugin_content, algorithm="sha256") == plugins[index]["checksum"]:
-                        ignored_plugins.add(file.name)
+                if file.is_dir():
+                    plugin_content = create_plugin_tar_gz(file, arc_root=file.name)
+                elif file.is_file():
+                    if plugin_tar_exclude(file.as_posix()) or not access(file.as_posix(), R_OK):
+                        LOGGER.debug(f"Excluding file from tar: {file}")
                         continue
-                    LOGGER.debug(f"Checksum of {file} has changed, removing it ...")
+                    plugin_content = create_plugin_tar_gz(file, arc_root=file.name)
+                else:
+                    continue
+                if bytes_hash(plugin_content, algorithm="sha256") == plugins[index]["checksum"]:
+                    ignored_plugins.add(file.name)
+                    continue
+                LOGGER.debug(f"Checksum of {file} has changed, removing it ...")
 
             if file.is_symlink() or file.is_file():
                 with suppress(OSError):
@@ -775,7 +776,9 @@ if __name__ == "__main__":
             if args.variables:
                 env_file_path = deepcopy(tmp_variables_path)
             else:
-                env_content = "\n".join(f"{key}={value}" for key, value in (env | environ).items() if "CUSTOM_CONF" not in key)
+                env_content = "\n".join(
+                    f"{key}={value}" for key, value in (env | {k: v for k, v in environ.items() if k in env}).items() if "CUSTOM_CONF" not in key
+                )
                 env_file_path.write_text(env_content + "\n", encoding="utf-8")
 
             cmd_env = {
@@ -864,42 +867,38 @@ if __name__ == "__main__":
             external_plugins = []
             tmp_external_plugins = []
             for file in plugin_path.glob("*/plugin.json"):
-                with BytesIO() as plugin_content:
-                    with tar_open(fileobj=plugin_content, mode="w:gz", compresslevel=9) as tar:
-                        # Safely pack the plugin directory while excluding caches/pyc and unreadable files
-                        add_dir_to_tar_safely(tar, file.parent, arc_root=file.parent.name)
-                    plugin_content.seek(0, 0)
+                plugin_content = create_plugin_tar_gz(file.parent, arc_root=file.parent.name)
 
-                    with file.open("r", encoding="utf-8") as f:
-                        plugin_data = json_load(f)
+                with file.open("r", encoding="utf-8") as f:
+                    plugin_data = json_load(f)
 
-                    if plugin_data["id"] == "letsencrypt_dns":
+                if plugin_data["id"] == "letsencrypt_dns":
+                    continue
+
+                checksum = bytes_hash(plugin_content, algorithm="sha256")
+                common_data = plugin_data | {
+                    "type": _type,
+                    "page": file.parent.joinpath("ui").is_dir(),
+                    "checksum": checksum,
+                }
+                jobs = common_data.pop("jobs", [])
+
+                with suppress(StopIteration, IndexError):
+                    index = next(i for i, plugin in enumerate(db_plugins) if plugin["id"] == common_data["id"])
+
+                    if checksum == db_plugins[index]["checksum"] or db_plugins[index]["method"] != "manual":
                         continue
 
-                    checksum = bytes_hash(plugin_content, algorithm="sha256")
-                    common_data = plugin_data | {
-                        "type": _type,
-                        "page": file.parent.joinpath("ui").is_dir(),
-                        "checksum": checksum,
+                tmp_external_plugins.append(common_data.copy())
+
+                external_plugins.append(
+                    common_data
+                    | {
+                        "method": "manual",
+                        "data": plugin_content.getvalue(),
                     }
-                    jobs = common_data.pop("jobs", [])
-
-                    with suppress(StopIteration, IndexError):
-                        index = next(i for i, plugin in enumerate(db_plugins) if plugin["id"] == common_data["id"])
-
-                        if checksum == db_plugins[index]["checksum"] or db_plugins[index]["method"] != "manual":
-                            continue
-
-                    tmp_external_plugins.append(common_data.copy())
-
-                    external_plugins.append(
-                        common_data
-                        | {
-                            "method": "manual",
-                            "data": plugin_content.getvalue(),
-                        }
-                        | ({"jobs": jobs} if jobs else {})
-                    )
+                    | ({"jobs": jobs} if jobs else {})
+                )
 
             changes = False
             if tmp_external_plugins:
@@ -993,6 +992,26 @@ if __name__ == "__main__":
                 LOGGER.warning("Waiting for the failover backup to finish ...")
                 sleep(1)
 
+            # On first start, generate config and reload instances BEFORE running
+            # plugin jobs — plugins need their API endpoints loaded on instances
+            if FIRST_START and CONFIG_NEED_GENERATION and SCHEDULER.apis:
+                LOGGER.info("First start: generating and sending initial configuration before running jobs ...")
+                if generate_configs():
+                    first_start_futures = [
+                        SCHEDULER_TASKS_EXECUTOR.submit(send_file_to_bunkerweb, CONFIG_PATH, "/confs"),
+                        SCHEDULER_TASKS_EXECUTOR.submit(send_file_to_bunkerweb, CACHE_PATH, "/cache"),
+                    ]
+                    for future in first_start_futures:
+                        future.result()
+                    first_start_futures.clear()
+
+                    SCHEDULER.send_to_apis(
+                        "POST",
+                        f"/reload?test={'no' if DISABLE_CONFIGURATION_TESTING else 'yes'}",
+                        timeout=max(RELOAD_MIN_TIMEOUT, 3 * len(env.get("SERVER_NAME", "www.example.com").split())),
+                    )
+                    CONFIG_NEED_GENERATION = False
+
             if RUN_JOBS_ONCE:
                 # Only run jobs once
                 if not SCHEDULER.reload(
@@ -1006,6 +1025,10 @@ if __name__ == "__main__":
                     if SCHEDULER.db.readonly:
                         generate_caches()
                 healthcheck_job_run = False
+                # Jobs may have created files needed by config templates (e.g. api-server-cert.pem)
+                if FIRST_START:
+                    LOGGER.info("First start: regenerating config after once-jobs to pick up files created by jobs (e.g. api-server-cert.pem)")
+                    CONFIG_NEED_GENERATION = True
 
             if CONFIG_NEED_GENERATION:
                 ret = generate_configs()

@@ -13,7 +13,7 @@ from urllib.parse import quote
 from API import API  # type: ignore
 from ApiCaller import ApiCaller  # type: ignore
 
-from app.utils import LOGGER
+from app.utils import LOGGER, RESERVED_SERVICE_NAMES
 
 
 class Instance:
@@ -114,8 +114,8 @@ class Instance:
             if ban_scope not in ("global", "service"):
                 ban_scope = "global"
 
-            # If ban_scope is service but no service provided, default to global
-            if ban_scope == "service" and (not service or service == "Web UI"):
+            # If ban_scope is service but no valid service provided, default to global
+            if ban_scope == "service" and (not service or service in RESERVED_SERVICE_NAMES):
                 ban_scope = "global"
 
             result = self.apiCaller.send_to_apis("POST", "/ban", data={"ip": ip, "exp": exp, "reason": reason, "service": service, "ban_scope": ban_scope})[0]
@@ -131,7 +131,7 @@ class Instance:
         try:
             # Prepare request data
             data = {"ip": ip, "ban_scope": ban_scope}
-            if service and service not in ("unknown", "Web UI", "default server"):
+            if service and service not in RESERVED_SERVICE_NAMES:
                 data["service"] = service
             result = self.apiCaller.send_to_apis("POST", "/unban", data=data)[0]
         except BaseException as e:
@@ -905,6 +905,42 @@ class InstancesUtils:
                 break
             start += chunk_size
 
+    def _iter_instance_api_requests(self):
+        """Fetch requests from BunkerWeb instance API (fallback when Redis is unavailable).
+
+        Reads from the NGINX shared dict via the /metrics/requests endpoint.
+        """
+        seen_ids: set = set()
+        for instance in self.get_instances(status="up"):
+            try:
+                resp, instance_metrics = instance.metrics("requests")
+            except Exception:
+                continue
+            if not resp:
+                continue
+
+            instance_data = instance_metrics.get(instance.hostname, {})
+            if instance_data.get("status") != "success":
+                continue
+
+            data = instance_data.get("data", instance_data.get("msg", {}))
+            if not isinstance(data, dict):
+                continue
+
+            requests_list = data.get("requests", [])
+            if not isinstance(requests_list, list):
+                continue
+
+            for request in requests_list:
+                if not isinstance(request, dict):
+                    continue
+                req_id = request.get("id")
+                if req_id is not None:
+                    if req_id in seen_ids:
+                        continue
+                    seen_ids.add(req_id)
+                yield request
+
     def get_home_aggregates(self, hours: int = 24 * 7, top_ips_limit: int = 10) -> dict[str, Any]:
         """
         Compute home page aggregates (country counts, IP counts, time buckets)
@@ -932,8 +968,9 @@ class InstancesUtils:
         request_countries: dict[str, dict[str, int]] = {}
         blocked_ip_counts: dict[str, int] = {}
         request_statuses: dict[int, int] = {}
-        top_ips_from_facets, blocked_unique_ips = self._get_redis_top_ip_counts_from_facets(redis_client, limit=top_ips_limit)
-        use_facet_ip_counts = blocked_unique_ips > 0
+        blocked_unique_ips = 0
+        top_ips_from_facets: list[tuple[str, int]] = []
+        use_facet_ip_counts = False
 
         current_date = datetime.now().astimezone()
         cutoff_timestamp = (current_date - timedelta(hours=hours)).timestamp()
@@ -942,30 +979,34 @@ class InstancesUtils:
         time_buckets: dict[datetime, int] = {(current_date - timedelta(hours=i)).replace(minute=0, second=0, microsecond=0): 0 for i in range(hours)}
 
         if not redis_client:
-            # Fallback: return empty aggregates if no Redis
-            return {
-                "request_countries": {},
-                "top_blocked_ips": {},
-                "blocked_unique_ips": 0,
-                "time_buckets": {key.isoformat(): value for key, value in time_buckets.items()},
-                "request_statuses": {},
-            }
+            # Fallback: fetch requests from instance API when Redis is unavailable
+            requests_iter = self._iter_instance_api_requests()
+        else:
+            top_ips_from_facets, blocked_unique_ips = self._get_redis_top_ip_counts_from_facets(redis_client, limit=top_ips_limit)
+            use_facet_ip_counts = blocked_unique_ips > 0
 
-        max_redis_requests = self._get_max_blocked_requests_redis()
-        if max_redis_requests == 0:
-            return {
-                "request_countries": {},
-                "top_blocked_ips": {},
-                "blocked_unique_ips": 0,
-                "time_buckets": {key.isoformat(): value for key, value in time_buckets.items()},
-                "request_statuses": {},
-            }
+            max_redis_requests = self._get_max_blocked_requests_redis()
+            if max_redis_requests == 0:
+                return {
+                    "request_countries": {},
+                    "top_blocked_ips": {},
+                    "blocked_unique_ips": 0,
+                    "time_buckets": {key.isoformat(): value for key, value in time_buckets.items()},
+                    "request_statuses": {},
+                }
 
-        # Process requests in chunks using the iterator
-        # This avoids loading all requests into memory at once
-        scan_start_idx = self._get_redis_scan_start_index(redis_client, max_redis_requests)
-        for request in self._iter_redis_requests(redis_client, chunk_size=2000, start_index=scan_start_idx):
+            # Process requests in chunks using the iterator
+            # This avoids loading all requests into memory at once
+            scan_start_idx = self._get_redis_scan_start_index(redis_client, max_redis_requests)
+            requests_iter = self._iter_redis_requests(redis_client, chunk_size=2000, start_index=scan_start_idx)
+
+        for request in requests_iter:
             request_date = request.get("date", 0)
+            if not isinstance(request_date, (int, float)):
+                try:
+                    request_date = float(request_date)
+                except (ValueError, TypeError):
+                    continue
 
             # Skip requests older than cutoff
             if request_date < cutoff_timestamp:

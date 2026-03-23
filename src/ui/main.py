@@ -27,7 +27,7 @@ for deps_path in [join(sep, "usr", "share", "bunkerweb", *paths) for paths in ((
 # This is a known issue in passlib that will be fixed in future versions
 filterwarnings("ignore", message=r".*pkg_resources is deprecated.*", category=UserWarning, module="passlib")
 
-from cachelib import FileSystemCache
+from app.models.safe_session_cache import SafeFileSystemCache
 from flask import Blueprint, Flask, Response, flash as flask_flash, g, jsonify, make_response, redirect, render_template, request, session, url_for
 from flask_login import current_user, LoginManager, login_required
 from flask_session import Session
@@ -163,6 +163,14 @@ _db_check_next_allowed = 0.0
 _cookie_config_lock = Lock()
 _cookie_config_detected = False
 
+_SESSION_CLEANUP_INTERVAL_SECONDS = 3600.0
+_session_cleanup_last_run = 0.0
+
+_restart_workers_lock = Lock()
+_restart_workers_future = None
+_restart_workers_next_allowed = 0.0
+RESTART_WORKERS_MIN_INTERVAL_SECONDS = 10.0
+
 
 def _shutdown_executors():
     """Shutdown all thread pool executors on application exit."""
@@ -170,6 +178,8 @@ def _shutdown_executors():
     _periodic_tasks_executor.shutdown(wait=False)
     _user_access_executor.shutdown(wait=False)
     _config_tasks_executor.shutdown(wait=False)
+    with suppress(Exception):
+        DB.close()
 
 
 register(_shutdown_executors)
@@ -621,6 +631,7 @@ with app.app_context():
         LOGGER.warning("Invalid SESSION_LIFETIME_HOURS, defaulting to 12h")
 
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=session_lifetime_hours)
+    app.config["SESSION_REFRESH_EACH_REQUEST"] = False
     app.config["SESSION_ID_LENGTH"] = 64
 
     session_cache_dir = LIB_DIR.joinpath("ui_sessions_cache")
@@ -673,7 +684,7 @@ with app.app_context():
 
     if not redis_client:
         app.config["SESSION_TYPE"] = "cachelib"
-        app.config["SESSION_CACHELIB"] = FileSystemCache(threshold=500, default_timeout=session_timeout, cache_dir=session_cache_dir)
+        app.config["SESSION_CACHELIB"] = SafeFileSystemCache(cache_dir=session_cache_dir, threshold=0, default_timeout=session_timeout)
     sess = Session()
     sess.init_app(app)
 
@@ -843,8 +854,15 @@ def handle_csrf_error(_):
     :return: A template with the error message and a 401 status code.
     """
     LOGGER.debug(format_exc())
-    LOGGER.error(f"CSRF token is missing or invalid for {request.path} by {current_user.get_id()}")
-    if not current_user:
+    try:
+        user_id = current_user.get_id()
+    except (AssertionError, RuntimeError):
+        user_id = "unknown"
+    LOGGER.error(f"CSRF token is missing or invalid for {request.path} by {user_id}")
+    try:
+        if not current_user:
+            return redirect(url_for("setup.setup_page"), 303)
+    except (AssertionError, RuntimeError):
         return redirect(url_for("setup.setup_page"), 303)
     response = logout_page()
     response.status_code = 303
@@ -965,6 +983,18 @@ def schedule_database_state_check(request_method: str, request_path: str):
         _db_check_next_allowed = now + DB_CHECK_MIN_INTERVAL_SECONDS
 
 
+def schedule_restart_workers():
+    global _restart_workers_future, _restart_workers_next_allowed
+    with _restart_workers_lock:
+        now = time()
+        if now < _restart_workers_next_allowed:
+            return
+        if _restart_workers_future and not _restart_workers_future.done():
+            return
+        _restart_workers_future = _periodic_tasks_executor.submit(restart_workers)
+        _restart_workers_next_allowed = now + RESTART_WORKERS_MIN_INTERVAL_SECONDS
+
+
 @app.before_request
 def before_request():
     DATA.load_from_file()
@@ -1002,11 +1032,19 @@ def before_request():
         # Plugin reload trigger
         if not DATA.get("RELOADING", False) and metadata.get("reload_ui_plugins", False):
             safe_reload_plugins()
-            _periodic_tasks_executor.submit(restart_workers)
+            schedule_restart_workers()
 
         if datetime.now().astimezone() - datetime.fromisoformat(DATA.get("LATEST_VERSION_LAST_CHECK", "1970-01-01T00:00:00")).astimezone() > timedelta(hours=1):
             DATA["LATEST_VERSION_LAST_CHECK"] = datetime.now().astimezone().isoformat()
             _periodic_tasks_executor.submit(update_latest_stable_release)
+
+        # Periodic expired session file cleanup (FileSystemCache only, where _prune is disabled via threshold=0)
+        if app.config.get("SESSION_TYPE") == "cachelib":
+            global _session_cleanup_last_run
+            now_ts = time()
+            if now_ts - _session_cleanup_last_run > _SESSION_CLEANUP_INTERVAL_SECONDS:
+                _session_cleanup_last_run = now_ts
+                _periodic_tasks_executor.submit(app.config["SESSION_CACHELIB"]._remove_expired, now_ts)
 
         schedule_database_state_check(request.method, request.path)
 
@@ -1217,12 +1255,13 @@ def set_security_headers(response):
 
 @app.teardown_request
 def teardown_request(teardown):
-    if (
-        not request.path.startswith(("/css/", "/img/", "/js/", "/json/", "/fonts/", "/libs/", "/locales/"))
-        and current_user.is_authenticated
-        and "session_id" in session
-    ):
-        _user_access_executor.submit(mark_user_access, current_user, session["session_id"])
+    with suppress(AssertionError, RuntimeError):
+        if (
+            not request.path.startswith(("/css/", "/img/", "/js/", "/json/", "/fonts/", "/libs/", "/locales/"))
+            and current_user.is_authenticated
+            and "session_id" in session
+        ):
+            _user_access_executor.submit(mark_user_access, current_user, session["session_id"])
 
     for hook in app.config["TEARDOWN_REQUEST_HOOKS"]:
         try:

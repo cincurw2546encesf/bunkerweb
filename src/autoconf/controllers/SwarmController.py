@@ -67,7 +67,7 @@ class SwarmController(Controller):
             services: List[Service] = self.__client.services.list(filters={"label": label_key})
         except DockerException as e:
             self._logger.error(f"Failed to retrieve services with label '{label_key}': {e}")
-            return []
+            raise
 
         namespace_set = set(self._namespaces or [])
         valid_services = []

@@ -246,12 +246,15 @@ def services_service_page(service: str):
 
             if clone and service == "new":
                 cloned_service_config = {k: v for k, v in DB.get_config(methods=False, with_drafts=True, service=clone).items()}
+                clone_prefix = f"{clone}_"
 
                 for key, value in cloned_service_config.items():
-                    if key in variables or key in ("SERVER_NAME", "OLD_SERVER_NAME", "IS_DRAFT", "USE_UI"):
+                    # Strip the clone service prefix from keys so they are recognized as valid setting names
+                    stripped_key = key.removeprefix(clone_prefix)
+                    if stripped_key in variables or stripped_key in ("SERVER_NAME", "OLD_SERVER_NAME", "IS_DRAFT", "USE_UI"):
                         continue
 
-                    variables[key] = value
+                    variables[stripped_key] = value
 
             # Edit check fields and remove already existing ones
             if service != "new":
@@ -345,6 +348,13 @@ def services_service_page(service: str):
             for db_custom_config, data in all_custom_configs.items():
                 if data.get("method") == "default" and data.get("template"):
                     removed_custom_configs.add(db_custom_config)
+
+            # Force-refresh template-derived settings to prevent stale form values
+            # from being stored as explicit overrides (applies to all UI modes)
+            if service != "new":
+                for setting, value in db_config.items():
+                    if value.get("template") and value["method"] == "default":
+                        variables[setting] = value["value"]
 
             variables_to_check = variables.copy()
             has_file_name_changes = False
