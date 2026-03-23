@@ -1741,11 +1741,21 @@ class Database:
                 services = [service for service in services if service]  # Clean up empty strings
 
                 if db_services:
-                    missing_ids = [
-                        service.id
-                        for service in db_services
-                        if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api"))) and service.id not in services
-                    ]
+                    # Guard: if the incoming services list is empty but DB has services for this method,
+                    # skip deletion to prevent catastrophic data loss from transient Docker API failure
+                    method_services = [s for s in db_services if s.method == method or (s.method in ("ui", "api") and method in ("ui", "api"))]
+                    if not services and method_services:
+                        self.logger.warning(
+                            f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
+                            "skipping service deletion to prevent data loss"
+                        )
+                        missing_ids = []
+                    else:
+                        missing_ids = [
+                            service.id
+                            for service in db_services
+                            if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api"))) and service.id not in services
+                        ]
 
                     if missing_ids:
                         self.logger.debug(f"Removing {len(missing_ids)} services that are no longer in the list")
@@ -4517,6 +4527,15 @@ class Database:
         with self._db_session() as session:
             if self.readonly:
                 return "The database is read-only, the changes will not be saved"
+
+            if not instances and method == "autoconf":
+                existing_count = session.query(Instances).filter(Instances.method == method).count()
+                if existing_count > 0:
+                    self.logger.warning(
+                        f"Received empty instances list for method 'autoconf' but database has {existing_count} existing instance(s), "
+                        "skipping deletion to prevent data loss"
+                    )
+                    return ""
 
             session.query(Instances).filter(Instances.method == method).delete()
 
