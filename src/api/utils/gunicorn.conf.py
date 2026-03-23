@@ -95,7 +95,7 @@ daemon = False
 chdir = join(sep, "usr", "share", "bunkerweb", "api")
 umask = 0x027
 pidfile = PID_FILE.as_posix()
-control_socket = RUN_DIR.joinpath("api.ctl").as_posix()
+control_socket_disable = True
 SHM_TMP_DIR = Path(sep, "dev", "shm")
 API_WORKER_TMP_DIR = Path(sep, "tmp", "bunkerweb", "api-workers")
 worker_tmp_dir = SHM_TMP_DIR.as_posix() if SHM_TMP_DIR.is_dir() else API_WORKER_TMP_DIR.as_posix()
@@ -521,6 +521,8 @@ def on_starting(server):
         exit(1)
 
     LOGGER.info("API is ready")
+
+    DB.close()  # Close local DB connections before fork to prevent fd leaks
 
 
 def when_ready(server):

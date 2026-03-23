@@ -106,9 +106,15 @@ function initializeDataTable(config) {
   // Check for saved pageLength in localStorage
   const savedPageLength = localStorage.getItem(`bw-${tableName}-pageLength`);
   if (savedPageLength !== null) {
+    // Migrate old "All" (-1) to 100
+    const parsedPageLength = parseInt(savedPageLength, 10);
+    if (parsedPageLength === -1) {
+      localStorage.setItem(`bw-${tableName}-pageLength`, "100");
+    }
     // Apply saved pageLength to the options if it exists
     if (dataTableOptions.pageLength === undefined) {
-      dataTableOptions.pageLength = parseInt(savedPageLength, 10);
+      dataTableOptions.pageLength =
+        parsedPageLength === -1 ? 100 : parsedPageLength;
     }
   }
 
@@ -141,6 +147,17 @@ function initializeDataTable(config) {
   // Initialize DataTable
   // Automatically enable state saving for DataTable
   safeDataTableOptions.stateSave = true;
+
+  // Migrate stale "All" (-1) page length from DataTables' own saved state
+  const existingStateLoadParams = safeDataTableOptions.stateLoadParams;
+  safeDataTableOptions.stateLoadParams = function (settings, data) {
+    if (data.length === -1) {
+      data.length = 100;
+    }
+    if (typeof existingStateLoadParams === "function") {
+      existingStateLoadParams.call(this, settings, data);
+    }
+  };
 
   const dataTable = new DataTable(tableSelector, safeDataTableOptions);
   applyTranslations();

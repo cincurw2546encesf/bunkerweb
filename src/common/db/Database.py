@@ -51,7 +51,7 @@ for deps_path in [os_join(sep, "usr", "share", "bunkerweb", *paths) for paths in
     if deps_path not in sys_path:
         sys_path.append(deps_path)
 
-from common_utils import bytes_hash  # type: ignore
+from common_utils import bytes_hash, PLUGIN_TAR_COMPRESS_LEVEL  # type: ignore
 
 from pymysql import install_as_MySQLdb
 from sqlalchemy import case, create_engine, event, MetaData as sql_metadata, func, join, select as db_select, text
@@ -478,9 +478,10 @@ class Database:
         self.sql_engine.dispose(close=True)
         self.sql_engine = create_engine(self.database_uri_readonly if fallback else self.database_uri, **self._engine_kwargs | kwargs)
 
-        if self._session_factory is not None:
-            self._session_factory.remove()
-        self._session_factory = scoped_session(sessionmaker(bind=self.sql_engine, autoflush=True, expire_on_commit=False))
+        with LOCK:
+            if self._session_factory is not None:
+                self._session_factory.remove()
+            self._session_factory = scoped_session(sessionmaker(bind=self.sql_engine, autoflush=True, expire_on_commit=False))
 
         if fallback or readonly:
             with self.sql_engine.connect() as conn:
@@ -629,7 +630,7 @@ class Database:
                 metadata = session.query(Metadata).with_entities(Metadata.version).filter_by(id=1).first()
                 if metadata:
                     return metadata.version
-                return "1.6.9~rc4"
+                return "1.6.9"
             except BaseException as e:
                 return f"Error: {e}"
 
@@ -663,7 +664,7 @@ class Database:
             "last_instances_change": None,
             "reload_ui_plugins": False,
             "integration": "unknown",
-            "version": "1.6.9~rc4",
+            "version": "1.6.9",
             "database_version": "Unknown",  # ? Extracted from the database
             "default": True,  # ? Extra field to know if the returned data is the default one
         }
@@ -993,7 +994,7 @@ class Database:
                     if path_ui.is_dir():
                         with BytesIO() as plugin_page_content:
                             tar_success = True
-                            with tar_open(fileobj=plugin_page_content, mode="w:gz", compresslevel=9) as tar:
+                            with tar_open(fileobj=plugin_page_content, mode="w:gz", compresslevel=PLUGIN_TAR_COMPRESS_LEVEL) as tar:
                                 try:
                                     tar.add(path_ui, arcname=path_ui.name, recursive=True)
                                 except (FileNotFoundError, OSError) as e:
@@ -1740,11 +1741,21 @@ class Database:
                 services = [service for service in services if service]  # Clean up empty strings
 
                 if db_services:
-                    missing_ids = [
-                        service.id
-                        for service in db_services
-                        if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api"))) and service.id not in services
-                    ]
+                    # Guard: if the incoming services list is empty but DB has services for this method,
+                    # skip deletion to prevent catastrophic data loss from transient Docker API failure
+                    method_services = [s for s in db_services if s.method == method or (s.method in ("ui", "api") and method in ("ui", "api"))]
+                    if not services and method_services:
+                        self.logger.warning(
+                            f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
+                            "skipping service deletion to prevent data loss"
+                        )
+                        missing_ids = []
+                    else:
+                        missing_ids = [
+                            service.id
+                            for service in db_services
+                            if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api"))) and service.id not in services
+                        ]
 
                     if missing_ids:
                         self.logger.debug(f"Removing {len(missing_ids)} services that are no longer in the list")
@@ -3474,7 +3485,7 @@ class Database:
                         remove = True
                         with BytesIO() as plugin_page_content:
                             tar_success = True
-                            with tar_open(fileobj=plugin_page_content, mode="w:gz", compresslevel=9) as tar:
+                            with tar_open(fileobj=plugin_page_content, mode="w:gz", compresslevel=PLUGIN_TAR_COMPRESS_LEVEL) as tar:
                                 try:
                                     tar.add(path_ui, arcname=path_ui.name, recursive=True)
                                 except (FileNotFoundError, OSError) as e:
@@ -3904,7 +3915,7 @@ class Database:
                     if path_ui.is_dir():
                         with BytesIO() as plugin_page_content:
                             tar_success = True
-                            with tar_open(fileobj=plugin_page_content, mode="w:gz", compresslevel=9) as tar:
+                            with tar_open(fileobj=plugin_page_content, mode="w:gz", compresslevel=PLUGIN_TAR_COMPRESS_LEVEL) as tar:
                                 try:
                                     tar.add(path_ui, arcname=path_ui.name, recursive=True)
                                 except (FileNotFoundError, OSError) as e:
@@ -4517,6 +4528,15 @@ class Database:
             if self.readonly:
                 return "The database is read-only, the changes will not be saved"
 
+            if not instances and method == "autoconf":
+                existing_count = session.query(Instances).filter(Instances.method == method).count()
+                if existing_count > 0:
+                    self.logger.warning(
+                        f"Received empty instances list for method 'autoconf' but database has {existing_count} existing instance(s), "
+                        "skipping deletion to prevent data loss"
+                    )
+                    return ""
+
             session.query(Instances).filter(Instances.method == method).delete()
 
             for instance in instances:
@@ -4582,7 +4602,7 @@ class Database:
                 update_values["last_seen"] = datetime.now().astimezone()
 
             try:
-                result = session.query(Instances).filter_by(hostname=hostname).update(update_values)
+                result = session.query(Instances).filter_by(hostname=hostname).update(update_values, synchronize_session=False)
 
                 if result == 0:
                     return f"Instance {hostname} does not exist, will not be updated."
@@ -4628,7 +4648,7 @@ class Database:
 
             try:
                 if update_values:
-                    result = session.query(Instances).filter_by(hostname=hostname).update(update_values)
+                    result = session.query(Instances).filter_by(hostname=hostname).update(update_values, synchronize_session=False)
                     if result == 0:
                         return f"Instance {hostname} does not exist, will not be updated."
 
@@ -5205,6 +5225,12 @@ class Database:
                 {Plugins.config_changed: True}, synchronize_session=False
             )
 
+            with suppress(ProgrammingError, OperationalError):
+                metadata = session.query(Metadata).get(1)
+                if metadata is not None:
+                    metadata.custom_configs_changed = True
+                    metadata.last_custom_configs_change = datetime.now().astimezone()
+
             try:
                 session.commit()
             except BaseException as e:
@@ -5235,6 +5261,12 @@ class Database:
             session.query(Plugins).filter(Plugins.id.in_(set(plugin.id for plugin in session.query(Plugins).with_entities(Plugins.id).all()))).update(
                 {Plugins.config_changed: True}, synchronize_session=False
             )
+
+            with suppress(ProgrammingError, OperationalError):
+                metadata = session.query(Metadata).get(1)
+                if metadata is not None:
+                    metadata.custom_configs_changed = True
+                    metadata.last_custom_configs_change = datetime.now().astimezone()
 
             try:
                 session.commit()

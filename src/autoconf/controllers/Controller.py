@@ -37,7 +37,10 @@ class Controller(Config):
                 sleep(wait_time)
                 continue
 
-            self._instances = self.get_instances()
+            try:
+                self._instances = self.get_instances()
+            except Exception:
+                self._instances = []
             if not self._instances:
                 self._logger.warning(f"No instance found, waiting {wait_time}s ...")
                 sleep(wait_time)
