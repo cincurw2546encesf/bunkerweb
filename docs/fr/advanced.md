@@ -3066,10 +3066,11 @@ Le plugin de surveillance vous permet de collecter et de récupérer des métriq
 
 **Liste des paramètres**
 
-| Réglage                        | Défaut | Contexte | Multiple | Description                                                        |
-| ------------------------------ | ------ | -------- | -------- | ------------------------------------------------------------------ |
-| `USE_MONITORING`               | `yes`  | global   | Non      | Activez la surveillance de BunkerWeb.                              |
-| `MONITORING_METRICS_DICT_SIZE` | `10M`  | global   | Non      | Taille du dictionnaire pour stocker les métriques de surveillance. |
+| Réglage                        | Défaut | Contexte | Multiple | Description                                                                                         |
+| ------------------------------ | ------ | -------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `USE_MONITORING`               | `yes`  | global   | Non      | Activez la surveillance de BunkerWeb.                                                               |
+| `MONITORING_METRICS_DICT_SIZE` | `10M`  | global   | Non      | Taille du dictionnaire pour stocker les métriques de surveillance.                                  |
+| `MONITORING_IGNORE_URLS`       |        | global   | Non      | Liste de chemins d'URL séparés par des espaces à exclure de la surveillance (ex. `/health /ready`). |
 
 ### Prometheus exporter <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
 
@@ -3610,38 +3611,103 @@ Personnalisez le comportement du plug-in à l'aide des paramètres suivants :
 - **Révision du code d'état :** mettez régulièrement à jour `ANTIDDOS_STATUS_CODES` pour capturer les comportements suspects nouveaux ou en évolution.
 - **Surveillance :** analysez régulièrement les journaux et les métriques pour affiner les paramètres et améliorer la protection globale.
 
-## Gestionnaire d'utilisateurs <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## User Manager <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+
+STREAM support :x:
 
 <p align="center">
-    <iframe style="display: block;" width="560" height="315" data-src="https://www.youtube-nocookie.com/embed/EIohiUf9Fg4" title="Gestionnaire d'utilisateurs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe style="display: block;" width="560" height="315" data-src="https://www.youtube-nocookie.com/embed/EIohiUf9Fg4" title="User Manager" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </p>
 
-Le plug-in de gestion des utilisateurs offre une interface robuste pour l'administration des comptes d'utilisateurs au sein de votre système.
+Le plugin **User Manager** offre une interface robuste pour l'administration des comptes utilisateurs au sein de votre système.
 
-Avec ce plugin, les administrateurs peuvent sans effort créer, mettre à jour et désactiver des comptes utilisateurs, gérer les rôles des utilisateurs, basculer l'authentification à deux facteurs (2FA) et afficher des informations détaillées sur les utilisateurs telles que les horodatages de la dernière connexion et les statuts des comptes (actif ou inactif). Conçu dans un souci de sécurité et de facilité d'utilisation, ce plug-in simplifie les tâches de gestion des utilisateurs tout en garantissant la conformité et l'auditabilité.
+Avec ce plugin, les administrateurs peuvent aisément créer, mettre à jour et désactiver des comptes utilisateurs, gérer les rôles, basculer l'authentification à deux facteurs (2FA) et consulter des informations détaillées sur les utilisateurs telles que les horodatages de la dernière connexion et les statuts des comptes (actif ou inactif). Conçu dans un souci de sécurité et de facilité d'utilisation, ce plugin simplifie les tâches courantes de gestion des utilisateurs tout en garantissant la conformité et l'auditabilité.
 
 ### Fonctionnalités
 
-- **Opérations de compte d'utilisateur :** importez au format CSV/XSLX, créez, modifiez et supprimez des comptes d'utilisateur en toute simplicité.
-- **Contrôle d'accès basé sur les rôles :** Attribuez et modifiez les rôles d'utilisateur pour gérer les autorisations et les niveaux d'accès.
+- **Opérations de compte utilisateur :** importez au format CSV/XLSX, créez, modifiez et supprimez des comptes utilisateur en toute simplicité.
+- **Contrôle d'accès basé sur les rôles :** attribuez et modifiez les rôles d'utilisateur pour gérer les autorisations et les niveaux d'accès.
 - **Gestion 2FA :** désactivez l'authentification à deux facteurs en fonction des décisions administratives.
 - **Informations complètes sur les utilisateurs :** surveillez les données clés des utilisateurs, notamment les heures de dernière connexion, les dates de création de compte et le statut actif/inactif.
 - **Journalisation des audits :** conservez une piste d'audit pour toutes les actions de gestion des utilisateurs afin d'améliorer la sécurité et la conformité.
 
+### Configuration
+
+| Paramètre           | Défaut | Contexte | Multiple | Description                                                           |
+| ------------------- | ------ | -------- | -------- | --------------------------------------------------------------------- |
+| `USERS_REQUIRE_2FA` | `no`   | global   | non      | Exiger l'authentification à deux facteurs pour tous les utilisateurs. |
+
 <figure markdown>
   ![Vue d'ensemble](assets/img/user-manager.png){ align=center }
-  <figcaption>Page Gestionnaire d'utilisateurs</figcaption>
+  <figcaption>Page User Manager</figcaption>
 </figure>
 
 <figure markdown>
   ![Créer un formulaire utilisateur](assets/img/user-manager-create.png){ align=center }
-  <figcaption>Gestionnaire d'utilisateurs - Créer un formulaire d'utilisateur</figcaption>
+  <figcaption>User Manager - Formulaire de création d'utilisateur</figcaption>
 </figure>
 
 <figure markdown>
   ![Page d'activités](assets/img/user-manager-activities.png){ align=center }
-  <figcaption>Gestionnaire d'utilisateurs - Page Activités</figcaption>
+  <figcaption>User Manager - Page Activités</figcaption>
 </figure>
+
+## UI Single Sign-On <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+
+STREAM support :x:
+
+Le plugin **UI Single Sign-On** permet l'authentification SSO pour l'interface web de BunkerWeb en lisant les en-têtes définis par un proxy d'authentification externe (tel qu'Authentik, Authelia, Keycloak ou Traefik Forward Auth) placé devant l'interface web.
+
+Au lieu de gérer des identifiants distincts pour BunkerWeb, les administrateurs peuvent déléguer l'authentification à un fournisseur d'identité existant. Le proxy d'authentification gère la connexion des utilisateurs et injecte des en-têtes d'identité avant de transmettre les requêtes à l'interface web de BunkerWeb.
+
+!!! danger "Risque d'usurpation d'en-têtes"
+    Les en-têtes SSO peuvent être facilement falsifiés par n'importe quel client. Vous **devez** restreindre `UI_SSO_TRUSTED_IPS` aux adresses IP de votre proxy d'authentification. Si ce paramètre est mal configuré, n'importe quel client peut envoyer de faux en-têtes et obtenir un accès non autorisé, y compris un accès administrateur.
+
+    La valeur par défaut `127.0.0.1,::1` ne fait confiance qu'au localhost. Dans les déploiements **Docker, Swarm ou Kubernetes**, le proxy d'authentification s'exécute dans un conteneur séparé avec sa propre adresse IP. Définissez `UI_SSO_TRUSTED_IPS` sur l'adresse IP ou le CIDR réel du conteneur du proxy d'authentification (par ex. `10.20.30.5` ou `172.18.0.0/16`). Ne le définissez jamais à `0.0.0.0/0`.
+
+### Fonctionnalités
+
+- **Authentification par en-têtes :** lit le nom d'utilisateur, l'e-mail, le nom d'affichage et les groupes depuis les en-têtes du proxy d'authentification.
+- **Correspondance groupe-rôle :** associez les groupes de l'IdP aux rôles BunkerWeb (admin, writer, reader).
+- **Provisionnement automatique des utilisateurs :** crée des comptes locaux lors de la première connexion SSO avec un rôle par défaut configurable.
+- **Liaison de comptes :** associe les utilisateurs SSO entrants aux comptes locaux existants par nom d'utilisateur ou e-mail.
+- **Restriction par IP de confiance :** n'accepte les en-têtes SSO que depuis les adresses IP ou plages CIDR configurées.
+- **Repli vers la connexion classique :** permet optionnellement la connexion par mot de passe lorsque les en-têtes SSO sont absents.
+- **Redirection de déconnexion :** redirige les utilisateurs vers l'endpoint de déconnexion du fournisseur SSO après la déconnexion locale.
+
+### Configuration
+
+| Paramètre                     | Défaut              | Contexte | Multiple | Description                                                                                                            |
+| ----------------------------- | ------------------- | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `USE_UI_SSO`                  | `no`                | global   | non      | Activer ou désactiver l'authentification UI Single Sign-On pour l'interface web.                                       |
+| `UI_SSO_HEADER_USERNAME`      | `X-User`            | global   | non      | En-tête HTTP contenant le nom d'utilisateur authentifié.                                                               |
+| `UI_SSO_HEADER_EMAIL`         | `X-Email`           | global   | non      | En-tête HTTP contenant l'adresse e-mail de l'utilisateur.                                                              |
+| `UI_SSO_HEADER_GROUPS`        | `X-Groups`          | global   | non      | En-tête HTTP contenant les groupes de l'utilisateur (séparés par des virgules ou des espaces).                         |
+| `UI_SSO_HEADER_NAME`          | `X-Name`            | global   | non      | En-tête HTTP contenant le nom d'affichage de l'utilisateur.                                                            |
+| `UI_SSO_TRUSTED_IPS`          | `127.0.0.1,::1`     | global   | non      | Liste d'adresses IP ou de plages CIDR de confiance autorisées à envoyer les en-têtes SSO, séparées par des virgules.   |
+| `UI_SSO_AUTO_CREATE_USERS`    | `yes`               | global   | non      | Créer automatiquement de nouveaux utilisateurs lors de leur première authentification SSO.                             |
+| `UI_SSO_DEFAULT_ROLE`         | `reader`            | global   | non      | Rôle par défaut attribué aux nouveaux utilisateurs SSO lorsqu'aucune correspondance de groupe n'est trouvée.           |
+| `UI_SSO_GROUP_ADMIN`          |                     | global   | non      | Nom du groupe accordant le rôle admin (priorité la plus haute).                                                        |
+| `UI_SSO_GROUP_WRITER`         |                     | global   | non      | Nom du groupe accordant le rôle writer.                                                                                |
+| `UI_SSO_GROUP_READER`         |                     | global   | non      | Nom du groupe accordant le rôle reader.                                                                                |
+| `UI_SSO_FALLBACK_TO_LOGIN`    | `yes`               | global   | non      | Permettre aux utilisateurs de se rabattre sur la connexion classique lorsque les en-têtes SSO sont absents.            |
+| `UI_SSO_UPDATE_USER_ON_LOGIN` | `yes`               | global   | non      | Mettre à jour les informations utilisateur (e-mail, rôle) depuis les en-têtes SSO à chaque connexion.                  |
+| `UI_SSO_ACCOUNT_LINKING`      | `username_or_email` | global   | non      | Mode de correspondance des utilisateurs SSO entrants avec les comptes locaux (`username_only` ou `username_or_email`). |
+| `UI_SSO_LOGOUT_REDIRECT_URL`  |                     | global   | non      | URL de redirection après déconnexion (par ex. endpoint de déconnexion du fournisseur SSO).                             |
+
+### Démarrage rapide
+
+1. Placez un proxy d'authentification (Authentik, Authelia, Keycloak, etc.) devant l'interface web de BunkerWeb.
+2. Activez le plugin : `USE_UI_SSO=yes`.
+3. Vérifiez que le proxy définit les en-têtes attendus (`X-User`, `X-Email`, `X-Groups`, `X-Name`) -- ou ajustez les noms d'en-têtes via les paramètres `UI_SSO_HEADER_*`.
+4. Restreignez les sources de confiance : définissez `UI_SSO_TRUSTED_IPS` sur les adresses IP du proxy d'authentification.
+5. Associez les groupes aux rôles : définissez `UI_SSO_GROUP_ADMIN`, `UI_SSO_GROUP_WRITER` et `UI_SSO_GROUP_READER` pour correspondre aux noms de groupes de votre IdP.
+
+### Conseils d'utilisation
+
+- Définissez `UI_SSO_FALLBACK_TO_LOGIN=no` en production pour imposer un accès exclusivement SSO. Lorsque la valeur est laissée à `yes` (par défaut), les utilisateurs peuvent contourner le SSO et se connecter avec des identifiants locaux, ignorant ainsi les politiques MFA ou de session imposées par votre fournisseur d'identité.
+- Conservez `UI_SSO_UPDATE_USER_ON_LOGIN` à sa valeur par défaut (`yes`) pour garantir la synchronisation des rôles avec les modifications de groupes de l'IdP.
+- Avec `UI_SSO_ACCOUNT_LINKING=username_or_email`, les comptes locaux existants sont automatiquement liés lors de la première connexion SSO si le nom d'utilisateur ou l'e-mail correspond. Utilisez `username_only` si votre IdP permet aux utilisateurs de définir des adresses e-mail arbitraires, afin de prévenir la prise de contrôle de comptes par usurpation d'e-mail.
 
 ## Easy Resolve <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
 
@@ -3664,7 +3730,7 @@ Le plugin Easy Resolve vous permet de remédier rapidement aux faux positifs et 
   <figcaption>Page Rapports - avec Easy Resolve</figcaption>
 </figure>
 
-## Load Balancer <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## Load Balancer <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
 
 <p align="center">
     <iframe style="display: block;" width="560" height="315" data-src="https://www.youtube-nocookie.com/embed/cOVp0rAt5nw?si=iVhDio8o8S4F_uag" title="Load Balancer" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -3726,7 +3792,7 @@ Le plugin Load Balancer transforme BunkerWeb en un directeur de trafic avec gard
 - Activez `LOADBALANCER_UPSTREAM_RESOLVE` lorsque vous pointez vers des hostnames qui peuvent changer via DNS.
 - Réglez les valeurs keepalive pour refléter la capacité backend et les objectifs de réutilisation des connexions.
 
-## Custom Pages <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## Custom Pages <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
 
 Le plugin Custom Pages vous permet de remplacer les pages intégrées de BunkerWeb (pages d'erreur, page du serveur par défaut et pages de défi antibot) par vos propres modèles HTML ou Lua personnalisés. Cela vous permet de maintenir une image de marque cohérente sur toutes les pages destinées aux utilisateurs servies par BunkerWeb.
 
@@ -4323,6 +4389,32 @@ sequenceDiagram
 - `OPENIDC_ACCEPT_UNSUPPORTED_ALG` (défaut : `no`) : accepter des jetons signés avec des algorithmes non supportés (non recommandé).
 - `OPENIDC_FORCE_REAUTHORIZE` (défaut : `no`) : forcer la ré-autorisation à chaque requête (debug uniquement).
 
+#### Contrôle d'accès par claims (ACL)
+
+Les claims sont des paires clé-valeur du jeton OIDC qui décrivent l'utilisateur (par ex. `email`, `groups`, `sub`). La fonctionnalité ACL vous permet de restreindre l'accès en fonction de valeurs spécifiques de claims.
+
+| Paramètre                 | Défaut | Contexte  | Multiple | Description                                                                                                                                                                   |
+| ------------------------- | ------ | --------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENIDC_USE_ACL`         | `no`   | multisite | non      | Activer le contrôle d'accès par claims après l'authentification OIDC. Seuls les utilisateurs dont les claims correspondent aux règles configurées se voient accorder l'accès. |
+| `OPENIDC_ACL_MATCH_MODE`  | `all`  | multisite | non      | Mode d'évaluation des règles ACL multiples. `all` = toutes les règles doivent passer (ET). `any` = au moins une règle doit passer (OU).                                       |
+| `OPENIDC_ACL_DENIED_URL`  |        | multisite | non      | URL de redirection en cas de refus par l'ACL. Si vide, renvoie une réponse 403 Forbidden.                                                                                     |
+| `OPENIDC_ACL_CLAIM`       |        | multisite | oui      | Nom du claim OIDC à vérifier (par ex. `groups`, `email`, `sub`). Associé à `OPENIDC_ACL_CLAIM_VALUE`.                                                                         |
+| `OPENIDC_ACL_CLAIM_VALUE` |        | multisite | oui      | Valeur attendue pour le claim. Pour les claims de type tableau (par ex. `groups`), vérifie l'appartenance. Pour les claims de type chaîne, vérifie l'égalité stricte.         |
+
+!!! tip "Règles ACL multiples"
+    Utilisez des suffixes numériques pour définir plusieurs règles. Chaque paire `OPENIDC_ACL_CLAIM` / `OPENIDC_ACL_CLAIM_VALUE` constitue une règle :
+
+    ```yaml
+    OPENIDC_USE_ACL: "yes"
+    OPENIDC_ACL_MATCH_MODE: "any"
+    OPENIDC_ACL_CLAIM: "groups"
+    OPENIDC_ACL_CLAIM_VALUE: "engineering"
+    OPENIDC_ACL_CLAIM_1: "email"
+    OPENIDC_ACL_CLAIM_VALUE_1: "admin@example.com"
+    ```
+
+    Avec `OPENIDC_ACL_MATCH_MODE=any`, l'accès est accordé si l'utilisateur fait partie du groupe `engineering` **ou** possède l'e-mail `admin@example.com`. Avec `all`, les deux conditions doivent être remplies.
+
 #### Cycle de vie session/jetons
 
 - `OPENIDC_REFRESH_SESSION_INTERVAL` : intervalle (secondes) pour ré-authentifier/rafraîchir silencieusement la session (vide = désactivé).
@@ -4431,7 +4523,111 @@ Options fréquentes de durcissement / tuning :
 - **Header utilisateur absent** : vérifiez que le claim de `OPENIDC_USER_HEADER_CLAIM` existe dans l'ID token/userinfo.
 - **Déploiements multi-instance** : activez `USE_REDIS=yes` et configurez `REDIS_HOST` (ou Sentinel) pour partager les sessions.
 
-## OpenAPI Validator <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## LDAP SSO <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+
+STREAM support :x:
+
+Le plugin **LDAP SSO** ajoute le Single Sign-On basé sur LDAP à vos services BunkerWeb. Il fournit un formulaire de connexion, authentifie les utilisateurs auprès d'un annuaire LDAP, crée une session et transmet optionnellement le nom d'utilisateur authentifié à votre upstream via un en-tête configurable.
+
+Le plugin prend en charge deux modes d'authentification :
+
+- **Mode recherche puis liaison (search-then-bind)** (recommandé, aussi appelé "mode recherche enterprise") : un compte de service recherche l'utilisateur dans l'annuaire, puis se lie au DN trouvé pour vérifier le mot de passe. Activé lorsque `LDAP_USER_SEARCH_BASE_DN` est défini.
+- **Mode liaison directe (direct bind)** : construit le DN de l'utilisateur à partir d'un modèle (`LDAP_USER_DN_TEMPLATE`) et effectue une liaison directe. Utilisé en repli lorsque le mode recherche n'est pas configuré.
+
+### Fonctionnalités
+
+- **LDAP/LDAPS/STARTTLS :** connexion en LDAP non chiffré, LDAPS (TLS dès le départ) ou montée en STARTTLS.
+- **Mode recherche puis liaison :** un compte de service effectue la découverte d'utilisateurs avec base de recherche, filtre, portée et limites de taille/temps configurables.
+- **Repli en liaison directe :** authentification basée sur un modèle de DN lorsque le mode recherche n'est pas nécessaire.
+- **Filtre d'autorisation :** filtre LDAP supplémentaire optionnel pour restreindre l'accès au-delà de l'authentification de base.
+- **Pool de connexions :** keepalive avec taille de pool et timeout configurables pour réduire les allers-retours LDAP.
+- **Gestion des sessions :** TTL configurable avec nettoyage automatique des sessions.
+- **Transmission du header utilisateur :** transmet le nom d'utilisateur authentifié aux upstreams via un en-tête configurable (défaut : `X-User`).
+- **Chemins de connexion/déconnexion :** endpoints dédiés pour l'authentification et la terminaison de session.
+
+!!! danger "Les identifiants sont transmis en clair par défaut"
+    Avec les paramètres par défaut (`LDAP_LDAPS=no`, `LDAP_STARTTLS=no`), les mots de passe des utilisateurs sont transmis en clair au serveur LDAP. **Activez toujours `LDAP_LDAPS=yes` (avec `LDAP_PORT=636`) ou `LDAP_STARTTLS=yes` en production.** Conservez `LDAP_SSL_VERIFY=yes` pour prévenir les attaques par dégradation TLS.
+
+### Configuration
+
+**Paramètres principaux**
+
+| Paramètre         | Défaut  | Contexte  | Multiple | Description                                                    |
+| ----------------- | ------- | --------- | -------- | -------------------------------------------------------------- |
+| `USE_LDAP`        | `no`    | multisite | non      | Activer ou désactiver l'authentification LDAP SSO.             |
+| `LDAP_HOST`       |         | multisite | non      | Nom d'hôte ou adresse IP du serveur LDAP.                      |
+| `LDAP_PORT`       | `389`   | multisite | non      | Port du serveur LDAP (389 pour LDAP/STARTTLS, 636 pour LDAPS). |
+| `LDAP_LDAPS`      | `no`    | multisite | non      | Utiliser LDAPS (TLS dès le début de la connexion).             |
+| `LDAP_STARTTLS`   | `no`    | multisite | non      | Utiliser la montée en STARTTLS sur la connexion LDAP.          |
+| `LDAP_SSL_VERIFY` | `yes`   | multisite | non      | Vérifier le certificat TLS du serveur.                         |
+| `LDAP_TIMEOUT`    | `10000` | multisite | non      | Timeout du socket LDAP en millisecondes.                       |
+
+**Pool de connexions**
+
+| Paramètre                  | Défaut  | Contexte  | Multiple | Description                                        |
+| -------------------------- | ------- | --------- | -------- | -------------------------------------------------- |
+| `LDAP_KEEPALIVE_TIMEOUT`   | `60000` | multisite | non      | Timeout du keepalive LDAP en millisecondes.        |
+| `LDAP_KEEPALIVE_POOL_SIZE` | `10`    | multisite | non      | Taille du pool de connexions keepalive LDAP.       |
+| `LDAP_KEEPALIVE_POOL_NAME` |         | multisite | non      | Nom personnalisé optionnel du pool keepalive LDAP. |
+
+**Mode recherche enterprise**
+
+| Paramètre                         | Défaut                                                                                                                  | Contexte  | Multiple | Description                                                                                                                                                                                                                             |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LDAP_BIND_DN`                    |                                                                                                                         | multisite | non      | DN du compte de service utilisé pour effectuer les recherches d'utilisateurs LDAP.                                                                                                                                                      |
+| `LDAP_BIND_PASSWORD`              |                                                                                                                         | multisite | non      | Mot de passe du compte de service LDAP (bind DN).                                                                                                                                                                                       |
+| `LDAP_USER_SEARCH_BASE_DN`        |                                                                                                                         | multisite | non      | DN de base pour la recherche d'utilisateurs (active le mode recherche enterprise lorsque défini).                                                                                                                                       |
+| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | non      | Modèle de filtre de recherche LDAP. Utilisez le placeholder `{username}`.                                                                                                                                                               |
+| `LDAP_AUTHZ_FILTER`               |                                                                                                                         | multisite | non      | Filtre d'autorisation LDAP supplémentaire optionnel (combiné en ET avec le filtre de recherche).                                                                                                                                        |
+| `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                                                                                               | multisite | non      | Portée de la recherche LDAP : `base`, `onelevel` ou `subtree`.                                                                                                                                                                          |
+| `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                                                                                                | multisite | non      | Mode de déréférencement des alias LDAP : `always`, `never`, `in_searching` ou `finding_base`.                                                                                                                                           |
+| `LDAP_USER_SEARCH_SIZE_LIMIT`     | `10`                                                                                                                    | multisite | non      | Nombre maximum d'entrées LDAP retournées par la recherche d'utilisateurs.                                                                                                                                                               |
+| `LDAP_USER_SEARCH_TIME_LIMIT`     | `10`                                                                                                                    | multisite | non      | Durée maximale de la recherche d'utilisateurs LDAP en secondes.                                                                                                                                                                         |
+| `LDAP_USER_SEARCH_ATTRIBUTES`     | `dn`                                                                                                                    | multisite | non      | Attributs demandés lors de la recherche d'utilisateurs (séparés par des espaces).                                                                                                                                                       |
+| `LDAP_USER_SEARCH_DN_FIELD`       | `object_name`                                                                                                           | multisite | non      | Nom du champ dans la réponse de recherche pour extraire le DN de l'utilisateur. La valeur par défaut `object_name` est le champ DN retourné par la bibliothèque LDAP sous-jacente ; en général, il n'est pas nécessaire de le modifier. |
+| `LDAP_USER_SEARCH_REQUIRE_UNIQUE` | `yes`                                                                                                                   | multisite | non      | Exiger exactement un seul résultat de recherche avant d'authentifier l'utilisateur.                                                                                                                                                     |
+
+**Mode liaison directe**
+
+| Paramètre               | Défaut                                       | Contexte  | Multiple | Description                                                                                 |
+| ----------------------- | -------------------------------------------- | --------- | -------- | ------------------------------------------------------------------------------------------- |
+| `LDAP_USER_DN_TEMPLATE` | `uid={username},ou=people,dc=example,dc=com` | multisite | non      | Modèle de DN utilisateur pour la liaison directe. Doit inclure `{username}` lorsque défini. |
+
+**Session et chemins**
+
+| Paramètre                    | Défaut               | Contexte  | Multiple | Description                                                                                           |
+| ---------------------------- | -------------------- | --------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| `LDAP_USERNAME_REGEX`        | `^[A-Za-z0-9@._-]+$` | multisite | non      | Regex PCRE utilisée pour valider les noms d'utilisateur soumis.                                       |
+| `LDAP_LOGIN_PATH`            | `/ldap/login`        | multisite | non      | Chemin de la page de connexion exposé par le plugin LDAP.                                             |
+| `LDAP_LOGOUT_PATH`           | `/ldap/logout`       | multisite | non      | Chemin de déconnexion exposé par le plugin LDAP.                                                      |
+| `LDAP_SESSION_TTL`           | `3600`               | multisite | non      | Durée de validité de la session LDAP en secondes.                                                     |
+| `LDAP_REALM`                 | `LDAP SSO`           | multisite | non      | Realm d'authentification affiché sur le formulaire de connexion LDAP.                                 |
+| `LDAP_USER_HEADER`           | `X-User`             | multisite | non      | En-tête pour transmettre le nom d'utilisateur authentifié à l'upstream (vide pour désactiver).        |
+| `LDAP_REDIRECT_AFTER_LOGIN`  | `/`                  | multisite | non      | Chemin relatif de repli après une connexion réussie lorsqu'aucune cible de redirection n'est fournie. |
+| `LDAP_REDIRECT_AFTER_LOGOUT` | `/`                  | multisite | non      | Chemin relatif vers lequel rediriger les utilisateurs après la déconnexion.                           |
+
+### Démarrage rapide
+
+1. Définissez les valeurs minimales par service protégé :
+    - `USE_LDAP=yes`
+    - `LDAP_HOST=ldap.example.com`
+2. Pour le mode recherche enterprise (recommandé), définissez également :
+    - `LDAP_BIND_DN=cn=readonly,dc=example,dc=com`
+    - `LDAP_BIND_PASSWORD=secret` (utilisez les [secrets Docker](integrations.md#docker) en production)
+    - `LDAP_USER_SEARCH_BASE_DN=ou=people,dc=example,dc=com`
+3. Pour le mode liaison directe, ajustez `LDAP_USER_DN_TEMPLATE` pour correspondre à la structure de votre annuaire.
+4. Optionnellement, restreignez l'accès avec `LDAP_AUTHZ_FILTER` (par ex. `(memberOf=cn=allowed,ou=groups,dc=example,dc=com)`).
+
+### Conseils d'utilisation
+
+- Privilégiez le mode recherche puis liaison par rapport à la liaison directe : il prend en charge des recherches flexibles sur plusieurs attributs (uid, mail, sAMAccountName, UPN).
+- Utilisez LDAPS (`LDAP_LDAPS=yes`) ou STARTTLS (`LDAP_STARTTLS=yes`) en production pour chiffrer les identifiants en transit.
+- Lorsque vous activez LDAPS (`LDAP_LDAPS=yes`), pensez également à définir `LDAP_PORT=636`. Le port ne change pas automatiquement.
+- Conservez `LDAP_SSL_VERIFY=yes` sauf pour des tests avec des certificats auto-signés.
+- Ajustez `LDAP_KEEPALIVE_POOL_SIZE` en fonction du volume d'utilisateurs simultanés attendu afin de réduire la surcharge de connexions LDAP.
+- Définissez `LDAP_USER_HEADER` sur une valeur vide pour désactiver la transmission de l'identité aux upstreams.
+
+## OpenAPI Validator <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
 
 <p align="center">
     <iframe style="display: block;" width="560" height="315" data-src="https://www.youtube-nocookie.com/embed/3oZOO1XdSlc" title="OpenAPI Validator" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -4509,24 +4705,24 @@ Le plugin Cache PRO active la mise en cache des réponses au niveau du reverse p
 
 **Liste des paramètres**
 
-| Réglage                     | Défaut                            | Contexte  | Multiple | Description                                                              |
-| --------------------------- | --------------------------------- | --------- | -------- | ------------------------------------------------------------------------ |
-| `CACHE_PATH`                |                                   | global    | oui      | Chemin et paramètres d'un cache.                                         |
+| Réglage                     | Défaut                            | Contexte  | Multiple | Description                                                                |
+| --------------------------- | --------------------------------- | --------- | -------- | -------------------------------------------------------------------------- |
+| `CACHE_PATH`                |                                   | global    | oui      | Chemin et paramètres d'un cache.                                           |
 | `CACHE_ZONE`                |                                   | multisite | non      | Nom de la zone de cache à utiliser (définie dans un réglage `CACHE_PATH`). |
-| `CACHE_HEADER`              | `X-Cache`                         | multisite | non      | Ajoute un en-tête exposant l'état du cache.                              |
-| `CACHE_BACKGROUND_UPDATE`   | `no`                              | multisite | non      | Active ou désactive la mise à jour du cache en arrière-plan.             |
-| `CACHE_BYPASS`              |                                   | multisite | non      | Liste de variables déterminant si le cache doit être contourné.          |
-| `CACHE_NO_CACHE`            | `$http_pragma$http_authorization` | multisite | non      | Désactive le stockage en cache si des variables sont définies.           |
-| `CACHE_KEY`                 | `$scheme$proxy_host$request_uri`  | multisite | non      | Clé utilisée pour identifier les éléments mis en cache.                  |
-| `CACHE_CONVERT_HEAD_TO_GET` | `yes`                             | multisite | non      | Convertit les requêtes HEAD en GET lors de la mise en cache.             |
-| `CACHE_LOCK`                | `no`                              | multisite | non      | Verrouille les requêtes concurrentes lors du remplissage du cache.       |
+| `CACHE_HEADER`              | `X-Cache`                         | multisite | non      | Ajoute un en-tête exposant l'état du cache.                                |
+| `CACHE_BACKGROUND_UPDATE`   | `no`                              | multisite | non      | Active ou désactive la mise à jour du cache en arrière-plan.               |
+| `CACHE_BYPASS`              |                                   | multisite | non      | Liste de variables déterminant si le cache doit être contourné.            |
+| `CACHE_NO_CACHE`            | `$http_pragma$http_authorization` | multisite | non      | Désactive le stockage en cache si des variables sont définies.             |
+| `CACHE_KEY`                 | `$scheme$proxy_host$request_uri`  | multisite | non      | Clé utilisée pour identifier les éléments mis en cache.                    |
+| `CACHE_CONVERT_HEAD_TO_GET` | `yes`                             | multisite | non      | Convertit les requêtes HEAD en GET lors de la mise en cache.               |
+| `CACHE_LOCK`                | `no`                              | multisite | non      | Verrouille les requêtes concurrentes lors du remplissage du cache.         |
 | `CACHE_LOCK_AGE`            | `5s`                              | multisite | non      | Envoie la requête à l'upstream si le cache est verrouillé depuis ce délai. |
-| `CACHE_LOCK_TIMEOUT`        | `5s`                              | multisite | non      | Envoie la requête à l'upstream si le verrou persiste pendant ce délai.   |
-| `CACHE_METHODS`             | `GET HEAD`                        | multisite | non      | Met en cache uniquement les réponses pour ces méthodes HTTP.             |
-| `CACHE_MIN_USES`            | `1`                               | multisite | non      | Nombre de requêtes avant de stocker la réponse en cache.                 |
-| `CACHE_REVALIDATE`          | `no`                              | multisite | non      | Revalide les éléments expirés via des requêtes conditionnelles.          |
-| `CACHE_USE_STALE`           | `off`                             | multisite | non      | Définit dans quels cas servir un contenu périmé.                         |
-| `CACHE_VALID`               | `10m`                             | multisite | oui      | Définit la durée de cache avec code(s) HTTP optionnel(s).                |
+| `CACHE_LOCK_TIMEOUT`        | `5s`                              | multisite | non      | Envoie la requête à l'upstream si le verrou persiste pendant ce délai.     |
+| `CACHE_METHODS`             | `GET HEAD`                        | multisite | non      | Met en cache uniquement les réponses pour ces méthodes HTTP.               |
+| `CACHE_MIN_USES`            | `1`                               | multisite | non      | Nombre de requêtes avant de stocker la réponse en cache.                   |
+| `CACHE_REVALIDATE`          | `no`                              | multisite | non      | Revalide les éléments expirés via des requêtes conditionnelles.            |
+| `CACHE_USE_STALE`           | `off`                             | multisite | non      | Définit dans quels cas servir un contenu périmé.                           |
+| `CACHE_VALID`               | `10m`                             | multisite | oui      | Définit la durée de cache avec code(s) HTTP optionnel(s).                  |
 
 **Exemple d'utilisation**
 
@@ -4564,3 +4760,179 @@ Le plugin Cache PRO active la mise en cache des réponses au niveau du reverse p
     - Utilisez des suffixes numériques pour les valeurs répétées, par exemple `CACHE_PATH_1`, `CACHE_PATH_2`, `CACHE_VALID_1` et `CACHE_VALID_2`.
     - Gardez le trafic authentifié ou spécifique à un utilisateur hors cache, sauf si votre `CACHE_KEY` varie explicitement selon cet état.
     - `CACHE_LOCK=yes` et `CACHE_BACKGROUND_UPDATE=yes` permettent de réduire les rafales de requêtes vers l'origine.
+
+## ACME <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+
+STREAM support :white_check_mark:
+
+Le plugin **ACME** fournit une gestion avancée des certificats via le protocole ACME avec prise en charge d'autorités de certification personnalisées (Step CA, Vault PKI, Sectigo, Google Trust Services, etc.). Il complète le plugin Let's Encrypt intégré en ajoutant la prise en charge de CA personnalisées, les challenges DNS-01 et TLS-ALPN-01, les certificats wildcard, la surveillance des certificats avec alertes d'expiration, la surveillance des logs Certificate Transparency et un OCSP stapling amélioré.
+
+!!! tip "Quand utiliser ACME ou le plugin Let's Encrypt intégré"
+    Si vous avez uniquement besoin de certificats Let's Encrypt avec des challenges HTTP-01, le plugin Let's Encrypt intégré (`AUTO_LETS_ENCRYPT=yes`) est suffisant. Utilisez le plugin ACME lorsque vous avez besoin de CA personnalisées, de challenges DNS-01 ou TLS-ALPN-01, de certificats wildcard, ou de surveillance des certificats avec alertes.
+
+### Fonctionnalités
+
+- **Prise en charge de CA personnalisées :** utilisez n'importe quelle autorité de certification compatible ACME, pas uniquement Let's Encrypt.
+- **Plusieurs types de challenges :** HTTP-01, DNS-01 (requis pour les wildcards) et TLS-ALPN-01.
+- **Intégration de fournisseurs DNS :** prise en charge intégrée de Cloudflare, Route53, DigitalOcean, OVH et d'autres.
+- **External Account Binding (EAB) :** pour les CA nécessitant des clés pré-enregistrées (Sectigo, Google Trust Services).
+- **Certificats wildcard :** via le challenge DNS-01.
+- **Surveillance des certificats :** suit l'expiration de tous les certificats gérés (y compris le Let's Encrypt OSS) avec des seuils d'alerte configurables.
+- **Alertes d'expiration :** envoi d'alertes par webhook ou e-mail lorsque les certificats approchent de leur expiration.
+- **Surveillance Certificate Transparency :** interroge crt.sh pour détecter l'émission non autorisée de certificats pour vos domaines.
+- **OCSP stapling amélioré :** récupération et mise en cache proactives des réponses OCSP.
+- **Types de clés configurables :** ECDSA (256/384) ou RSA (2048/4096).
+
+### Prérequis
+
+#### Le challenge HTTP-01 nécessite `LETS_ENCRYPT_PASSTHROUGH=yes`
+
+Lorsque vous utilisez `ACME_CHALLENGE=http` (la valeur par défaut), vous **devez** définir `LETS_ENCRYPT_PASSTHROUGH=yes` sur le même service.
+
+Le plugin Let's Encrypt intégré de BunkerWeb inclut à la fois un bloc location NGINX et un gestionnaire d'accès Lua pour `/.well-known/acme-challenge/`. Comme le bloc location NGINX correspond avant que le code des plugins Lua ne s'exécute, il intercepte les requêtes de challenge avant que le plugin ACME PRO ne puisse les servir. Définir `LETS_ENCRYPT_PASSTHROUGH=yes` désactive les deux mécanismes afin que le plugin ACME PRO puisse gérer correctement les tokens du challenge HTTP-01.
+
+Cela n'est **nécessaire que pour HTTP-01**. Les challenges DNS-01 et TLS-ALPN-01 ne sont pas concernés.
+
+#### Ordre d'exécution des plugins
+
+Le plugin ACME se réordonne automatiquement pour s'exécuter en premier dans la phase NGINX `ssl_certificate`, garantissant que les certificats de challenge TLS-ALPN-01 sont servis avant que d'autres plugins fournisseurs de certificats (selfsigned, letsencrypt, customcert) ne court-circuitent la boucle.
+
+Lorsque vous utilisez ACME aux côtés d'autres plugins PRO nécessitant un TLS valide (par ex. OpenID Connect, UI SSO), il est recommandé d'ajouter explicitement `acme` juste après `customcert` dans les paramètres d'ordre des phases concernées :
+
+```env
+PLUGINS_ORDER_SSL_CERTIFICATE=customcert acme letsencrypt selfsigned
+PLUGINS_ORDER_INIT=sessions whitelist blacklist greylist bunkernet limit authbasic securitytxt robotstxt crowdsec dnsbl headers customcert acme letsencrypt selfsigned
+```
+
+Les plugins externes/PRO non listés dans les paramètres `PLUGINS_ORDER_*` sont ajoutés par ordre alphabétique après les plugins principaux explicitement ordonnés.
+
+!!! warning "N'activez pas `USE_ACME` et `AUTO_LETS_ENCRYPT` sur le même service"
+    Le plugin ACME et le plugin Let's Encrypt intégré utilisent des stockages et des chemins de challenge séparés, mais les activer tous les deux sur le même service provoquera des conflits. Utilisez l'un ou l'autre par service. En mode multisite, différents services peuvent utiliser différents plugins -- par exemple, `app1.example.com_USE_ACME=yes` et `app2.example.com_AUTO_LETS_ENCRYPT=yes`.
+
+### Configuration
+
+**Paramètres principaux ACME**
+
+| Paramètre              | Défaut  | Contexte  | Multiple | Description                                                                                    |
+| ---------------------- | ------- | --------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `USE_ACME`             | `no`    | multisite | non      | Activer la gestion des certificats ACME pour ce service.                                       |
+| `ACME_DIRECTORY_URL`   |         | multisite | non      | URL du répertoire ACME de l'autorité de certification.                                         |
+| `ACME_EMAIL`           |         | multisite | non      | Adresse e-mail pour l'enregistrement du compte ACME et les notifications.                      |
+| `ACME_CHALLENGE`       | `http`  | multisite | non      | Type de challenge ACME : `http`, `dns` ou `alpn`.                                              |
+| `ACME_KEY_TYPE`        | `ecdsa` | multisite | non      | Type de clé pour le certificat : `ecdsa` ou `rsa`.                                             |
+| `ACME_KEY_SIZE`        | `256`   | multisite | non      | Taille de la clé en bits. ECDSA : `256` ou `384`. RSA : `2048` ou `4096`.                      |
+| `ACME_RENEWAL_DAYS`    | `30`    | multisite | non      | Renouveler le certificat lorsqu'il reste moins de ce nombre de jours avant l'expiration.       |
+| `ACME_SSL_VERIFY`      | `yes`   | multisite | non      | Vérifier les certificats SSL lors de la communication avec le serveur ACME.                    |
+| `ACME_WILDCARD`        | `no`    | multisite | non      | Demander un certificat wildcard (nécessite le challenge DNS-01).                               |
+| `ACME_MUST_STAPLE`     | `no`    | multisite | non      | Demander l'extension OCSP Must-Staple dans le certificat.                                      |
+| `ACME_MAX_RETRIES`     | `3`     | multisite | non      | Nombre de tentatives de génération du certificat en cas d'échec (0 désactive les tentatives).  |
+| `ACME_PREFERRED_CHAIN` |         | multisite | non      | CN de l'émetteur de la chaîne de certificats préférée lorsque la CA fournit plusieurs chaînes. |
+| `ACME_CA_CERT_PATH`    |         | multisite | non      | Chemin du fichier du certificat racine CA pour les serveurs ACME privés.                       |
+
+**External Account Binding (EAB)**
+
+| Paramètre           | Défaut | Contexte  | Multiple | Description                                                     |
+| ------------------- | ------ | --------- | -------- | --------------------------------------------------------------- |
+| `ACME_EAB_KID`      |        | multisite | non      | Key ID de l'External Account Binding (requis par certaines CA). |
+| `ACME_EAB_HMAC_KEY` |        | multisite | non      | Clé HMAC de l'External Account Binding (encodée en base64).     |
+
+**Challenge DNS-01**
+
+| Paramètre                           | Défaut    | Contexte  | Multiple | Description                                                                                                                                                                                                                                     |
+| ----------------------------------- | --------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ACME_DNS_PROVIDER`                 |           | multisite | non      | Fournisseur DNS pour les challenges DNS-01.                                                                                                                                                                                                     |
+| `ACME_DNS_CREDENTIAL_ITEM`          |           | multisite | oui      | Identifiant du fournisseur DNS au format `key value` (par ex. `cloudflare_api_token YOUR_TOKEN`). Utilisez des suffixes numériques pour plusieurs éléments (par ex. `ACME_DNS_CREDENTIAL_ITEM_1`). Les valeurs peuvent être encodées en base64. |
+| `ACME_DNS_CREDENTIAL_DECODE_BASE64` | `yes`     | multisite | oui      | Décoder automatiquement les identifiants DNS encodés en base64. Désactivez si vos identifiants sont du texte brut qui se trouve être du base64 valide.                                                                                          |
+| `ACME_DNS_PROPAGATION`              | `default` | multisite | non      | Temps d'attente pour la propagation DNS en secondes (`default` ou un nombre).                                                                                                                                                                   |
+
+**Surveillance des certificats**
+
+| Paramètre             | Défaut      | Contexte | Multiple | Description                                                                                                               |
+| --------------------- | ----------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `USE_ACME_MONITORING` | `yes`       | global   | non      | Activer la surveillance de l'expiration des certificats pour tous les certificats gérés (y compris le Let's Encrypt OSS). |
+| `ACME_ALERT_DAYS`     | `30 14 7 1` | global   | non      | Liste de seuils en jours séparés par des espaces déclenchant des alertes d'expiration.                                    |
+
+**Alertes (webhook)**
+
+| Paramètre                 | Défaut | Contexte | Multiple | Description                                                       |
+| ------------------------- | ------ | -------- | -------- | ----------------------------------------------------------------- |
+| `USE_ACME_ALERT_WEBHOOK`  | `no`   | global   | non      | Envoyer les alertes de certificat par webhook.                    |
+| `ACME_ALERT_WEBHOOK_URLS` |        | global   | non      | Liste d'URL de webhook séparées par des espaces pour les alertes. |
+
+**Alertes (e-mail)**
+
+| Paramètre                       | Défaut | Contexte | Multiple | Description                                                    |
+| ------------------------------- | ------ | -------- | -------- | -------------------------------------------------------------- |
+| `USE_ACME_ALERT_EMAIL`          | `no`   | global   | non      | Envoyer les alertes de certificat par e-mail.                  |
+| `ACME_ALERT_SMTP_EMAILS`        |        | global   | non      | Liste de destinataires e-mail séparés par des espaces.         |
+| `ACME_ALERT_SMTP_HOST`          |        | global   | non      | Hôte SMTP pour les e-mails d'alerte de certificat.             |
+| `ACME_ALERT_SMTP_PORT`          | `465`  | global   | non      | Port SMTP (SSL=465, TLS=587).                                  |
+| `ACME_ALERT_SMTP_FROM_EMAIL`    |        | global   | non      | Adresse e-mail de l'expéditeur pour les alertes de certificat. |
+| `ACME_ALERT_SMTP_FROM_USER`     |        | global   | non      | Utilisateur d'authentification SMTP.                           |
+| `ACME_ALERT_SMTP_FROM_PASSWORD` |        | global   | non      | Mot de passe d'authentification SMTP.                          |
+| `ACME_ALERT_SMTP_SSL`           | `SSL`  | global   | non      | Type de connexion : `no`, `SSL` ou `TLS`.                      |
+
+**Surveillance Certificate Transparency**
+
+| Paramètre                   | Défaut | Contexte | Multiple | Description                                                                                           |
+| --------------------------- | ------ | -------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| `USE_ACME_CT_MONITORING`    | `no`   | global   | non      | Activer la surveillance des logs CT via crt.sh pour détecter l'émission non autorisée de certificats. |
+| `ACME_CT_MONITORED_DOMAINS` |        | global   | non      | Liste de domaines à surveiller séparés par des espaces. Laisser vide pour la détection automatique.   |
+
+**OCSP stapling**
+
+| Paramètre                | Défaut | Contexte  | Multiple | Description                                                                                  |
+| ------------------------ | ------ | --------- | -------- | -------------------------------------------------------------------------------------------- |
+| `USE_ACME_OCSP_STAPLING` | `no`   | multisite | non      | Activer l'OCSP stapling amélioré avec récupération et mise en cache proactives des réponses. |
+| `ACME_OCSP_CACHE_SIZE`   | `1m`   | global    | non      | Taille du dictionnaire partagé pour la mise en cache des réponses OCSP.                      |
+
+### Démarrage rapide
+
+1. Définissez les valeurs minimales par service protégé :
+    - `USE_ACME=yes`
+    - `ACME_DIRECTORY_URL=https://ca.example.com/acme/directory`
+    - `ACME_EMAIL=admin@example.com`
+2. Pour les certificats wildcard, passez au challenge DNS-01 :
+    - `ACME_CHALLENGE=dns`
+    - `ACME_DNS_PROVIDER=cloudflare`
+    - `ACME_DNS_CREDENTIAL_ITEM=cloudflare_api_token YOUR_TOKEN` (utilisez les [secrets Docker](integrations.md#docker) en production)
+    - `ACME_WILDCARD=yes`
+3. Pour les CA nécessitant l'External Account Binding :
+    - `ACME_EAB_KID=your-key-id`
+    - `ACME_EAB_HMAC_KEY=your-base64-hmac-key` (utilisez les [secrets Docker](integrations.md#docker) en production)
+4. Pour les CA privées avec des certificats racines auto-signés :
+    - `ACME_CA_CERT_PATH=/path/to/ca-root.pem`
+    - `ACME_SSL_VERIFY=yes` (fournir `ACME_CA_CERT_PATH` permet à la vérification de fonctionner avec des CA privées sans désactiver la vérification SSL)
+
+### Conseils d'utilisation
+
+- La surveillance des certificats (`USE_ACME_MONITORING`) est activée par défaut et suit également les certificats Let's Encrypt OSS. Configurez les seuils `ACME_ALERT_DAYS` et au moins un canal d'alerte (webhook ou e-mail) pour recevoir les avertissements d'expiration.
+- Activez la surveillance CT (`USE_ACME_CT_MONITORING=yes`) pour détecter les certificats non autorisés émis pour vos domaines via les logs Certificate Transparency.
+- Utilisez les clés ECDSA (par défaut) pour des certificats plus compacts et plus rapides. Passez à RSA uniquement lorsque la compatibilité avec des clients anciens est requise.
+- Lors de l'utilisation des challenges DNS-01, ajustez `ACME_DNS_PROPAGATION` si votre fournisseur DNS est lent à propager les enregistrements.
+- Définissez `ACME_MAX_RETRIES=0` pour désactiver les tentatives automatiques si vous préférez investiguer les échecs manuellement.
+
+### Coexistence avec le Let's Encrypt intégré
+
+Le plugin ACME PRO et le plugin Let's Encrypt OSS utilisent des stockages, des endpoints API et des clés de cache entièrement séparés. Les deux peuvent être actifs simultanément sur différents services en mode multisite :
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "app1.example.com app2.example.com"
+
+# ACME PRO pour app1 (CA privée)
+app1.example.com_USE_ACME: "yes"
+app1.example.com_ACME_DIRECTORY_URL: "https://ca.internal:9000/acme/acme/directory"
+app1.example.com_ACME_CA_CERT_PATH: "/certs/step-ca-root.pem"
+app1.example.com_LETS_ENCRYPT_PASSTHROUGH: "yes"  # nécessaire pour HTTP-01
+
+# Let's Encrypt intégré pour app2
+app2.example.com_AUTO_LETS_ENCRYPT: "yes"
+```
+
+### Dépannage
+
+- **Échec du challenge HTTP-01** : vérifiez que `LETS_ENCRYPT_PASSTHROUGH=yes` est défini -- sans cela, le bloc location intégré de BunkerWeb intercepte les requêtes de challenge avant que le plugin ACME PRO ne puisse les servir. Vérifiez également que le port 80 est accessible depuis le serveur ACME et que `AUTO_LETS_ENCRYPT` n'est pas également activé pour le même service.
+- **Échec du challenge TLS-ALPN-01** : vérifiez que le port 443 est accessible depuis le serveur ACME et qu'aucun autre plugin ne sert de certificat avant ACME dans la phase `ssl_certificate`. Vérifiez `PLUGINS_ORDER_SSL_CERTIFICATE` en cas de doute.
+- **Échec du challenge DNS-01** : vérifiez les identifiants du fournisseur DNS dans `ACME_DNS_CREDENTIAL_ITEM` et ajustez `ACME_DNS_PROPAGATION` si votre fournisseur est lent à propager les enregistrements.
+- **Certificat non renouvelé** : vérifiez `ACME_RENEWAL_DAYS` et les logs du scheduler. Le job `acme-renew` s'exécute quotidiennement et renouvelle les certificats qui se trouvent dans le seuil configuré.
