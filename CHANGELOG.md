@@ -11,6 +11,7 @@
 - [UI] Check database for `USE_REDIS` setting before showing the filesystem session backend warning, so Redis configured via the Web UI is correctly detected.
 - [AUTOCONF] Fix Docker socket proxy restarts triggering catastrophic deletion of all instances and services by adding guards in `update_instances()` and `save_config()` to refuse empty-list updates when the database has existing data.
 - [AUTOCONF] Fix `_get_controller_containers` and `_get_controller_swarm_services` silently swallowing Docker API errors as empty lists, causing downstream code to treat failures as zero containers.
+- [DOCS] Add llms.txt and llms-full.txt generation via MkDocs post-build hook for AI agent documentation consumption, following the llms.txt standard (llmstxt.org).
 
 ## v1.6.9 - 2026/03/13
 
