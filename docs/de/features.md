@@ -124,11 +124,12 @@ Das Umschalten in den `detect`-Modus kann Ihnen helfen, potenzielle Falsch-Posit
 
 === "Worker-Einstellungen"
 
-    | Einstellung            | Standard | Kontext | Mehrfach | Beschreibung                                                                                          |
-    | ---------------------- | -------- | ------- | -------- | ----------------------------------------------------------------------------------------------------- |
-    | `WORKER_PROCESSES`     | `auto`   | global  | Nein     | **Worker-Prozesse:** Anzahl der Worker-Prozesse. Auf `auto` setzen, um verfügbare Kerne zu verwenden. |
-    | `WORKER_CONNECTIONS`   | `1024`   | global  | Nein     | **Worker-Verbindungen:** Maximale Anzahl von Verbindungen pro Worker.                                 |
-    | `WORKER_RLIMIT_NOFILE` | `2048`   | global  | Nein     | **Dateideskriptor-Limit:** Maximale Anzahl offener Dateien pro Worker.                                |
+    | Einstellung               | Standard | Kontext | Mehrfach | Beschreibung                                                                                                                                                                   |
+    | ------------------------- | -------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+    | `WORKER_PROCESSES`        | `auto`   | global  | Nein     | **Worker-Prozesse:** Anzahl der Worker-Prozesse. Auf `auto` setzen, um verfügbare Kerne zu verwenden.                                                                          |
+    | `WORKER_CONNECTIONS`      | `1024`   | global  | Nein     | **Worker-Verbindungen:** Maximale Anzahl von Verbindungen pro Worker.                                                                                                          |
+    | `WORKER_RLIMIT_NOFILE`    | `2048`   | global  | Nein     | **Dateideskriptor-Limit:** Maximale Anzahl offener Dateien pro Worker.                                                                                                         |
+    | `WORKER_SHUTDOWN_TIMEOUT` | `30s`    | global  | Nein     | **Worker-Shutdown-Timeout:** Zeitlimit für das ordnungsgemäße Herunterfahren der Worker-Prozesse. Alte Worker werden nach diesem Zeitlimit bei einem Reload erzwungen beendet. |
 
 === "Speichereinstellungen"
 

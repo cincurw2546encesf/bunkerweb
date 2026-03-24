@@ -1,6 +1,10 @@
 # Changelog
 
-## v1.6.10~rc1 - 2026/03/??
+## v1.6.10~rc2 - 2026/03/??
+
+- [BUGFIX] Add `WORKER_SHUTDOWN_TIMEOUT` setting (default `30s`) to force old NGINX workers to terminate after a config reload, preventing unbounded memory growth when workers linger in "shutting down" state.
+
+## v1.6.10~rc1 - 2026/03/23
 
 - [SECURITY] Replace Trivy with Docker Scout for container image vulnerability scanning in CI/CD pipeline.
 - [BUGFIX] Disable Gunicorn 25.1.0 control socket to prevent worker deadlock caused by fork in multi-threaded master process (UI, TMP-UI, API).

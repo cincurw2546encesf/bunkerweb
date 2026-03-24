@@ -124,11 +124,12 @@ Passer en mode `detect` aide à identifier et corriger les faux positifs sans im
 
 === "Paramètres des workers"
 
-    | Paramètre              | Valeur par défaut | Contexte | Multiple | Description                                                                             |
-    | ---------------------- | ----------------- | -------- | -------- | --------------------------------------------------------------------------------------- |
-    | `WORKER_PROCESSES`     | `auto`            | global   | Non      | **Processus workers :** Nombre de processus workers. `auto` utilise le nombre de cœurs. |
-    | `WORKER_CONNECTIONS`   | `1024`            | global   | Non      | **Connexions par worker :** Nombre maximal de connexions par worker.                    |
-    | `WORKER_RLIMIT_NOFILE` | `2048`            | global   | Non      | **Limite descripteurs :** Nombre maximal de fichiers ouverts par worker.                |
+    | Paramètre                 | Valeur par défaut | Contexte | Multiple | Description                                                                                                                                                         |
+    | ------------------------- | ----------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `WORKER_PROCESSES`        | `auto`            | global   | Non      | **Processus workers :** Nombre de processus workers. `auto` utilise le nombre de cœurs.                                                                             |
+    | `WORKER_CONNECTIONS`      | `1024`            | global   | Non      | **Connexions par worker :** Nombre maximal de connexions par worker.                                                                                                |
+    | `WORKER_RLIMIT_NOFILE`    | `2048`            | global   | Non      | **Limite descripteurs :** Nombre maximal de fichiers ouverts par worker.                                                                                            |
+    | `WORKER_SHUTDOWN_TIMEOUT` | `30s`             | global   | Non      | **Délai d'arrêt des workers :** Délai pour l'arrêt gracieux des processus workers. Les anciens workers sont arrêtés de force après ce délai lors d'un rechargement. |
 
 === "Paramètres mémoire"
 

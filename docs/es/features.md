@@ -124,11 +124,12 @@ Cambiar al modo `detect` puede ayudarte a identificar y resolver posibles falsos
 
 === "Ajustes de Workers"
 
-    | Parámetro              | Valor por defecto | Contexto | Múltiple | Descripción                                                                                              |
-    | ---------------------- | ----------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------- |
-    | `WORKER_PROCESSES`     | `auto`            | global   | No       | **Procesos Worker:** Número de procesos worker. Establécelo en `auto` para usar los núcleos disponibles. |
-    | `WORKER_CONNECTIONS`   | `1024`            | global   | No       | **Conexiones por Worker:** Número máximo de conexiones por worker.                                       |
-    | `WORKER_RLIMIT_NOFILE` | `2048`            | global   | No       | **Límite de Descriptores de Archivo:** Número máximo de archivos abiertos por worker.                    |
+    | Parámetro                 | Valor por defecto | Contexto | Múltiple | Descripción                                                                                                                                                                                            |
+    | ------------------------- | ----------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+    | `WORKER_PROCESSES`        | `auto`            | global   | No       | **Procesos Worker:** Número de procesos worker. Establécelo en `auto` para usar los núcleos disponibles.                                                                                               |
+    | `WORKER_CONNECTIONS`      | `1024`            | global   | No       | **Conexiones por Worker:** Número máximo de conexiones por worker.                                                                                                                                     |
+    | `WORKER_RLIMIT_NOFILE`    | `2048`            | global   | No       | **Límite de Descriptores de Archivo:** Número máximo de archivos abiertos por worker.                                                                                                                  |
+    | `WORKER_SHUTDOWN_TIMEOUT` | `30s`             | global   | No       | **Tiempo de espera de apagado de Workers:** Tiempo de espera para el apagado ordenado de los procesos worker. Los workers antiguos se terminan forzosamente después de este plazo durante una recarga. |
 
 === "Ajustes de Memoria"
 
