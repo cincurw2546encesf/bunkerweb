@@ -130,7 +130,8 @@ $(document).ready(function () {
     if (templateNumber > 25) menu.push(25);
     if (templateNumber > 50) menu.push(50);
     if (templateNumber > 100) menu.push(100);
-    menu.push({ label: t("datatable.length_all", "All"), value: -1 }); // Translate "All"
+    if (templateNumber > 500) menu.push(500);
+    if (templateNumber > 1000) menu.push(1000);
     layout.bottomStart = {
       pageLength: { menu: menu },
       info: true,

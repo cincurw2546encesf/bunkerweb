@@ -3363,7 +3363,11 @@ $(document).ready(() => {
     // None/empty, so we need to initialise from the stored value or the default.
     const $hiddenInput = $dropdown.find('input[type="hidden"]');
     if ($hiddenInput.length) {
-      const rawValue = $hiddenInput.val() || $hiddenInput.data("default") || "";
+      const hiddenVal = $hiddenInput.val();
+      // An empty string is a valid multiselect value (no options selected).
+      // Only fall back to data-default when the value is truly absent.
+      const rawValue =
+        hiddenVal != null ? hiddenVal : $hiddenInput.data("default") || "";
       const initValue = String(rawValue);
       if (initValue) {
         const separator = $dropdown.data("separator");

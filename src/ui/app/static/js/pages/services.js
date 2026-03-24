@@ -152,7 +152,8 @@ $(document).ready(function () {
     [25, 50, 100].forEach((num) => {
       if (serviceNumber > num) menu.push(num);
     });
-    menu.push({ label: t("datatable.length_all", "All"), value: -1 });
+    if (serviceNumber > 500) menu.push(500);
+    if (serviceNumber > 1000) menu.push(1000);
     layout.bottomStart = {
       pageLength: {
         menu: menu,

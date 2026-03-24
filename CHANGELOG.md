@@ -2,8 +2,16 @@
 
 ## v1.6.10~rc1 - 2026/03/??
 
+- [SECURITY] Replace Trivy with Docker Scout for container image vulnerability scanning in CI/CD pipeline.
 - [BUGFIX] Disable Gunicorn 25.1.0 control socket to prevent worker deadlock caused by fork in multi-threaded master process (UI, TMP-UI, API).
+- [BUGFIX] Fix template settings not propagating to services after template edits. Stale form values were stored as explicit overrides when saving a service, permanently blocking template propagation for affected settings. Template custom config changes are now also correctly flagged for scheduler regeneration.
+- [UI/SECURITY] Replace unbounded "All" option in DataTable page length menus with capped values (500, 1000) across all pages, and clamp server-side `length`/`start` parameters to prevent OOM from oversized requests.
 - [UI] Fix multiselect settings not correctly displaying or applying their values in the template editor and the service creation wizard.
+- [UI] Fix multiselect and multivalue settings resetting to default values when all options are unchecked, by preserving empty string as a valid value across Jinja2 rendering, jQuery initialization, and the template editor module.
+- [UI] Check database for `USE_REDIS` setting before showing the filesystem session backend warning, so Redis configured via the Web UI is correctly detected.
+- [AUTOCONF] Fix Docker socket proxy restarts triggering catastrophic deletion of all instances and services by adding guards in `update_instances()` and `save_config()` to refuse empty-list updates when the database has existing data.
+- [AUTOCONF] Fix `_get_controller_containers` and `_get_controller_swarm_services` silently swallowing Docker API errors as empty lists, causing downstream code to treat failures as zero containers.
+- [DOCS] Add llms.txt and llms-full.txt generation via MkDocs post-build hook for AI agent documentation consumption, following the llms.txt standard (llmstxt.org).
 
 ## v1.6.9 - 2026/03/13
 

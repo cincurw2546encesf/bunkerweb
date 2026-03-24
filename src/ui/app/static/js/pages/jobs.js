@@ -45,7 +45,8 @@ $(document).ready(function () {
     if (jobNumber > 100) {
       menu.push(100);
     }
-    menu.push({ label: t("datatable.length_all", "All"), value: -1 });
+    if (jobNumber > 500) menu.push(500);
+    if (jobNumber > 1000) menu.push(1000);
     layout.bottomStart = {
       pageLength: {
         menu: menu,

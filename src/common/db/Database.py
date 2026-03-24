@@ -635,7 +635,7 @@ class Database:
                 metadata = session.query(Metadata).with_entities(Metadata.version).filter_by(id=1).first()
                 if metadata:
                     return metadata.version
-                return "1.6.9"
+                return "1.6.10~rc1"
             except BaseException as e:
                 return f"Error: {e}"
 
@@ -669,7 +669,7 @@ class Database:
             "last_instances_change": None,
             "reload_ui_plugins": False,
             "integration": "unknown",
-            "version": "1.6.9",
+            "version": "1.6.10~rc1",
             "database_version": "Unknown",  # ? Extracted from the database
             "default": True,  # ? Extra field to know if the returned data is the default one
         }
@@ -1746,11 +1746,21 @@ class Database:
                 services = [service for service in services if service]  # Clean up empty strings
 
                 if db_services:
-                    missing_ids = [
-                        service.id
-                        for service in db_services
-                        if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api"))) and service.id not in services
-                    ]
+                    # Guard: if the incoming services list is empty but DB has services for this method,
+                    # skip deletion to prevent catastrophic data loss from transient Docker API failure
+                    method_services = [s for s in db_services if s.method == method or (s.method in ("ui", "api") and method in ("ui", "api"))]
+                    if not services and method_services:
+                        self.logger.warning(
+                            f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
+                            "skipping service deletion to prevent data loss"
+                        )
+                        missing_ids = []
+                    else:
+                        missing_ids = [
+                            service.id
+                            for service in db_services
+                            if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api"))) and service.id not in services
+                        ]
 
                     if missing_ids:
                         self.logger.debug(f"Removing {len(missing_ids)} services that are no longer in the list")
@@ -4523,6 +4533,15 @@ class Database:
             if self.readonly:
                 return "The database is read-only, the changes will not be saved"
 
+            if not instances and method == "autoconf":
+                existing_count = session.query(Instances).filter(Instances.method == method).count()
+                if existing_count > 0:
+                    self.logger.warning(
+                        f"Received empty instances list for method 'autoconf' but database has {existing_count} existing instance(s), "
+                        "skipping deletion to prevent data loss"
+                    )
+                    return ""
+
             session.query(Instances).filter(Instances.method == method).delete()
 
             for instance in instances:
@@ -5211,6 +5230,12 @@ class Database:
                 {Plugins.config_changed: True}, synchronize_session=False
             )
 
+            with suppress(ProgrammingError, OperationalError):
+                metadata = session.query(Metadata).get(1)
+                if metadata is not None:
+                    metadata.custom_configs_changed = True
+                    metadata.last_custom_configs_change = datetime.now().astimezone()
+
             try:
                 session.commit()
             except BaseException as e:
@@ -5241,6 +5266,12 @@ class Database:
             session.query(Plugins).filter(Plugins.id.in_(set(plugin.id for plugin in session.query(Plugins).with_entities(Plugins.id).all()))).update(
                 {Plugins.config_changed: True}, synchronize_session=False
             )
+
+            with suppress(ProgrammingError, OperationalError):
+                metadata = session.query(Metadata).get(1)
+                if metadata is not None:
+                    metadata.custom_configs_changed = True
+                    metadata.last_custom_configs_change = datetime.now().astimezone()
 
             try:
                 session.commit()

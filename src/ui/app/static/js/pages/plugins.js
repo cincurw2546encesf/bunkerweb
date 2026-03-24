@@ -207,7 +207,8 @@ $(document).ready(function () {
     if (pluginNumber > 100) {
       menu.push(100);
     }
-    menu.push({ label: "All", value: -1 });
+    if (pluginNumber > 500) menu.push(500);
+    if (pluginNumber > 1000) menu.push(1000);
     layout.bottomStart = {
       pageLength: {
         menu: menu,

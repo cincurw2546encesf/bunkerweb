@@ -382,6 +382,13 @@ def services_service_page(service: str):
                 if data.get("method") == "default" and data.get("template"):
                     removed_custom_configs.add(db_custom_config)
 
+            # Force-refresh template-derived settings to prevent stale form values
+            # from being stored as explicit overrides (applies to all UI modes)
+            if service != "new":
+                for setting, value in db_config.items():
+                    if value.get("template") and value["method"] == "default":
+                        variables[setting] = value["value"]
+
             variables_to_check = variables.copy()
             has_file_name_changes = False
 

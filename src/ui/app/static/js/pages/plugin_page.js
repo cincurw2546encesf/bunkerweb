@@ -97,7 +97,8 @@
         if (tableLength > 100) {
           menu.push(100);
         }
-        menu.push({ label: "All", value: -1 });
+        if (tableLength > 500) menu.push(500);
+        if (tableLength > 1000) menu.push(1000);
         layout.topStart.pageLength = {
           menu: menu,
         };

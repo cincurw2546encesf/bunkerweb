@@ -63,7 +63,7 @@ class DockerController(Controller):
             containers: List[Container] = self.__client.containers.list(filters={"label": label_key})
         except DockerException as e:
             self._logger.error(f"Failed to retrieve containers with label '{label_key}': {e}")
-            return []
+            raise
 
         namespace_set = set(self._namespaces or [])
         valid_containers = []
