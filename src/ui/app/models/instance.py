@@ -205,13 +205,13 @@ class InstancesUtils:
     _REPORT_PANE_FIELDS = ["ip", "country", "method", "url", "status", "reason", "server_name", "security_mode"]
     _REPORT_PANE_MAX_VALUES = 200
 
-    def __init__(self, db):
-        self.__db = db
+    def __init__(self, db=None, *, api_client):
+        self.__api_client = api_client
 
     def _get_max_blocked_requests_redis(self) -> int:
         default_max = 100000
         try:
-            config = self.__db.get_config(global_only=True, methods=False)
+            config = self.__api_client.get_global_settings(full=True)
             value = int(config.get("METRICS_MAX_BLOCKED_REQUESTS_REDIS", default_max))
             return max(0, value)
         except Exception:
@@ -424,7 +424,13 @@ class InstancesUtils:
 
         return capped_total, reports
 
+    def _parse_dt(self, val):
+        if isinstance(val, str):
+            return datetime.fromisoformat(val)
+        return val
+
     def get_instances(self, status: Optional[Literal["loading", "up", "down"]] = None) -> List[Instance]:
+        instances_data = self.__api_client.get_instances()
         return [
             Instance(
                 instance["hostname"],
@@ -432,11 +438,11 @@ class InstancesUtils:
                 instance["method"],
                 instance["status"],
                 instance["type"],
-                instance["creation_date"],
-                instance["last_seen"],
+                self._parse_dt(instance["creation_date"]),
+                self._parse_dt(instance["last_seen"]),
                 ApiCaller([API.from_instance(instance)]),
             )
-            for instance in self.__db.get_instances()
+            for instance in instances_data
             if not status or instance["status"] == status
         ]
 
@@ -470,7 +476,7 @@ class InstancesUtils:
 
         bans: List[dict[str, Any]] = []
         if hostname:
-            instance = Instance.from_hostname(hostname, self.__db)
+            instance = Instance.from_hostname(hostname, self.__api_client)
             if not instance:
                 return []
             bans = get_instance_bans(instance)
@@ -507,7 +513,7 @@ class InstancesUtils:
 
         reports: List[dict[str, Any]] = []
         if hostname:
-            instance = Instance.from_hostname(hostname, self.__db)
+            instance = Instance.from_hostname(hostname, self.__api_client)
             if not instance:
                 return []
             reports = get_instance_reports(instance)
@@ -557,7 +563,7 @@ class InstancesUtils:
         best_date = float("-inf")
         target_instances = []
         if hostname:
-            instance = Instance.from_hostname(hostname, self.__db)
+            instance = Instance.from_hostname(hostname, self.__api_client)
             if instance:
                 target_instances = [instance]
             else:
@@ -805,7 +811,7 @@ class InstancesUtils:
         result = {"total": 0, "filtered": 0, "data": [], "pane_counts": {}}
 
         if hostname:
-            instance = Instance.from_hostname(hostname, self.__db)
+            instance = Instance.from_hostname(hostname, self.__api_client)
             if instance:
                 api_result = instance.reports_query(start, length, search, order_column, order_dir, search_panes, count_only)
                 if api_result[0] and isinstance(api_result[1], dict):
@@ -1117,7 +1123,7 @@ class InstancesUtils:
                     return {"requests": requests_list}
 
                 # Check if METRICS_SAVE_TO_REDIS is enabled for errors
-                config = self.__db.get_config(global_only=True, methods=False)
+                config = self.__api_client.get_global_settings(full=True)
                 if config.get("METRICS_SAVE_TO_REDIS", "yes").lower() != "yes":
                     return {}
 
@@ -1197,7 +1203,7 @@ class InstancesUtils:
                             continue
                         else:
                             # Unsupported Redis data type, skip
-                            self.__db.logger.warning(f"Unsupported Redis data type {key_type} for key {key_str}")
+                            LOGGER.warning(f"Unsupported Redis data type {key_type} for key {key_str}")
                             continue
 
                         if decoded_value is None:
@@ -1214,12 +1220,12 @@ class InstancesUtils:
                             redis_metrics[metric_name] = decoded_value
 
                     except Exception as e:
-                        self.__db.logger.warning(f"Failed to process Redis metric key {key}: {e}")
+                        LOGGER.warning(f"Failed to process Redis metric key {key}: {e}")
                         continue
 
                 return redis_metrics
             except Exception as e:
-                self.__db.logger.warning(f"Failed to get metrics from Redis: {e}")
+                LOGGER.warning(f"Failed to get metrics from Redis: {e}")
                 return {}
 
         def get_instance_metrics(instance: Instance) -> dict[str, Any]:
@@ -1230,18 +1236,18 @@ class InstancesUtils:
                 else:
                     resp, instance_metrics = instance.metrics(plugin_id)
             except Exception as e:
-                self.__db.logger.warning(f"Can't get metrics from {instance.hostname}: {e}")
+                LOGGER.warning(f"Can't get metrics from {instance.hostname}: {e}")
                 return {}
 
             if not resp:
-                self.__db.logger.warning(f"Can't get metrics from {instance.hostname}")
+                LOGGER.warning(f"Can't get metrics from {instance.hostname}")
                 return {}
 
             instance_data = instance_metrics.get(instance.hostname, {})
             status = instance_data.get("status")
 
             if status != "success":
-                self.__db.logger.warning(f"Can't get metrics from {instance.hostname}: {instance_data.get('msg')} - {status}")
+                LOGGER.warning(f"Can't get metrics from {instance.hostname}: {instance_data.get('msg')} - {status}")
                 return {}
 
             # Handle both nested data structure and direct data response
@@ -1268,7 +1274,7 @@ class InstancesUtils:
 
         # Get instance metrics (either as fallback or for specific hostname)
         if hostname:
-            instance = Instance.from_hostname(hostname, self.__db)
+            instance = Instance.from_hostname(hostname, self.__api_client)
             if instance:
                 instance_metrics = get_instance_metrics(instance)
                 metrics = aggregate_metrics(metrics, instance_metrics)

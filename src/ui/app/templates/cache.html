@@ -119,7 +119,7 @@
                             {% endif %}
                         </td>
                         <td class="cache-last-update-date">
-                            {{ cache["last_update"] if cache["last_update"] == "Never" else cache["last_update"].astimezone().isoformat() }}
+                            {{ cache["last_update"] if cache["last_update"] == "Never" else cache["last_update"] | to_iso }}
                         </td>
                         <td>{{ cache["checksum"] }}</td>
                         <td>

@@ -8,13 +8,14 @@ from pathlib import Path
 from re import DOTALL, error as RegexError, search as re_search
 from typing import List, Literal, Optional, Set, Tuple, Union
 
+from app.api_client import ApiClientError, ApiUnavailableError
 from app.utils import get_blacklisted_settings, is_editable_method
 
 
 class Config:
-    def __init__(self, db, data) -> None:
+    def __init__(self, db=None, *, data, api_client) -> None:
         self.__settings = json_loads(Path(sep, "usr", "share", "bunkerweb", "settings.json").read_text(encoding="utf-8"))
-        self.__db = db
+        self.__api_client = api_client
         self.__data = data
         self.__ignore_regex_check = getenv("IGNORE_REGEX_CHECK", "no").lower() == "yes"
 
@@ -66,9 +67,13 @@ class Config:
 
         if servers:
             conf["SERVER_NAME"] = " ".join(servers)
-        conf["DATABASE_URI"] = self.__db.database_uri
+        conf["DATABASE_URI"] = getenv("DATABASE_URI", "")
 
-        return self.__db.save_config(conf, override_method, changed=check_changes, file_names=file_name_map)
+        try:
+            resp = self.__api_client.save_config(conf, override_method, changed=check_changes)
+        except (ApiClientError, ApiUnavailableError) as e:
+            return str(e)
+        return set(resp.get("changed_plugins", []))
 
     def get_plugins_settings(self) -> dict:
         return {
@@ -77,7 +82,7 @@ class Config:
         }
 
     def get_plugins(self, *, _type: Literal["all", "external", "ui", "pro"] = "all", with_data: bool = False) -> dict:
-        db_plugins = self.__db.get_plugins(_type=_type, with_data=with_data)
+        db_plugins = self.__api_client.get_plugins(type=_type, with_data=with_data)
 
         plugins = {"general": {}}
 
@@ -103,7 +108,7 @@ class Config:
         dict
             The nginx variables env file as a dict
         """
-        return self.__db.get_non_default_settings(global_only=global_only, methods=methods, with_drafts=with_drafts, filtered_settings=filtered_settings)
+        return self.__api_client.get_global_settings(methods=methods, with_drafts=with_drafts, filtered_settings=filtered_settings, global_only=global_only)
 
     def get_services(self, methods: bool = True, with_drafts: bool = False) -> list[dict]:
         """Get nginx's services
@@ -113,7 +118,36 @@ class Config:
         list
             The services
         """
-        return self.__db.get_services_settings(methods=methods, with_drafts=with_drafts)
+        config = self.__api_client.get_global_settings(methods=methods, with_drafts=with_drafts, global_only=False)
+        service_names = config["SERVER_NAME"]["value"].split() if methods else config["SERVER_NAME"].split()
+        services = []
+        for service in service_names:
+            service_settings = []
+            tmp_config = config.copy()
+
+            for key, value in config.items():
+                if key.startswith(f"{service}_"):
+                    setting = key.replace(f"{service}_", "", 1)
+                    service_settings.append(setting)
+                    tmp_config[setting] = tmp_config.pop(key)
+                elif any(key.startswith(f"{s}_") for s in service_names):
+                    tmp_config.pop(key, None)
+                elif key not in service_settings:
+                    tmp_config[key] = (
+                        {
+                            "value": value.get("value", ""),
+                            "global": value.get("global", False),
+                            "method": value.get("method", "default"),
+                            "default": value.get("default", ""),
+                            "template": value.get("template"),
+                        }
+                        if methods
+                        else value
+                    )
+
+            services.append(tmp_config)
+
+        return services
 
     def check_variables(self, variables: dict, config: dict, to_check: dict, *, global_config: bool = False, new: bool = False, threaded: bool = False) -> dict:
         """

@@ -7,7 +7,8 @@ from user_agents import parse
 
 from app.models.totp import totp as TOTP
 
-from app.dependencies import DATA, DB
+from app.dependencies import API_CLIENT, DATA
+from app.api_client import ApiClientError, ApiUnavailableError
 from app.utils import USER_PASSWORD_RX, flash, gen_password_hash
 
 from app.routes.utils import cors_required, handle_error, verify_data_in_form
@@ -16,7 +17,7 @@ profile = Blueprint("profile", __name__)
 
 
 def get_last_sessions(page: int, per_page: int) -> Tuple[Generator[Dict[str, Union[str, bool]], None, None], int]:
-    db_sessions = DB.get_ui_user_sessions(current_user.username, session.get("session_id"))
+    db_sessions = API_CLIENT.get_user_sessions(current_user.username, session.get("session_id"))
     total_sessions = len(db_sessions)
     if "session_id" not in session:
         total_sessions += 1
@@ -40,6 +41,8 @@ def get_last_sessions(page: int, per_page: int) -> Tuple[Generator[Dict[str, Uni
 
             def _fmt_dt(dt_val):
                 with suppress(Exception):
+                    if isinstance(dt_val, str):
+                        dt_val = datetime.fromisoformat(dt_val)
                     if isinstance(dt_val, datetime):
                         return dt_val.astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
                 return datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
@@ -115,7 +118,7 @@ def get_sessions():
 @profile.route("/profile/totp-refresh", methods=["POST"])
 @login_required
 def totp_refresh():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "profile")
 
     if not bool(current_user.totp_secret):
@@ -128,9 +131,10 @@ def totp_refresh():
 
     totp_recovery_codes = TOTP.generate_recovery_codes()
 
-    ret = DB.refresh_ui_user_recovery_codes(current_user.get_id(), totp_recovery_codes)
-    if ret:
-        return handle_error(f"Couldn't refresh the recovery codes in the database: {ret}", "profile")
+    try:
+        API_CLIENT.refresh_recovery_codes(current_user.get_id(), totp_recovery_codes)
+    except (ApiClientError, ApiUnavailableError) as e:
+        return handle_error(f"Couldn't refresh the recovery codes: {e.message}", "profile")
 
     session["totp_refreshed"] = True
     session["decrypted_recovery_codes"] = totp_recovery_codes
@@ -142,7 +146,7 @@ def totp_refresh():
 @profile.route("/profile/totp-disable", methods=["POST"])
 @login_required
 def totp_disable():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "profile")
 
     if not bool(current_user.totp_secret):
@@ -160,11 +164,16 @@ def totp_disable():
     ):
         return handle_error("The totp token is invalid.", "profile")
 
-    ret = DB.update_ui_user(
-        current_user.get_id(), current_user.password.encode("utf-8"), None, theme=current_user.theme, method=current_user.method, language=current_user.language
-    )
-    if ret:
-        return handle_error(f"Couldn't disable the two-factor authentication in the database: {ret}", "profile")
+    try:
+        API_CLIENT.update_user(
+            current_user.get_id(),
+            totp_secret=None,
+            theme=current_user.theme,
+            method=current_user.method,
+            language=current_user.language,
+        )
+    except (ApiClientError, ApiUnavailableError) as e:
+        return handle_error(f"Couldn't disable the two-factor authentication: {e.message}", "profile")
 
     session["totp_validated"] = False
 
@@ -175,7 +184,7 @@ def totp_disable():
 @profile.route("/profile/totp-enable", methods=["POST"])
 @login_required
 def totp_enable():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "profile")
 
     if bool(current_user.totp_secret):
@@ -195,17 +204,17 @@ def totp_enable():
     totp_recovery_codes = TOTP.generate_recovery_codes()
     totp_secret = session.pop("tmp_totp_secret", "")
 
-    ret = DB.update_ui_user(
-        current_user.get_id(),
-        current_user.password.encode("utf-8"),
-        totp_secret,
-        theme=current_user.theme,
-        totp_recovery_codes=totp_recovery_codes,
-        method=current_user.method,
-        language=current_user.language,
-    )
-    if ret:
-        return handle_error(f"Couldn't enable the two-factor authentication in the database: {ret}", "profile")
+    try:
+        API_CLIENT.update_user(
+            current_user.get_id(),
+            totp_secret=totp_secret,
+            theme=current_user.theme,
+            totp_recovery_codes=totp_recovery_codes,
+            method=current_user.method,
+            language=current_user.language,
+        )
+    except (ApiClientError, ApiUnavailableError) as e:
+        return handle_error(f"Couldn't enable the two-factor authentication: {e.message}", "profile")
 
     session["totp_validated"] = True
     session["totp_refreshed"] = True
@@ -218,12 +227,11 @@ def totp_enable():
 @profile.route("/profile/edit", methods=["POST"])
 @login_required
 def edit_profile():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "profile")
 
     user_data = {
         "username": current_user.get_id(),
-        "password": current_user.password.encode("utf-8"),
         "email": current_user.email,
         "totp_secret": current_user.totp_secret,
         "method": current_user.method,
@@ -282,9 +290,11 @@ def edit_profile():
     else:
         return handle_error("No fields were updated.", "profile")
 
-    ret = DB.update_ui_user(**user_data, old_username=current_user.get_id())
-    if ret:
-        return handle_error(f"Couldn't update the {current_user.get_id()} user in the database: {ret}", "profile")
+    try:
+        api_data = {k: (v.decode("utf-8") if isinstance(v, bytes) else v) for k, v in user_data.items()}
+        API_CLIENT.update_user(api_data.pop("username"), **api_data, old_username=current_user.get_id())
+    except (ApiClientError, ApiUnavailableError) as e:
+        return handle_error(f"Couldn't update the {current_user.get_id()} user: {e.message}", "profile")
 
     flash("The profile has been successfully updated.")
 
@@ -297,7 +307,7 @@ def edit_profile():
 @profile.route("/profile/wipe-other-sessions", methods=["POST"])
 @login_required
 def wipe_old_sessions():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "profile")
 
     verify_data_in_form(data={"password": None}, err_message="Missing current password parameter on /profile/wipe-other-sessions.", redirect_url="profile")
@@ -305,13 +315,13 @@ def wipe_old_sessions():
     if not current_user.check_password(request.form["password"]):
         return handle_error("The current password is incorrect.", "profile")
 
-    DATA["REVOKED_SESSIONS"] = [
-        db_session["id"] for db_session in DB.get_ui_user_sessions(current_user.username) if db_session["id"] != session.get("session_id")
-    ]
-
-    ret = DB.delete_ui_user_old_sessions(current_user.username)
-    if ret:
-        return handle_error(f"Couldn't wipe the other sessions in the database: {ret}", "profile")
+    try:
+        DATA["REVOKED_SESSIONS"] = [
+            db_session["id"] for db_session in API_CLIENT.get_user_sessions(current_user.username) if db_session["id"] != session.get("session_id")
+        ]
+        API_CLIENT.delete_user_sessions(current_user.username)
+    except (ApiClientError, ApiUnavailableError) as e:
+        return handle_error(f"Couldn't wipe the other sessions: {e.message}", "profile")
 
     flash("The other sessions have been successfully wiped.")
     return redirect(url_for("profile.profile_page") + "#sessions")

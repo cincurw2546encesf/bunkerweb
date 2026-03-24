@@ -3,10 +3,10 @@ from time import time
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from app.dependencies import BW_CONFIG, CONFIG_TASKS_EXECUTOR, DATA, DB
+from app.dependencies import API_CLIENT, BW_CONFIG, CONFIG_TASKS_EXECUTOR, DATA
+from app.api_client import ApiClientError, ApiUnavailableError
 from app.routes.utils import get_remain, handle_error, verify_data_in_form, wait_applying
 from app.utils import flash
-
 
 pro = Blueprint("pro", __name__)
 
@@ -16,19 +16,21 @@ pro = Blueprint("pro", __name__)
 def pro_page():
     online_services = 0
     draft_services = 0
-    for service in DB.get_services(with_drafts=True):
+    for service in API_CLIENT.get_services(with_drafts=True):
         if service["is_draft"]:
             draft_services += 1
             continue
         online_services += 1
 
-    metadata = DB.get_metadata()
+    metadata = API_CLIENT.get_metadata()
     # Convert current date to UTC and normalize to midnight for daily comparison
     current_day_utc = datetime.now().astimezone().astimezone(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     pro_expires_in = "Unknown"
     if metadata["pro_expire"]:
-        # Ensure pro_expire is timezone-aware UTC (MariaDB returns naive datetime stored as UTC)
+        # Ensure pro_expire is timezone-aware UTC
         pro_expire = metadata["pro_expire"]
+        if isinstance(pro_expire, str):
+            pro_expire = datetime.fromisoformat(pro_expire)
         if pro_expire.tzinfo is None:
             pro_expire = pro_expire.replace(tzinfo=timezone.utc)
         else:
@@ -52,7 +54,7 @@ def pro_page():
 @pro.route("/pro/key", methods=["POST"])
 @login_required
 def pro_key():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "pro")
 
     verify_data_in_form(
@@ -65,8 +67,8 @@ def pro_key():
     if not license_key:
         return handle_error("Invalid license key", "pro")
 
-    global_config = DB.get_config(global_only=True)
-    global_config_methods = DB.get_config(global_only=True, methods=True)
+    global_config = BW_CONFIG.get_config(global_only=True, methods=False)
+    global_config_methods = BW_CONFIG.get_config(global_only=True, methods=True)
     variables = BW_CONFIG.check_variables(
         global_config | {"PRO_LICENSE_KEY": license_key},
         global_config_methods,
@@ -121,16 +123,14 @@ def pro_key():
 @pro.route("/pro/force-check", methods=["POST"])
 @login_required
 def force_check():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "pro")
 
-    err = DB.set_metadata({"last_pro_check": None})
-    if err:
-        return handle_error(err, "pro")
-
-    err = DB.checked_changes(changes=["config"], plugins_changes={"pro"}, value=True)
-    if err:
-        return handle_error(err, "pro")
+    try:
+        API_CLIENT.update_metadata({"last_pro_check": None})
+        API_CLIENT.checked_changes(["config"], plugins_changes=["pro"], value=True)
+    except (ApiClientError, ApiUnavailableError) as e:
+        return handle_error(e.message, "pro")
 
     flash("A new check for PRO plugins has been scheduled.", "success")
     DATA["PRO_LOADING"] = True
@@ -140,23 +140,15 @@ def force_check():
 @pro.route("/pro/force-update", methods=["POST"])
 @login_required
 def force_update():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "pro")
 
-    # Set metadata flag for downloader job to detect force mode
-    err = DB.set_metadata({"force_pro_update": True})
-    if err:
-        return handle_error(err, "pro")
-
-    # Ensure next scheduler run does not skip by date
-    err = DB.set_metadata({"last_pro_check": None})
-    if err:
-        return handle_error(err, "pro")
-
-    # Trigger a config cycle so the scheduler picks up changes promptly
-    err = DB.checked_changes(changes=["config"], plugins_changes={"pro"}, value=True)
-    if err:
-        return handle_error(err, "pro")
+    try:
+        API_CLIENT.update_metadata({"force_pro_update": True})
+        API_CLIENT.update_metadata({"last_pro_check": None})
+        API_CLIENT.checked_changes(["config"], plugins_changes=["pro"], value=True)
+    except (ApiClientError, ApiUnavailableError) as e:
+        return handle_error(e.message, "pro")
 
     flash("A forced update of PRO plugins has been scheduled.", "success")
     DATA["PRO_LOADING"] = True

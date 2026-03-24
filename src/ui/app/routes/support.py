@@ -7,8 +7,8 @@ from zipfile import ZipFile
 from flask import Blueprint, render_template, request, send_file
 from flask_login import login_required
 
-from app.dependencies import BW_CONFIG, DB
-
+from app.dependencies import API_CLIENT, BW_CONFIG
+from app.api_client import ApiClientError, ApiUnavailableError
 
 support = Blueprint("support", __name__)
 
@@ -72,10 +72,13 @@ def support_config():
         if service not in BW_CONFIG.get_config(global_only=True, methods=False, with_drafts=True, filtered_settings=("SERVER_NAME",))["SERVER_NAME"].split():
             return "Service not found", 404
 
-        service_config = DB.get_config(methods=True, with_drafts=True, service=service)
+        try:
+            service_config = API_CLIENT.get_service(service, full=True, methods=True)
+        except (ApiClientError, ApiUnavailableError):
+            return "Could not retrieve service config", 500
         return send_file(
             BytesIO(dumps(service_config, indent=2).encode()), mimetype="application/json", as_attachment=True, download_name=f"{service}_config.json"
         )
 
-    db_config = DB.get_config(methods=True, with_drafts=True)
+    db_config = BW_CONFIG.get_config(methods=True, with_drafts=True)
     return send_file(BytesIO(dumps(db_config, indent=2).encode()), mimetype="application/json", as_attachment=True, download_name="bunkerweb_config.json")

@@ -40,8 +40,9 @@ from common_utils import get_redis_client as get_common_redis_client, is_newer_v
 from app.models.biscuit import BiscuitMiddleware
 from app.models.reverse_proxied import ReverseProxied
 
-from app.dependencies import BW_CONFIG, DATA, DB, CORE_PLUGINS_PATH, EXTERNAL_PLUGINS_PATH, PRO_PLUGINS_PATH, safe_reload_plugins
-from app.models.models import AnonymousUser
+from app.dependencies import API_CLIENT, BW_CONFIG, DATA, CORE_PLUGINS_PATH, EXTERNAL_PLUGINS_PATH, PRO_PLUGINS_PATH, safe_reload_plugins
+from app.api_client import ApiClientError, ApiUnavailableError
+from app.models.models import AnonymousUser, UiUsers
 from app.utils import (
     BISCUIT_PUBLIC_KEY_FILE,
     COLUMNS_PREFERENCES_DEFAULTS,
@@ -145,20 +146,10 @@ HOOKS = {
     },
 }
 
-DB_CHECK_MIN_INTERVAL_SECONDS = 2.0
-DB_CHECK_STALE_INTERVAL_SECONDS = 30.0
-DB_CHECK_LAST_RUN_KEY = "DB_STATE_CHECK_LAST_RUN"
-DB_CHECK_RUNNING_KEY = "DB_STATE_CHECK_RUNNING"
-
 # Shared thread pool executors for background tasks to prevent thread spawning on every request
-_db_check_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bw-ui-db-check")
 _periodic_tasks_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="bw-ui-periodic")
 _user_access_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bw-ui-access")
 _config_tasks_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="bw-ui-config")
-
-_db_check_lock = Lock()
-_db_check_future = None
-_db_check_next_allowed = 0.0
 
 _cookie_config_lock = Lock()
 _cookie_config_detected = False
@@ -174,12 +165,9 @@ RESTART_WORKERS_MIN_INTERVAL_SECONDS = 10.0
 
 def _shutdown_executors():
     """Shutdown all thread pool executors on application exit."""
-    _db_check_executor.shutdown(wait=False)
     _periodic_tasks_executor.shutdown(wait=False)
     _user_access_executor.shutdown(wait=False)
     _config_tasks_executor.shutdown(wait=False)
-    with suppress(Exception):
-        DB.close()
 
 
 register(_shutdown_executors)
@@ -715,6 +703,16 @@ with app.app_context():
         return "#"
 
     # Declare functions for jinja2
+    def to_iso(val):
+        """Jinja2 filter: convert datetime or ISO string to local ISO format."""
+        if isinstance(val, str):
+            val = datetime.fromisoformat(val)
+        if isinstance(val, datetime):
+            return val.astimezone().isoformat()
+        return str(val)
+
+    app.jinja_env.filters["to_iso"] = to_iso
+
     app.jinja_env.globals.update(
         get_multiples=get_multiples,
         get_filtered_settings=get_filtered_settings,
@@ -814,20 +812,44 @@ def inject_variables():
 
 @login_manager.user_loader
 def load_user(username):
-    ui_user = DB.get_ui_user(username=username)
-    if not ui_user:
-        LOGGER.warning(f"Couldn't get the user {username} from the database.")
+    try:
+        user_data = API_CLIENT.get_user(username)
+    except (ApiClientError, ApiUnavailableError):
+        LOGGER.warning(f"Couldn't get the user {username} from the API.")
+        return None
+    except Exception:
+        LOGGER.error(f"Unexpected error loading user {username} from the API.")
         return None
 
-    ui_user.list_roles = [role.role_name for role in ui_user.roles]
-    ui_user.list_permissions = []
-    for role in ui_user.list_roles:
-        ui_user.list_permissions.extend(DB.get_ui_role_permissions(role))
-    ui_user.list_permissions = set(ui_user.list_permissions)
+    if not user_data:
+        LOGGER.warning(f"User {username} not found via API.")
+        return None
+
+    ui_user = UiUsers(
+        username=user_data["username"],
+        email=user_data.get("email"),
+        password="",
+        method=user_data.get("method", "manual"),
+        admin=user_data.get("admin", False),
+        theme=user_data.get("theme", "light"),
+        language=user_data.get("language", "en"),
+        totp_secret=user_data.get("totp_secret"),
+    )
+
+    try:
+        permissions = API_CLIENT.get_user_permissions(username)
+        ui_user.list_permissions = set(permissions)
+    except (ApiClientError, ApiUnavailableError):
+        LOGGER.warning(f"Couldn't get permissions for user {username}, defaulting to empty.")
+        ui_user.list_permissions = set()
+    except Exception:
+        LOGGER.error(f"Unexpected error getting permissions for user {username}, defaulting to empty.")
+        ui_user.list_permissions = set()
+
+    ui_user.list_roles = user_data.get("roles", [])
+    ui_user.list_recovery_codes = user_data.get("recovery_codes", [])
 
     if ui_user.totp_secret:
-        ui_user.list_recovery_codes = [recovery_code.code for recovery_code in ui_user.recovery_codes]
-
         if (
             "totp-disable" not in request.path
             and "totp-refresh" not in request.path
@@ -875,112 +897,12 @@ def update_latest_stable_release():
         DATA["LATEST_VERSION"] = latest_release
 
 
-def check_database_state(request_method: str, request_path: str):
-    DATA.load_from_file()
-    if (
-        DB.database_uri
-        and DB.readonly
-        and (datetime.now().astimezone() - datetime.fromisoformat(DATA.get("LAST_DATABASE_RETRY", "1970-01-01T00:00:00")).astimezone() > timedelta(minutes=1))
-    ):
-        failed = False
-        try:
-            DB.retry_connection(pool_timeout=1)
-            DB.retry_connection(log=False)
-            LOGGER.info("The database is no longer read-only, defaulting to read-write mode")
-        except BaseException:
-            failed = True
-            try:
-                DB.retry_connection(readonly=True, pool_timeout=1)
-                DB.retry_connection(readonly=True, log=False)
-            except BaseException:
-                if DB.database_uri_readonly:
-                    with suppress(BaseException):
-                        DB.retry_connection(fallback=True, pool_timeout=1)
-                        DB.retry_connection(fallback=True, log=False)
-        DATA.update(
-            {
-                "READONLY_MODE": failed,
-                "LAST_DATABASE_RETRY": DB.last_connection_retry.isoformat() if DB.last_connection_retry else datetime.now().astimezone().isoformat(),
-            }
-        )
-    elif (
-        DB.database_uri
-        and not DATA.get("READONLY_MODE", False)
-        and request_method == "POST"
-        and not ("/totp" in request_path or "/login" in request_path or request_path.startswith("/plugins/upload"))
-    ):
-        try:
-            DB.test_write()
-            DATA["READONLY_MODE"] = False
-        except BaseException:
-            DATA.update(
-                {
-                    "READONLY_MODE": True,
-                    "LAST_DATABASE_RETRY": DB.last_connection_retry.isoformat() if DB.last_connection_retry else datetime.now().astimezone().isoformat(),
-                }
-            )
-    else:
-        try:
-            DB.test_read()
-        except BaseException:
-            DATA["LAST_DATABASE_RETRY"] = DB.last_connection_retry.isoformat() if DB.last_connection_retry else datetime.now().astimezone().isoformat()
-
-
-def schedule_database_state_check(request_method: str, request_path: str):
-    global _db_check_future, _db_check_next_allowed
-    now = time()
-    with _db_check_lock:
-        if now < _db_check_next_allowed:
-            return
-        if _db_check_future and not _db_check_future.done():
-            return
-
-        DATA.load_from_file()
-        last_run_raw = DATA.get(DB_CHECK_LAST_RUN_KEY)
-        last_run_ts = 0.0
-        if isinstance(last_run_raw, (int, float)):
-            last_run_ts = float(last_run_raw)
-        elif isinstance(last_run_raw, str):
-            with suppress(ValueError):
-                last_run_ts = datetime.fromisoformat(last_run_raw).timestamp()
-
-        running = bool(DATA.get(DB_CHECK_RUNNING_KEY, False))
-        if running:
-            if last_run_ts and now - last_run_ts >= DB_CHECK_STALE_INTERVAL_SECONDS:
-                DATA[DB_CHECK_RUNNING_KEY] = False
-                running = False
-            else:
-                return
-
-        if last_run_ts and now - last_run_ts < DB_CHECK_MIN_INTERVAL_SECONDS:
-            return
-
-        run_started_iso = datetime.now().astimezone().isoformat()
-        DATA.update(
-            {
-                DB_CHECK_RUNNING_KEY: True,
-                DB_CHECK_LAST_RUN_KEY: run_started_iso,
-            }
-        )
-
-        def _run_check():
-            try:
-                check_database_state(request_method, request_path)
-            except BaseException:
-                LOGGER.exception("Unexpected error while checking database state")
-            finally:
-                finished_iso = datetime.now().astimezone().isoformat()
-                with _db_check_lock:
-                    DATA.load_from_file()
-                    DATA.update(
-                        {
-                            DB_CHECK_RUNNING_KEY: False,
-                            DB_CHECK_LAST_RUN_KEY: finished_iso,
-                        }
-                    )
-
-        _db_check_future = _db_check_executor.submit(_run_check)
-        _db_check_next_allowed = now + DB_CHECK_MIN_INTERVAL_SECONDS
+def check_api_readonly_state():
+    """Check API readonly state and update DATA accordingly."""
+    try:
+        DATA["READONLY_MODE"] = API_CLIENT.readonly
+    except Exception:
+        pass
 
 
 def schedule_restart_workers():
@@ -1027,7 +949,11 @@ def before_request():
                 _cookie_config_detected = True
 
     if not request.path.startswith(("/css/", "/img/", "/js/", "/json/", "/fonts/", "/libs/", "/locales/")):
-        metadata = DB.get_metadata()
+        try:
+            metadata = API_CLIENT.get_metadata()
+        except Exception:
+            LOGGER.warning("Failed to fetch metadata from API.")
+            metadata = {}
 
         # Plugin reload trigger
         if not DATA.get("RELOADING", False) and metadata.get("reload_ui_plugins", False):
@@ -1046,11 +972,10 @@ def before_request():
                 _session_cleanup_last_run = now_ts
                 _periodic_tasks_executor.submit(app.config["SESSION_CACHELIB"]._remove_expired, now_ts)
 
-        schedule_database_state_check(request.method, request.path)
+        # Check API readonly state (uses TTL-cached property)
+        check_api_readonly_state()
 
-        DB.readonly = DATA.get("READONLY_MODE", DB.readonly) or not DB.database_uri
-
-        if not request.path.startswith(("/check", "/loading", "/login", "/totp")) and DB.readonly and current_user.is_authenticated:
+        if not request.path.startswith(("/check", "/loading", "/login", "/totp")) and DATA.get("READONLY_MODE", False) and current_user.is_authenticated:
             flask_flash("Database connection is in read-only mode : no modifications possible.", "error")
 
         if current_user.is_authenticated:
@@ -1103,7 +1028,11 @@ def before_request():
         g._env = base_env
     else:
         if not metadata:
-            metadata = DB.get_metadata()
+            try:
+                metadata = API_CLIENT.get_metadata()
+            except Exception:
+                LOGGER.warning("Failed to fetch metadata from API in before_request.")
+                metadata = {}
 
         changes_ongoing = any(
             v
@@ -1115,7 +1044,7 @@ def before_request():
             DATA["PRO_LOADING"] = False
 
         if not request.path.startswith("/loading") and current_user.is_authenticated:
-            if not changes_ongoing and metadata["failover"]:
+            if not changes_ongoing and metadata.get("failover", False):
                 flask_flash(
                     "<p class='p-0 m-0 fst-italic'>The last changes could not be applied because it creates a configuration error on NGINX, please check BunkerWeb's logs for more information. The configuration fell back to the last working one.</p>",
                     "error",
@@ -1123,11 +1052,11 @@ def before_request():
                 flask_flash(
                     f"""<div class='d-flex flex-column'>
                         <h6 class='fw-bold mb-1'>Failover Message:</h6>
-                        <p class='p-0 m-0 fst-italic'>{metadata['failover_message']}</p>
+                        <p class='p-0 m-0 fst-italic'>{metadata.get('failover_message', '')}</p>
                     </div>""",
                     "error",
                 )
-            elif not changes_ongoing and not metadata["failover"] and DATA.get("CONFIG_CHANGED", False):
+            elif not changes_ongoing and not metadata.get("failover", False) and DATA.get("CONFIG_CHANGED", False):
                 flash("The last changes have been applied successfully.")
                 DATA["CONFIG_CHANGED"] = False
 
@@ -1146,18 +1075,26 @@ def before_request():
                 flash(content, f["type"], save=f.get("save", True))
             DATA["TO_FLASH"] = []
 
+        try:
+            plugins = BW_CONFIG.get_plugins()
+        except Exception:
+            plugins = {}
+
+        bw_version = metadata.get("version", "unknown")
+        pro_expire_val = metadata.get("pro_expire")
+
         data = dict(
             current_endpoint=current_endpoint,
             script_nonce=g.script_nonce,
-            bw_version=metadata["version"],
+            bw_version=bw_version,
             latest_version=DATA.get("LATEST_VERSION", "unknown"),
-            new_version_available=is_newer_version_available(metadata["version"], DATA.get("LATEST_VERSION", "unknown")),
-            is_pro_version=metadata["is_pro"],
-            pro_status=metadata["pro_status"],
-            pro_services=metadata["pro_services"],
-            pro_expire=metadata["pro_expire"].strftime("%Y/%m/%d") if isinstance(metadata["pro_expire"], datetime) else "Unknown",
-            pro_overlapped=metadata["pro_overlapped"],
-            plugins=BW_CONFIG.get_plugins(),
+            new_version_available=is_newer_version_available(bw_version, DATA.get("LATEST_VERSION", "unknown")),
+            is_pro_version=metadata.get("is_pro", False),
+            pro_status=metadata.get("pro_status", "unknown"),
+            pro_services=metadata.get("pro_services", 0),
+            pro_expire=pro_expire_val.strftime("%Y/%m/%d") if isinstance(pro_expire_val, datetime) else "Unknown",
+            pro_overlapped=metadata.get("pro_overlapped", False),
+            plugins=plugins,
             flash_messages=session.get("flash_messages", []),
             is_readonly=DATA.get("READONLY_MODE", False) or ("write" not in current_user.list_permissions and not request.path.startswith("/profile")),
             db_readonly=DATA.get("READONLY_MODE", False),
@@ -1169,11 +1106,18 @@ def before_request():
             extra_pages=app.config["EXTRA_PAGES"],
             extra_scripts=DATA.get("EXTRA_SCRIPTS", []),
             extra_styles=DATA.get("EXTRA_STYLES", []),
-            config=DB.get_config(global_only=True, methods=True),
         )
 
+        try:
+            data["config"] = BW_CONFIG.get_config(global_only=True, methods=True)
+        except Exception:
+            data["config"] = {}
+
         if current_endpoint in COLUMNS_PREFERENCES_DEFAULTS:
-            data["columns_preferences"] = DB.get_ui_user_columns_preferences(current_user.get_id(), current_endpoint)
+            try:
+                data["columns_preferences"] = API_CLIENT.get_user_preferences(current_user.get_id(), current_endpoint)
+            except Exception:
+                data["columns_preferences"] = {}
 
         g._env = data
 
@@ -1187,13 +1131,14 @@ def before_request():
 
 
 def mark_user_access(user, session_id):
-    if user and "write" not in user.list_permissions or DB.readonly:
+    if not user or DATA.get("READONLY_MODE", False):
         return
 
-    ret = DB.mark_ui_user_access(session_id, datetime.now().astimezone())
-    if ret:
-        LOGGER.error(f"Couldn't mark the user access: {ret}")
-    LOGGER.debug(f"Marked the user access for session {session_id}")
+    try:
+        API_CLIENT.mark_user_access(user.get_id(), session_id)
+        LOGGER.debug(f"Marked the user access for session {session_id}")
+    except Exception:
+        LOGGER.debug(f"Couldn't mark the user access for session {session_id}")
 
 
 @app.after_request
@@ -1275,7 +1220,12 @@ def teardown_request(teardown):
 
 @app.route("/", strict_slashes=False, methods=["GET"])
 def index():
-    if DB.get_ui_user():
+    try:
+        admin_user = API_CLIENT.get_admin_user()
+    except Exception:
+        admin_user = None
+
+    if admin_user:
         if current_user.is_authenticated:  # type: ignore
             return redirect(url_for("home.home_page"))
         return redirect(url_for("login.login_page"), 303)
@@ -1322,7 +1272,11 @@ def check_reloading():
     DATA.load_from_file()
     current_time = time()
 
-    db_metadata = DB.get_metadata()
+    try:
+        db_metadata = API_CLIENT.get_metadata()
+    except Exception:
+        db_metadata = {}
+
     if (
         not any(
             v
@@ -1345,24 +1299,15 @@ def check_reloading():
 @app.route("/set_theme", methods=["POST"])
 @login_required
 def set_theme():
-    if DB.readonly:
+    if DATA.get("READONLY_MODE", False):
         return Response(status=423, response=dumps({"message": "Database is in read-only mode"}), content_type="application/json")
     elif request.form["theme"] not in ("dark", "light"):
         return Response(status=400, response=dumps({"message": "Bad request"}), content_type="application/json")
 
-    user_data = {
-        "username": current_user.get_id(),
-        "password": current_user.password.encode("utf-8"),
-        "email": current_user.email,
-        "totp_secret": current_user.totp_secret,
-        "method": current_user.method,
-        "theme": request.form["theme"],
-        "language": current_user.language,
-    }
-
-    ret = DB.update_ui_user(**user_data, old_username=current_user.get_id())
-    if ret:
-        LOGGER.error(f"Couldn't update the user {current_user.get_id()}: {ret}")
+    try:
+        API_CLIENT.update_user(current_user.get_id(), theme=request.form["theme"])
+    except Exception as e:
+        LOGGER.error(f"Couldn't update the user {current_user.get_id()}: {e}")
         return Response(status=500, response=dumps({"message": "Internal server error"}), content_type="application/json")
 
     return Response(status=200, response=dumps({"message": "ok"}), content_type="application/json")
@@ -1373,24 +1318,15 @@ def set_theme():
 def set_language():
     allowed_languages = {lang["code"] for lang in SUPPORTED_LANGUAGES}
     lang = request.form["language"].lower()
-    if DB.readonly:
+    if DATA.get("READONLY_MODE", False):
         return Response(status=423, response=dumps({"message": "Database is in read-only mode"}), content_type="application/json")
     elif lang not in allowed_languages:
         return Response(status=400, response=dumps({"message": "Bad request"}), content_type="application/json")
 
-    user_data = {
-        "username": current_user.get_id(),
-        "password": current_user.password.encode("utf-8"),
-        "email": current_user.email,
-        "totp_secret": current_user.totp_secret,
-        "method": current_user.method,
-        "theme": current_user.theme,
-        "language": lang,
-    }
-
-    ret = DB.update_ui_user(**user_data, old_username=current_user.get_id())
-    if ret:
-        LOGGER.error(f"Couldn't update the user {current_user.get_id()}: {ret}")
+    try:
+        API_CLIENT.update_user(current_user.get_id(), language=lang)
+    except Exception as e:
+        LOGGER.error(f"Couldn't update the user {current_user.get_id()}: {e}")
         return Response(status=500, response=dumps({"message": "Internal server error"}), content_type="application/json")
 
     return Response(status=200, response=dumps({"message": "ok"}), content_type="application/json")
@@ -1408,15 +1344,16 @@ def set_columns_preferences():
         return Response(status=400, response=dumps({"message": "Bad request"}), content_type="application/json")
 
     if (
-        DB.readonly
+        DATA.get("READONLY_MODE", False)
         or table_name not in COLUMNS_PREFERENCES_DEFAULTS
         or any(column not in COLUMNS_PREFERENCES_DEFAULTS[table_name] for column in columns_preferences)
     ):
         return Response(status=400, response=dumps({"message": "Bad request"}), content_type="application/json")
 
-    ret = DB.update_ui_user_columns_preferences(current_user.get_id(), table_name, columns_preferences)
-    if ret:
-        LOGGER.error(f"Couldn't update the user {current_user.get_id()}'s columns preferences: {ret}")
+    try:
+        API_CLIENT.update_user_preferences(current_user.get_id(), table_name, columns_preferences)
+    except Exception as e:
+        LOGGER.error(f"Couldn't update the user {current_user.get_id()}'s columns preferences: {e}")
         return Response(status=500, response=dumps({"message": "Internal server error"}), content_type="application/json")
 
     return Response(status=200, response=dumps({"message": "ok"}), content_type="application/json")

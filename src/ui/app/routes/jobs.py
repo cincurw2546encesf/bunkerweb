@@ -2,7 +2,8 @@ from json import JSONDecodeError, loads
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from app.dependencies import DB
+from app.dependencies import API_CLIENT
+from app.api_client import ApiClientError, ApiUnavailableError
 from app.utils import flash
 
 from app.routes.utils import handle_error, verify_data_in_form
@@ -13,13 +14,19 @@ jobs = Blueprint("jobs", __name__)
 @jobs.route("/jobs", methods=["GET"])
 @login_required
 def jobs_page():
-    return render_template("jobs.html", jobs=DB.get_jobs())
+    try:
+        jobs_list = API_CLIENT.get_jobs()
+    except (ApiClientError, ApiUnavailableError) as e:
+        flash(f"Error fetching jobs: {e.message}", "error")
+        jobs_list = []
+
+    return render_template("jobs.html", jobs=jobs_list)
 
 
 @jobs.route("/jobs/run", methods=["POST"])
 @login_required
 def jobs_run():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "jobs")
 
     verify_data_in_form(
@@ -36,9 +43,10 @@ def jobs_run():
     except JSONDecodeError:
         return handle_error("Invalid jobs parameter on /jobs/run.", "jobs", True)
 
-    ret = DB.checked_changes(["config"], [job.get("plugin") for job in jobs if job.get("plugin")], True)
-    if ret:
-        return handle_error(ret, "jobs", True)
+    try:
+        API_CLIENT.run_jobs(jobs)
+    except (ApiClientError, ApiUnavailableError) as e:
+        return handle_error(e.message, "jobs", True)
 
     flash(f"Job{'s' if len(jobs) > 1 else ''}'s plugins will be run in the background by the scheduler.")
     return redirect(

@@ -1,7 +1,8 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 
-from app.dependencies import DB
+from app.api_client import ApiClientError, ApiUnavailableError
+from app.dependencies import API_CLIENT
 from app.models.totp import totp as TOTP
 from app.routes.utils import flash, handle_error, verify_data_in_form
 
@@ -19,10 +20,13 @@ def totp_page():
             if not recovery_code:
                 return handle_error("The token is invalid.", "totp")
             flash(f"You've used one of your recovery codes. You have {len(current_user.list_recovery_codes)} left.")
-            DB.use_ui_user_recovery_code(current_user.get_id(), recovery_code)
+            try:
+                API_CLIENT.use_recovery_code(current_user.get_id(), recovery_code)
+            except (ApiClientError, ApiUnavailableError):
+                return handle_error("An error occurred while using the recovery code.", "totp")
 
         session["totp_validated"] = True
-        redirect(url_for("loading", next=request.form.get("next") or url_for("home.home_page"), message="Validating TOTP token."))
+        return redirect(url_for("loading", next=request.form.get("next") or url_for("home.home_page"), message="Validating TOTP token."))
 
     if not bool(current_user.totp_secret) or session.get("totp_validated", False):
         return redirect(url_for("home.home_page"))

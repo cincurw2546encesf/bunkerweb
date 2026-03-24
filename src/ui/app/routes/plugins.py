@@ -20,7 +20,17 @@ from werkzeug.utils import secure_filename
 
 from common_utils import bytes_hash, create_plugin_tar_gz  # type: ignore
 
-from app.dependencies import CORE_PLUGINS_PATH, BW_CONFIG, BW_INSTANCES_UTILS, CONFIG_TASKS_EXECUTOR, DATA, DB, EXTERNAL_PLUGINS_PATH, PRO_PLUGINS_PATH
+from app.dependencies import (
+    API_CLIENT,
+    CORE_PLUGINS_PATH,
+    BW_CONFIG,
+    BW_INSTANCES_UTILS,
+    CONFIG_TASKS_EXECUTOR,
+    DATA,
+    EXTERNAL_PLUGINS_PATH,
+    PRO_PLUGINS_PATH,
+)
+from app.api_client import ApiClientError, ApiUnavailableError
 from app.utils import ALWAYS_USED_PLUGINS, LOGGER, PLUGIN_NAME_RX, PLUGINS_SPECIFICS, TMP_DIR
 
 from app.routes.utils import PLUGIN_KEYS, error_message, handle_error, verify_data_in_form, wait_applying
@@ -41,7 +51,7 @@ def plugins_page():
 @plugins.route("/plugins/delete", methods=["POST"])
 @login_required
 def delete_plugin():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return Response("Database is in read-only mode", 403)
 
     verify_data_in_form(
@@ -57,17 +67,26 @@ def delete_plugin():
     def update_plugins(plugins: List[str]):
         wait_applying()
 
+        deleted_plugins = []
         for plugin in plugins:
-            err = DB.delete_plugin(plugin, "ui", changes=plugin == plugins[-1])
-            if err:
-                if not err.startswith("Plugin with id"):
-                    message = f"Couldn't delete plugin {plugin} in database: {err}"
-                else:
-                    message = err
-
-                DATA["TO_FLASH"].append({"content": message, "type": "error"})
-            else:
+            try:
+                API_CLIENT.delete_plugin(plugin)
                 DATA["TO_FLASH"].append({"content": f"Deleted plugin {plugin} successfully", "type": "success"})
+                deleted_plugins.append(plugin)
+            except ApiClientError as e:
+                if "not found" in e.message.lower() or "does not exist" in e.message.lower():
+                    message = f"Plugin with id {plugin} not found"
+                else:
+                    message = f"Couldn't delete plugin {plugin} in database: {e.message}"
+                DATA["TO_FLASH"].append({"content": message, "type": "error"})
+            except ApiUnavailableError as e:
+                DATA["TO_FLASH"].append({"content": f"Couldn't delete plugin {plugin}: {e.message}", "type": "error"})
+
+        if deleted_plugins:
+            try:
+                API_CLIENT.checked_changes(["config"], plugins_changes=list(deleted_plugins), value=True)
+            except (ApiClientError, ApiUnavailableError):
+                pass
 
         DATA["RELOADING"] = False
 
@@ -119,14 +138,17 @@ def run_action(plugin: str, function_name: str = "", *, tmp_dir: Optional[Path] 
             # Plugin exists in filesystem
             tmp_dir = plugin_path / "ui"
         else:
-            # Fall back to database if not found in filesystem
-            page = DB.get_plugin_page(plugin)
+            # Fall back to API if not found in filesystem
+            try:
+                page = API_CLIENT.get_plugin_page(plugin)
+            except (ApiClientError, ApiUnavailableError):
+                page = None
 
             if not page:
                 return {"status": "ko", "code": 404, "message": "The plugin does not have a page"}
 
             try:
-                # Extract from database blob
+                # Extract from API blob
                 tmp_dir = TMP_DIR.joinpath("ui", "action", str(uuid4()))
                 tmp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -179,7 +201,7 @@ def run_action(plugin: str, function_name: str = "", *, tmp_dir: Optional[Path] 
         except BaseException:
             data = {}
 
-        res = method(app=current_app, db=DB, bw_instances_utils=BW_INSTANCES_UTILS, args=queries, data=data)
+        res = method(app=current_app, db=None, bw_instances_utils=BW_INSTANCES_UTILS, args=queries, data=data)
     except AttributeError as e:
         if function_name == "pre_render":
             sys_path.pop()
@@ -216,7 +238,7 @@ def run_action(plugin: str, function_name: str = "", *, tmp_dir: Optional[Path] 
 @plugins.route("/plugins/refresh", methods=["POST"])
 @login_required
 def plugins_refresh():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "plugins")
     tmp_ui_path = TMP_DIR.joinpath("ui")
 
@@ -391,11 +413,28 @@ def plugins_refresh():
             DATA["RELOADING"] = False
             return
 
-        err = DB.update_external_plugins(new_plugins, _type="ui", delete_missing=False)
-        if err:
-            DATA["TO_FLASH"].append({"content": f"Couldn't update ui plugins to database: {err}", "type": "error"})
+        # Upload each plugin's tar.gz data via the API upload endpoint
+        upload_files = []
+        for plugin in new_plugins:
+            plugin_data = plugin.get("data", b"")
+            if plugin_data:
+                upload_files.append(("files", (f"{plugin['id']}.tar.gz", BytesIO(plugin_data), "application/gzip")))
+
+        if upload_files:
+            try:
+                result = API_CLIENT.upload_plugins(upload_files, method="ui")
+                created = result.get("created", [])
+                errors = result.get("errors", [])
+                if created:
+                    DATA["TO_FLASH"].append({"content": f"Plugins uploaded successfully: {', '.join(created)}", "type": "success"})
+                for error in errors:
+                    DATA["TO_FLASH"].append({"content": f"Plugin upload error ({error.get('file', '?')}): {error.get('error', 'unknown')}", "type": "error"})
+                if not created and not errors:
+                    DATA["TO_FLASH"].append({"content": "Plugins uploaded successfully", "type": "success"})
+            except (ApiClientError, ApiUnavailableError) as e:
+                DATA["TO_FLASH"].append({"content": f"Couldn't update ui plugins via API: {e}", "type": "error"})
         else:
-            DATA["TO_FLASH"].append({"content": "Plugins uploaded successfully", "type": "success"})
+            DATA["TO_FLASH"].append({"content": "No plugin data to upload", "type": "error"})
 
         DATA["RELOADING"] = False
 
@@ -408,7 +447,7 @@ def plugins_refresh():
 @plugins.route("/plugins/upload", methods=["POST"])
 @login_required
 def upload_plugin():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return {"status": "ko", "message": "Database is in read-only mode"}, 403
 
     if not request.files:
@@ -513,7 +552,7 @@ def custom_plugin_page(plugin: str):
 
     plugin_id = plugin.upper()
     plugin_name_formatted = plugin_data["name"].replace(" ", "_").upper()
-    db_config = DB.get_config()
+    db_config = BW_CONFIG.get_config(methods=False)
 
     def plugin_used(prefix: str = "") -> bool:
         if plugin_id in PLUGINS_SPECIFICS:
@@ -550,12 +589,15 @@ def custom_plugin_page(plugin: str):
             tmp_page_dir = plugin_fs_path / "ui"
             LOGGER.debug(f"Using filesystem path for plugin {plugin}: {tmp_page_dir}")
         else:
-            # Fall back to database if not found in filesystem
-            page = DB.get_plugin_page(plugin)
+            # Fall back to API if not found in filesystem
+            try:
+                page = API_CLIENT.get_plugin_page(plugin)
+            except (ApiClientError, ApiUnavailableError):
+                page = None
             if not page:
                 return error_message("The plugin does not have a page"), 404
 
-            # Extract from database blob to temporary location
+            # Extract from API blob to temporary location
             tmp_page_dir = TMP_DIR.joinpath("ui", "page", str(uuid4()))
             tmp_page_dir.mkdir(parents=True, exist_ok=True)
 
@@ -574,7 +616,7 @@ def custom_plugin_page(plugin: str):
                     tar.extract(member, tmp_page_dir)
 
             tmp_page_dir = tmp_page_dir.joinpath("ui")
-            LOGGER.debug(f"Plugin {plugin} page extracted from database successfully")
+            LOGGER.debug(f"Plugin {plugin} page extracted successfully")
 
         # Execute pre-render action if exists
         pre_render = run_action(plugin, "pre_render", tmp_dir=tmp_page_dir)

@@ -21,7 +21,8 @@ from passlib.totp import generate_secret
 from common_utils import effective_cpu_count, handle_docker_secrets  # type: ignore
 from logger import getLogger, log_types  # type: ignore
 
-from app.models.ui_database import UIDatabase
+from base_api_client import BaseApiClient, ApiClientError, ApiUnavailableError  # type: ignore
+
 from app.dependencies import reload_plugins
 from app.utils import BISCUIT_PRIVATE_KEY_FILE, BISCUIT_PUBLIC_KEY_FILE, USER_PASSWORD_RX, check_password, gen_password_hash, get_latest_stable_release
 
@@ -136,6 +137,32 @@ if UI_SSL_ENABLED and UI_SSL_CERTFILE and UI_SSL_KEYFILE:
     keyfile = UI_SSL_KEYFILE
     if UI_SSL_CA_CERTS:
         ca_certs = UI_SSL_CA_CERTS
+
+
+def _wait_for_api(logger, max_retries=30, delay=2):
+    """Create an API client and wait for the API to be available.
+
+    The API service may not be ready when the UI gunicorn starts. This function
+    creates a BaseApiClient and retries the /ping endpoint with backoff until the
+    API responds or we exhaust retries.
+    """
+    client = BaseApiClient(
+        base_url=getenv("API_URL", "http://bw-api:5000"),
+        api_token=getenv("API_TOKEN", ""),
+        timeout=5,
+        logger_name="UI.STARTUP",
+    )
+    with client.expect_errors():
+        for attempt in range(max_retries):
+            try:
+                client.ping()
+                logger.info("API connection established")
+                return client
+            except (ApiClientError, ApiUnavailableError):
+                if attempt < max_retries - 1:
+                    logger.info(f"Waiting for API... (attempt {attempt + 1}/{max_retries})")
+                    sleep(delay)
+    raise RuntimeError(f"Could not connect to API after {max_retries} attempts")
 
 
 def on_starting(server):
@@ -410,52 +437,45 @@ def on_starting(server):
         ERROR_FILE.write_text(message, encoding="utf-8")
         exit(1)
 
-    DB = UIDatabase(LOGGER)
-    current_time = datetime.now().astimezone()
+    # Connect to the API service (with retry/backoff — API may not be ready yet)
+    try:
+        api_client = _wait_for_api(LOGGER)
+    except RuntimeError as e:
+        message = str(e)
+        LOGGER.critical(message)
+        ERROR_FILE.write_text(message, encoding="utf-8")
+        exit(1)
 
-    ready = False
-    while not ready:
+    # Wait for the database to be initialized (via API metadata endpoint)
+    current_time = datetime.now().astimezone()
+    db_initialized = False
+    while not db_initialized:
         if (datetime.now().astimezone() - current_time).total_seconds() > 60:
             message = "Timed out while waiting for the database to be initialized."
             LOGGER.error(message)
             ERROR_FILE.write_text(message, encoding="utf-8")
             exit(1)
 
-        db_metadata = DB.get_metadata()
-        ui_roles = DB.get_ui_roles(as_dict=True)
-        if isinstance(db_metadata, str) or not db_metadata["is_initialized"] or (isinstance(ui_roles, str) and "doesn't exist" in ui_roles):
+        try:
+            metadata_resp = api_client._get("/metadata")
+            db_metadata = metadata_resp.get("metadata", {})
+            if db_metadata.get("is_initialized"):
+                db_initialized = True
+                continue
             LOGGER.warning("Database is not initialized, retrying in 5s ...")
-        else:
-            ready = True
-            continue
+        except (ApiClientError, ApiUnavailableError) as e:
+            LOGGER.warning(f"Could not check metadata: {e}, retrying in 5s ...")
         sleep(5)
 
-    if not ui_roles:
-        ret = DB.create_ui_role("admin", "Admins can create new users, edit and read the data.", ["manage", "write", "read"])
-        if ret:
-            message = f"Couldn't create the admin role in the database: {ret}"
-            LOGGER.error(message)
-            ERROR_FILE.write_text(message, encoding="utf-8")
-            exit(1)
+    # NOTE: UI role bootstrapping (admin, writer, reader) is handled by the API service.
+    # The API's Database.initialize() creates the default roles and permissions during
+    # database initialization. No role creation is needed here.
 
-        ret = DB.create_ui_role("writer", "Writers can edit and read the data but can't create new users.", ["write", "read"])
-        if ret:
-            message = f"Couldn't create the writer role in the database: {ret}"
-            LOGGER.error(message)
-            ERROR_FILE.write_text(message, encoding="utf-8")
-            exit(1)
-
-        ret = DB.create_ui_role("reader", "Readers can only read the data.", ["read"])
-        if ret:
-            message = f"Couldn't create the reader role in the database: {ret}"
-            LOGGER.error(message)
-            ERROR_FILE.write_text(message, encoding="utf-8")
-            exit(1)
-
+    # Fetch the admin user via API
+    ADMIN_USER = None
     current_time = datetime.now().astimezone()
-
-    ADMIN_USER = "Error"
-    while ADMIN_USER == "Error":
+    admin_fetch_done = False
+    while not admin_fetch_done:
         if (datetime.now().astimezone() - current_time).total_seconds() > 60:
             message = "Timed out while waiting for the admin user."
             LOGGER.error(message)
@@ -463,8 +483,18 @@ def on_starting(server):
             exit(1)
 
         try:
-            ADMIN_USER = DB.get_ui_user(as_dict=True)
-        except BaseException as e:
+            resp = api_client._get("/users", params={"auth": "true"})
+            ADMIN_USER = resp.get("user")
+            admin_fetch_done = True
+        except ApiClientError as e:
+            if e.status_code == 404:
+                # No admin user exists yet — that's valid, we may create one below
+                ADMIN_USER = None
+                admin_fetch_done = True
+            else:
+                LOGGER.debug(f"Couldn't get the admin user: {e}")
+                sleep(1)
+        except ApiUnavailableError as e:
             LOGGER.debug(f"Couldn't get the admin user: {e}")
             sleep(1)
 
@@ -474,44 +504,60 @@ def on_starting(server):
     if ADMIN_USER:
         if invalid_totp_encryption_keys:
             LOGGER.warning("The TOTP encryption key(s) have changed, removing admin TOTP secrets ...")
-            err = DB.update_ui_user(
-                ADMIN_USER["username"], ADMIN_USER["password"], None, theme=ADMIN_USER["theme"], method=ADMIN_USER["method"], language=ADMIN_USER["language"]
-            )
-            if err:
-                LOGGER.error(f"Couldn't update the admin user in the database: {err}")
+            try:
+                api_client._patch(
+                    f"/users/{ADMIN_USER['username']}",
+                    json={
+                        "password": ADMIN_USER["password"],
+                        "totp_secret": None,
+                        "theme": ADMIN_USER.get("theme", "light"),
+                        "method": ADMIN_USER.get("method", "manual"),
+                        "language": ADMIN_USER.get("language", "en"),
+                    },
+                )
+            except (ApiClientError, ApiUnavailableError) as e:
+                LOGGER.error(f"Couldn't update the admin user via API: {e}")
 
         if env_admin_username or env_admin_password:
             override_admin_creds = getenv("OVERRIDE_ADMIN_CREDS", "no").lower() == "yes"
             if ADMIN_USER["method"] == "manual" or override_admin_creds:
                 updated = False
+                old_username = ADMIN_USER["username"]
                 if env_admin_username and ADMIN_USER["username"] != env_admin_username:
                     ADMIN_USER["username"] = env_admin_username
                     updated = True
 
-                if env_admin_password and not check_password(env_admin_password, ADMIN_USER["password"]):
+                # Password from API is a string; check_password expects bytes for the hash
+                admin_password_bytes = ADMIN_USER["password"].encode("utf-8") if isinstance(ADMIN_USER["password"], str) else ADMIN_USER["password"]
+                if env_admin_password and not check_password(env_admin_password, admin_password_bytes):
                     if not USER_PASSWORD_RX.match(env_admin_password):
                         LOGGER.warning(
                             "The admin password is not strong enough. It must contain at least 8 characters, including at least 1 uppercase letter, 1 lowercase letter, 1 number and 1 special character. It will not be updated."
                         )
                     else:
-                        ADMIN_USER["password"] = gen_password_hash(env_admin_password)
+                        ADMIN_USER["password"] = gen_password_hash(env_admin_password).decode("utf-8")
                         updated = True
 
                 if updated:
                     if override_admin_creds:
                         LOGGER.warning("Overriding the admin user credentials, as the OVERRIDE_ADMIN_CREDS environment variable is set to 'yes'.")
-                    err = DB.update_ui_user(
-                        ADMIN_USER["username"],
-                        ADMIN_USER["password"],
-                        ADMIN_USER["totp_secret"],
-                        theme=ADMIN_USER["theme"],
-                        method="manual",
-                        language=ADMIN_USER["language"],
-                    )
-                    if err:
-                        LOGGER.error(f"Couldn't update the admin user in the database: {err}")
-                    else:
+                    try:
+                        patch_payload = {
+                            "password": ADMIN_USER["password"],
+                            "totp_secret": ADMIN_USER.get("totp_secret"),
+                            "theme": ADMIN_USER.get("theme", "light"),
+                            "method": "manual",
+                            "language": ADMIN_USER.get("language", "en"),
+                        }
+                        if old_username != ADMIN_USER["username"]:
+                            patch_payload["username"] = ADMIN_USER["username"]
+                        api_client._patch(
+                            f"/users/{old_username}",
+                            json=patch_payload,
+                        )
                         LOGGER.info("The admin user was updated successfully.")
+                    except (ApiClientError, ApiUnavailableError) as e:
+                        LOGGER.error(f"Couldn't update the admin user via API: {e}")
             else:
                 LOGGER.warning("The admin user wasn't created manually. You can't change it from the environment variables.")
     elif env_admin_username and env_admin_password:
@@ -529,9 +575,26 @@ def on_starting(server):
                 ERROR_FILE.write_text(message, encoding="utf-8")
                 exit(1)
 
-        ret = DB.create_ui_user(user_name, gen_password_hash(env_admin_password), ["admin"], admin=True)
-        if ret and "already exists" not in ret:
-            message = f"Couldn't create the admin user in the database: {ret}"
+        try:
+            api_client._post(
+                "/users",
+                json={
+                    "username": user_name,
+                    "password": gen_password_hash(env_admin_password).decode("utf-8"),
+                    "roles": ["admin"],
+                    "admin": True,
+                    "method": "manual",
+                },
+            )
+            LOGGER.info(f"Admin user '{user_name}' created successfully.")
+        except ApiClientError as e:
+            if "already exists" not in str(e):
+                message = f"Couldn't create the admin user via API: {e}"
+                LOGGER.critical(message)
+                ERROR_FILE.write_text(message, encoding="utf-8")
+                exit(1)
+        except ApiUnavailableError as e:
+            message = f"Couldn't create the admin user via API: {e}"
             LOGGER.critical(message)
             ERROR_FILE.write_text(message, encoding="utf-8")
             exit(1)
@@ -542,26 +605,35 @@ def on_starting(server):
     except BaseException as e:
         LOGGER.error(f"Exception while fetching latest release information: {e}")
 
+    # Fetch readonly mode from the API
+    readonly_mode = False
+    try:
+        readonly_mode = api_client.readonly
+    except (ApiClientError, ApiUnavailableError) as e:
+        LOGGER.warning(f"Could not check readonly mode via API: {e}, defaulting to False")
+
     UI_DATA_FILE.write_text(
         dumps(
             {
                 "LATEST_VERSION": latest_version,
                 "LATEST_VERSION_LAST_CHECK": datetime.now().astimezone().isoformat(),
                 "TO_FLASH": [],
-                "READONLY_MODE": DB.readonly,
+                "READONLY_MODE": readonly_mode,
             }
         ),
         encoding="utf-8",
     )
     set_secure_permissions(UI_DATA_FILE)
 
-    # Check if Redis is enabled via environment variable or database before closing DB
+    # Check if Redis is enabled via environment variable or API global settings
     use_redis = getenv("USE_REDIS", "no").lower() == "yes"
     if not use_redis:
-        db_config = DB.get_config(global_only=True, methods=False, filtered_settings=("USE_REDIS",))
-        use_redis = db_config.get("USE_REDIS", "no") == "yes"
-
-    DB.close()  # Close local DB connections before fork to prevent fd leaks
+        try:
+            settings_resp = api_client._get("/global_settings", params={"filtered_settings": ["USE_REDIS"], "global_only": "true"})
+            db_config = settings_resp.get("settings", {})
+            use_redis = db_config.get("USE_REDIS", "no") == "yes"
+        except (ApiClientError, ApiUnavailableError) as e:
+            LOGGER.warning(f"Could not check USE_REDIS via API: {e}, defaulting to environment value")
 
     LOGGER.info(
         "UI will disconnect users that have their IP address changed during a session"
@@ -596,23 +668,13 @@ def when_ready(server):
 
 
 def post_fork(server, worker):
-    """Dispose inherited DB connections after fork.
+    """Post-fork hook for worker initialization.
 
-    The master process opens DB connections during on_starting() (admin/role
-    setup and reload_plugins()). After fork, workers inherit these stale
-    connections via sys.modules. Per SQLAlchemy docs, call dispose(close=False)
-    in the child to replace the pool without closing the parent's physical
-    connections.
-
-    See: https://docs.sqlalchemy.org/en/21/core/pooling.html
-         #using-connection-pools-with-multiprocessing-or-os-fork
+    Previously disposed inherited DB connections after fork. Now that the UI
+    communicates with the API service instead of the database directly, there
+    are no SQLAlchemy connections to dispose.
     """
-    from app.dependencies import DB
-
-    if DB._session_factory is not None:
-        DB._session_factory.remove()
-    if DB.sql_engine is not None:
-        DB.sql_engine.dispose(close=False)
+    pass
 
 
 def on_exit(server):

@@ -7,12 +7,28 @@ from flask import Blueprint, redirect, render_template, request, send_file, url_
 from flask_login import login_required
 from regex import sub
 
-from app.dependencies import BW_CONFIG, CONFIG_TASKS_EXECUTOR, DATA, DB
+from app.dependencies import API_CLIENT, BW_CONFIG, CONFIG_TASKS_EXECUTOR, DATA
+from app.api_client import ApiClientError, ApiUnavailableError
 
 from app.routes.utils import CUSTOM_CONF_RX, extract_file_setting_names, handle_error, verify_data_in_form, wait_applying
-from app.utils import LOGGER, get_blacklisted_settings, is_editable_method, is_ui_api_method
+from app.utils import LOGGER, flash, get_blacklisted_settings, is_editable_method, is_ui_api_method
 
 services = Blueprint("services", __name__)
+
+
+def _configs_list_to_dict(configs_list):
+    result = {}
+    for c in configs_list:
+        sid = c.get("service") or None
+        sid = None if sid in ("global", "") else sid
+        key = (f"{sid}_" if sid else "") + f"{c['type']}_{c['name']}"
+        entry = dict(c)
+        entry["service_id"] = sid
+        entry.pop("service", None)
+        if "data" in entry and isinstance(entry["data"], str):
+            entry["data"] = entry["data"].encode("utf-8")
+        result[key] = entry
+    return result
 
 
 def parse_services_export(content: str) -> Tuple[Dict[str, Dict[str, str]], List[str]]:
@@ -44,7 +60,19 @@ def parse_services_export(content: str) -> Tuple[Dict[str, Dict[str, str]], List
 @services.route("/services", methods=["GET"])
 @login_required
 def services_page():
-    return render_template("services.html", services=DB.get_services(with_drafts=True), templates=DB.get_templates())
+    try:
+        services_list = API_CLIENT.get_services(with_drafts=True)
+    except (ApiClientError, ApiUnavailableError):
+        flash("Could not fetch services from the API.", "error")
+        services_list = []
+
+    try:
+        templates_data = API_CLIENT.get_templates()
+    except (ApiClientError, ApiUnavailableError):
+        flash("Could not fetch templates from the API.", "error")
+        templates_data = {}
+
+    return render_template("services.html", services=services_list, templates=templates_data)
 
 
 @services.route("/services/", methods=["GET"])
@@ -56,7 +84,7 @@ def services_redirect():
 @services.route("/services/convert", methods=["POST"])
 @login_required
 def services_convert():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "services")
 
     verify_data_in_form(
@@ -72,7 +100,7 @@ def services_convert():
         next=True,
     )
 
-    services = request.form["services"].split(",")
+    services = [s for s in request.form["services"].split(",") if s.strip()]
     if not services:
         return handle_error("No services selected.", "services", True)
 
@@ -84,7 +112,7 @@ def services_convert():
     def convert_services(services: List[str], convert_to: str):
         wait_applying()
 
-        db_services = DB.get_services(with_drafts=True)
+        db_services = API_CLIENT.get_services(with_drafts=True)
         services_to_convert = set()
         non_editable_services = set()
         non_convertible_services = set()
@@ -112,13 +140,14 @@ def services_convert():
             DATA.update({"RELOADING": False, "CONFIG_CHANGED": False})
             return
 
-        db_config = DB.get_config(with_drafts=True)
+        db_config = BW_CONFIG.get_config(with_drafts=True, methods=False)
         for service in services_to_convert:
             db_config[f"{service}_IS_DRAFT"] = "yes" if convert_to == "draft" else "no"
 
-        ret = DB.save_config(db_config, "ui", changed=True)
-        if isinstance(ret, str):
-            DATA["TO_FLASH"].append({"content": ret, "type": "error"})
+        try:
+            API_CLIENT.save_config(db_config, "ui", changed=True)
+        except Exception as e:
+            DATA["TO_FLASH"].append({"content": str(e), "type": "error"})
             DATA.update({"RELOADING": False, "CONFIG_CHANGED": False})
             return
         DATA["TO_FLASH"].append({"content": f"Converted to \"{convert_to.title()}\" services: {', '.join(services_to_convert)}", "type": "success"})
@@ -139,7 +168,7 @@ def services_convert():
 @services.route("/services/delete", methods=["POST"])
 @login_required
 def services_delete():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "services")
 
     verify_data_in_form(
@@ -148,7 +177,7 @@ def services_delete():
         redirect_url="services",
         next=True,
     )
-    services = request.form["services"].split(",")
+    services = [s for s in request.form["services"].split(",") if s.strip()]
     if not services:
         return handle_error("No services selected.", "services", True)
     DATA.load_from_file()
@@ -157,7 +186,7 @@ def services_delete():
         wait_applying()
 
         db_config = BW_CONFIG.get_config(methods=False, with_drafts=True)
-        db_services = DB.get_services(with_drafts=True)
+        db_services = API_CLIENT.get_services(with_drafts=True)
         all_drafts = True
         services_to_delete = set()
         non_deletable_services = set()
@@ -210,14 +239,18 @@ def services_delete():
 @services.route("/services/<string:service>", methods=["GET", "POST"])
 @login_required
 def services_service_page(service: str):
-    services = BW_CONFIG.get_config(global_only=True, methods=False, with_drafts=True, filtered_settings=("SERVER_NAME",))["SERVER_NAME"].split()
+    try:
+        services = BW_CONFIG.get_config(global_only=True, methods=False, with_drafts=True, filtered_settings=("SERVER_NAME",))["SERVER_NAME"].split()
+    except Exception:
+        flash("Could not fetch services configuration.", "error")
+        services = []
     service_exists = service in services
 
     if service != "new" and not service_exists:
         return redirect(url_for("services.services_page"))
 
     if request.method == "POST":
-        if DB.readonly:
+        if API_CLIENT.readonly:
             return handle_error("Database is in read-only mode", "services")
 
         DATA.load_from_file()
@@ -245,7 +278,7 @@ def services_service_page(service: str):
             wait_applying()
 
             if clone and service == "new":
-                cloned_service_config = {k: v for k, v in DB.get_config(methods=False, with_drafts=True, service=clone).items()}
+                cloned_service_config = {k: v for k, v in API_CLIENT.get_service(clone, full=True, methods=False, with_drafts=True).items()}
                 clone_prefix = f"{clone}_"
 
                 for key, value in cloned_service_config.items():
@@ -258,9 +291,9 @@ def services_service_page(service: str):
 
             # Edit check fields and remove already existing ones
             if service != "new":
-                db_config = DB.get_config(methods=True, with_drafts=True, service=service)
+                db_config = API_CLIENT.get_service(service, full=True, methods=True, with_drafts=True)
             else:
-                db_config = DB.get_config(global_only=True, methods=True)
+                db_config = API_CLIENT.get_global_settings(full=True, methods=True)
 
             service_method = db_config.get("SERVER_NAME", {}).get("method", "ui") if service != "new" else "ui"
             override_method = service_method if is_editable_method(service_method) else "ui"
@@ -269,13 +302,13 @@ def services_service_page(service: str):
 
             old_server_name = variables.pop("OLD_SERVER_NAME", "")
             db_custom_configs = {}
-            all_custom_configs = DB.get_custom_configs(with_drafts=True, as_dict=True)
+            all_custom_configs = _configs_list_to_dict(API_CLIENT.get_configs(with_drafts=True, with_data=True))
             removed_custom_configs: set[str] = set()
             new_configs = set()
             configs_changed = False
 
             if mode == "easy":
-                db_templates = DB.get_templates()
+                db_templates = API_CLIENT.get_templates()
                 db_custom_configs = all_custom_configs.copy()
 
                 for variable, value in variables.copy().items():
@@ -444,33 +477,50 @@ def services_service_page(service: str):
             # Save custom configs after the service edit so the new service id exists
             if new_configs or configs_changed:
                 if renamed_service:
-                    # Use per-config upsert to avoid bulk delete when renaming services
+                    # Use per-config create/update to avoid bulk delete when renaming services
                     for custom_config in final_custom_configs.values():
-                        custom_conf_data = {
-                            "service_id": custom_config.get("service_id"),
-                            "type": custom_config.get("type"),
-                            "name": custom_config.get("name"),
-                            "data": custom_config.get("data"),
-                            "checksum": custom_config.get("checksum"),
-                            "method": custom_config.get("method"),
-                        }
-                        error = DB.upsert_custom_config(
-                            custom_conf_data["type"],
-                            custom_conf_data["name"],
-                            custom_conf_data,
-                            service_id=custom_conf_data["service_id"],
-                        )
-                        if error:
-                            DATA["TO_FLASH"].append({"content": f"An error occurred while saving the custom configs: {error}", "type": "error"})
-                            break
+                        conf_data = custom_config.get("data")
+                        if isinstance(conf_data, bytes):
+                            conf_data = conf_data.decode("utf-8", errors="replace")
+                        try:
+                            API_CLIENT.create_config(
+                                service=custom_config.get("service_id"),
+                                type=custom_config.get("type"),
+                                name=custom_config.get("name"),
+                                data=conf_data or "",
+                                is_draft=custom_config.get("is_draft", False),
+                            )
+                        except Exception as create_err:
+                            if "already exists" in str(create_err):
+                                try:
+                                    API_CLIENT.update_config(
+                                        custom_config.get("service_id"),
+                                        custom_config.get("type"),
+                                        custom_config.get("name"),
+                                        data=conf_data or "",
+                                        is_draft=custom_config.get("is_draft", False),
+                                    )
+                                except Exception as update_err:
+                                    DATA["TO_FLASH"].append({"content": f"An error occurred while saving the custom configs: {update_err}", "type": "error"})
+                                    break
+                            else:
+                                DATA["TO_FLASH"].append({"content": f"An error occurred while saving the custom configs: {create_err}", "type": "error"})
+                                break
                 else:
-                    error = DB.save_custom_configs(
-                        final_custom_configs.values(),
-                        override_method,
-                        changed=service != "new" and (was_draft != is_draft or not is_draft),
-                    )
-                    if error:
-                        DATA["TO_FLASH"].append({"content": f"An error occurred while saving the custom configs: {error}", "type": "error"})
+                    serializable_configs = []
+                    for cfg in final_custom_configs.values():
+                        cfg_copy = dict(cfg)
+                        if isinstance(cfg_copy.get("data"), bytes):
+                            cfg_copy["data"] = cfg_copy["data"].decode("utf-8", errors="replace")
+                        serializable_configs.append(cfg_copy)
+                    try:
+                        API_CLIENT.bulk_save_configs(
+                            serializable_configs,
+                            override_method,
+                            changed=service != "new" and (was_draft != is_draft or not is_draft),
+                        )
+                    except Exception as e:
+                        DATA["TO_FLASH"].append({"content": f"An error occurred while saving the custom configs: {e}", "type": "error"})
 
             if operation.endswith("already exists."):
                 DATA["TO_FLASH"].append({"content": operation, "type": "warning"})
@@ -522,7 +572,13 @@ def services_service_page(service: str):
     mode = request.args.get("mode", "easy")
     search_type = request.args.get("type", "all")
     template = request.args.get("template", "low")
-    db_templates = DB.get_templates()
+
+    try:
+        db_templates = API_CLIENT.get_templates()
+    except (ApiClientError, ApiUnavailableError):
+        flash("Could not fetch templates from the API.", "error")
+        db_templates = {}
+
     used_dom_ids = set()
 
     for template_id, template_data in db_templates.items():
@@ -539,22 +595,44 @@ def services_service_page(service: str):
         used_dom_ids.add(dom_id)
         template_data["dom_id"] = dom_id
 
-    db_custom_configs = DB.get_custom_configs(with_drafts=True, as_dict=True)
+    try:
+        db_custom_configs = _configs_list_to_dict(API_CLIENT.get_configs(with_drafts=True, with_data=True))
+    except (ApiClientError, ApiUnavailableError):
+        flash("Could not fetch custom configs from the API.", "error")
+        db_custom_configs = {}
+
     clone = None
     if service == "new":
         clone = request.args.get("clone", "")
-        db_config = DB.get_config(global_only=True, methods=True)
+        try:
+            db_config = API_CLIENT.get_global_settings(full=True, methods=True)
+        except (ApiClientError, ApiUnavailableError):
+            flash("Could not fetch global settings from the API.", "error")
+            db_config = {}
+
         if clone:
-            for key, setting in DB.get_config(methods=True, with_drafts=True, service=clone).items():
+            try:
+                clone_service_data = API_CLIENT.get_service(clone, full=True, methods=True, with_drafts=True)
+            except (ApiClientError, ApiUnavailableError):
+                flash(f"Could not fetch service {clone} for cloning.", "error")
+                clone_service_data = {}
+
+            for key, setting in clone_service_data.items():
                 original_value = db_config.get(key, {}).get("value")
                 db_config[key] = setting | {"clone": original_value != setting.get("value")}
-            db_config["SERVER_NAME"].update({"value": "", "clone": False})
-            db_config["USE_UI"].update({"value": "no", "clone": False})
-            for key, value in DB.get_custom_configs(with_drafts=True, as_dict=True).items():
+            if "SERVER_NAME" in db_config:
+                db_config["SERVER_NAME"].update({"value": "", "clone": False})
+            if "USE_UI" in db_config:
+                db_config["USE_UI"].update({"value": "no", "clone": False})
+            for key, value in list(db_custom_configs.items()):
                 if key.startswith(f"{clone}_"):
                     db_custom_configs[key.replace(f"{clone}_", f"{service}_", 1)] = value
     else:
-        db_config = DB.get_config(methods=True, with_drafts=True, service=service)
+        try:
+            db_config = API_CLIENT.get_service(service, full=True, methods=True, with_drafts=True)
+        except (ApiClientError, ApiUnavailableError):
+            flash(f"Could not fetch service {service} from the API.", "error")
+            db_config = {}
 
     return render_template(
         "service_settings.html",
@@ -604,7 +682,7 @@ def services_service_export():
 @services.route("/services/import", methods=["POST"])
 @login_required
 def services_service_import():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "services")
 
     services_file = request.files.get("services_file")
@@ -628,8 +706,8 @@ def services_service_import():
         for error in parse_errors:
             DATA["TO_FLASH"].append({"content": f"Import warning: {error}", "type": "error"})
 
-        existing_services = {service["id"] for service in DB.get_services(with_drafts=True)}
-        base_config = DB.get_config(global_only=True, methods=True)
+        existing_services = {service["id"] for service in API_CLIENT.get_services(with_drafts=True)}
+        base_config = API_CLIENT.get_global_settings(full=True, methods=True)
         created = []
         skipped = []
         failed = []

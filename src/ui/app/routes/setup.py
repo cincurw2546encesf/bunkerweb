@@ -12,7 +12,8 @@ from flask_login import current_user
 
 # from app.models.totp import totp as TOTP
 
-from app.dependencies import BW_CONFIG, DATA, DB
+from app.dependencies import API_CLIENT, BW_CONFIG, DATA
+from app.api_client import ApiClientError, ApiUnavailableError
 from app.utils import LOGGER, USER_PASSWORD_RX, gen_password_hash, _sanitize_internal_next
 
 from app.routes.utils import REVERSE_PROXY_PATH, handle_error
@@ -22,47 +23,55 @@ setup = Blueprint("setup", __name__)
 
 @setup.route("/setup", methods=["GET", "POST"])
 def setup_page():
-    db_config = DB.get_config(
-        filtered_settings=(
-            "SERVER_NAME",
-            "MULTISITE",
-            "USE_UI",
-            "UI_HOST",
-            "REVERSE_PROXY_URL",
-            "AUTO_LETS_ENCRYPT",
-            "USE_LETS_ENCRYPT_STAGING",
-            "EMAIL_LETS_ENCRYPT",
-            "LETS_ENCRYPT_SERVER",
-            "LETS_ENCRYPT_ZEROSSL_API_KEY",
-            "LETS_ENCRYPT_ZEROSSL_API_RETRY",
-            "LETS_ENCRYPT_ZEROSSL_API_RETRY_DELAY",
-            "LETS_ENCRYPT_ZEROSSL_API_CONNECT_TIMEOUT",
-            "LETS_ENCRYPT_ZEROSSL_API_MAX_TIME",
-            "LETS_ENCRYPT_CHALLENGE",
-            "LETS_ENCRYPT_PROFILE",
-            "LETS_ENCRYPT_CUSTOM_PROFILE",
-            "LETS_ENCRYPT_DISABLE_PUBLIC_SUFFIXES",
-            "LETS_ENCRYPT_DNS_PROVIDER",
-            "LETS_ENCRYPT_DNS_PROPAGATION",
-            "USE_LETS_ENCRYPT_WILDCARD",
-            "LETS_ENCRYPT_DNS_CREDENTIAL_ITEM",
-            "USE_CUSTOM_SSL",
-            "CUSTOM_SSL_CERT_PRIORITY",
-            "CUSTOM_SSL_CERT",
-            "CUSTOM_SSL_KEY",
-            "CUSTOM_SSL_CERT_DATA",
-            "CUSTOM_SSL_KEY_DATA",
-            "PRO_LICENSE_KEY",
-            "USE_REAL_IP",
-            "USE_PROXY_PROTOCOL",
-            "REAL_IP_FROM",
-            "REAL_IP_HEADER",
-            "REAL_IP_RECURSIVE",
-            "REAL_IP_FROM_URLS",
-        ),
-    )
+    try:
+        db_config = BW_CONFIG.get_config(
+            methods=False,
+            filtered_settings=(
+                "SERVER_NAME",
+                "MULTISITE",
+                "USE_UI",
+                "UI_HOST",
+                "REVERSE_PROXY_URL",
+                "AUTO_LETS_ENCRYPT",
+                "USE_LETS_ENCRYPT_STAGING",
+                "EMAIL_LETS_ENCRYPT",
+                "LETS_ENCRYPT_SERVER",
+                "LETS_ENCRYPT_ZEROSSL_API_KEY",
+                "LETS_ENCRYPT_ZEROSSL_API_RETRY",
+                "LETS_ENCRYPT_ZEROSSL_API_RETRY_DELAY",
+                "LETS_ENCRYPT_ZEROSSL_API_CONNECT_TIMEOUT",
+                "LETS_ENCRYPT_ZEROSSL_API_MAX_TIME",
+                "LETS_ENCRYPT_CHALLENGE",
+                "LETS_ENCRYPT_PROFILE",
+                "LETS_ENCRYPT_CUSTOM_PROFILE",
+                "LETS_ENCRYPT_DISABLE_PUBLIC_SUFFIXES",
+                "LETS_ENCRYPT_DNS_PROVIDER",
+                "LETS_ENCRYPT_DNS_PROPAGATION",
+                "USE_LETS_ENCRYPT_WILDCARD",
+                "LETS_ENCRYPT_DNS_CREDENTIAL_ITEM",
+                "USE_CUSTOM_SSL",
+                "CUSTOM_SSL_CERT_PRIORITY",
+                "CUSTOM_SSL_CERT",
+                "CUSTOM_SSL_KEY",
+                "CUSTOM_SSL_CERT_DATA",
+                "CUSTOM_SSL_KEY_DATA",
+                "PRO_LICENSE_KEY",
+                "USE_REAL_IP",
+                "USE_PROXY_PROTOCOL",
+                "REAL_IP_FROM",
+                "REAL_IP_HEADER",
+                "REAL_IP_RECURSIVE",
+                "REAL_IP_FROM_URLS",
+            ),
+        )
+    except Exception:
+        LOGGER.warning("Could not fetch config for setup page.")
+        db_config = {"SERVER_NAME": ""}
 
-    admin_user = DB.get_ui_user()
+    try:
+        admin_user = API_CLIENT.get_admin_user()
+    except (ApiClientError, ApiUnavailableError):
+        admin_user = None
     pro_license_key = db_config.get("PRO_LICENSE_KEY", getenv("PRO_LICENSE_KEY", ""))
 
     ui_reverse_proxy = None
@@ -89,7 +98,7 @@ def setup_page():
         return redirect(url_for("home.home_page"))
 
     if request.method == "POST":
-        if DB.readonly:
+        if API_CLIENT.readonly:
             return handle_error("Database is in read-only mode", "setup")
 
         required_keys = ["theme"]
@@ -130,7 +139,7 @@ def setup_page():
             return handle_error(f"Missing either one of the following parameters: {', '.join(required_keys)}.", "setup")
 
         if not pro_license_key and request.form.get("pro_license_key", ""):
-            global_config = DB.get_config(global_only=True)
+            global_config = BW_CONFIG.get_config(global_only=True)
             BW_CONFIG.edit_global_conf(global_config | {"PRO_LICENSE_KEY": request.form["pro_license_key"]}, check_changes=False)
 
         if not admin_user:
@@ -156,20 +165,21 @@ def setup_page():
 
             #     totp_recovery_codes = TOTP.generate_recovery_codes()
 
-            ret = DB.create_ui_user(
-                request.form["admin_username"],
-                gen_password_hash(request.form["admin_password"]),
-                ["admin"],
-                request.form["admin_email"] or None,
-                theme=request.form.get("theme", "light"),
-                language=request.form.get("language", "en"),
-                totp_secret=totp_secret,
-                totp_recovery_codes=totp_recovery_codes,
-                method="wizard",
-                admin=True,
-            )
-            if ret:
-                return handle_error(f"Couldn't create the admin user in the database: {ret}", "setup", False, "error")
+            try:
+                API_CLIENT.create_user(
+                    request.form["admin_username"],
+                    gen_password_hash(request.form["admin_password"]).decode("utf-8"),
+                    roles=["admin"],
+                    email=request.form["admin_email"] or None,
+                    theme=request.form.get("theme", "light"),
+                    language=request.form.get("language", "en"),
+                    totp_secret=totp_secret,
+                    totp_recovery_codes=totp_recovery_codes,
+                    method="wizard",
+                    admin=True,
+                )
+            except (ApiClientError, ApiUnavailableError) as e:
+                return handle_error(f"Couldn't create the admin user: {e.message}", "setup", False, "error")
 
             flash("The admin user was created successfully")
 
@@ -251,7 +261,7 @@ def setup_page():
                     )
 
             if not config.get("MULTISITE", "no") == "yes":
-                global_config = DB.get_config(global_only=True)
+                global_config = BW_CONFIG.get_config(global_only=True)
                 BW_CONFIG.edit_global_conf(global_config | {"MULTISITE": "yes"}, check_changes=False)
 
             LOGGER.debug(f"Creating new service with base_config: {base_config} and config: {config}")
@@ -264,9 +274,10 @@ def setup_page():
             if error:
                 return handle_error(f"Couldn't edit the new service: {operation}", "setup", False, "error")
 
-            err = DB.checked_changes(["config", "custom_configs"], plugins_changes="all", value=True)
-            if err:
-                LOGGER.error(f"Error while applying changes to the database: {err}, you may need to reload the application")
+            try:
+                API_CLIENT.checked_changes(["config", "custom_configs"], plugins_changes="all", value=True)
+            except (ApiClientError, ApiUnavailableError) as e:
+                LOGGER.error(f"Error while applying changes: {e.message}, you may need to reload the application")
 
         return Response(status=200)
 
@@ -332,10 +343,23 @@ def setup_page():
 def setup_loading():
     DATA.load_from_file()
 
-    db_config = DB.get_config(filtered_settings=("SERVER_NAME", "USE_UI", "REVERSE_PROXY_URL"))
+    try:
+        db_config = BW_CONFIG.get_config(methods=False, filtered_settings=("SERVER_NAME", "USE_UI", "REVERSE_PROXY_URL"))
+    except Exception:
+        LOGGER.warning("Could not fetch config for setup loading page.")
+        db_config = {"SERVER_NAME": ""}
+
     ui_service = {}
-    ui_admin = DB.get_ui_user(as_dict=True)
-    admin_old_enough = ui_admin and ui_admin["creation_date"] < datetime.now().astimezone() - timedelta(minutes=5)
+
+    try:
+        ui_admin = API_CLIENT.get_admin_user()
+    except (ApiClientError, ApiUnavailableError):
+        ui_admin = None
+    admin_creation_date = None
+    if ui_admin and ui_admin.get("creation_date"):
+        cd = ui_admin["creation_date"]
+        admin_creation_date = datetime.fromisoformat(cd) if isinstance(cd, str) else cd
+    admin_old_enough = admin_creation_date is not None and admin_creation_date < datetime.now().astimezone() - timedelta(minutes=5)
 
     for server_name in db_config["SERVER_NAME"].split():
         if server_name and db_config.get(f"{server_name}_USE_UI", "no") == "yes":

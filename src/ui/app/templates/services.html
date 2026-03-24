@@ -137,8 +137,8 @@
                                       data-i18n="badge.no_template">No template</span>
                             {% endif %}
                         </td>
-                        <td class="service-creation-date">{{ service['creation_date'].astimezone().isoformat() }}</td>
-                        <td class="service-last-update-date">{{ service['last_update'].astimezone().isoformat() }}</td>
+                        <td class="service-creation-date">{{ service['creation_date'] | to_iso }}</td>
+                        <td class="service-last-update-date">{{ service['last_update'] | to_iso }}</td>
                         <td>
                             <div class="d-flex justify-content-evenly">
                                 {% set can_delete_service = is_ui_api_method(service['method']) %}

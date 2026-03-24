@@ -116,8 +116,8 @@
                         <td>{{ template_data.settings|length }}</td>
                         <td>{{ template_data.configs|length }}</td>
                         <td id="method-{{ template }}">{{ template_data.method }}</td>
-                        <td class="template-creation-date">{{ template_data.creation_date.astimezone().isoformat() }}</td>
-                        <td class="template-last-update-date">{{ template_data.last_update.astimezone().isoformat() }}</td>
+                        <td class="template-creation-date">{{ template_data.creation_date | to_iso }}</td>
+                        <td class="template-last-update-date">{{ template_data.last_update | to_iso }}</td>
                         <td>
                             <div class="d-flex justify-content-evenly">
                                 <a role="button"

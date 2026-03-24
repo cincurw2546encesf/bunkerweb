@@ -136,8 +136,8 @@
                                 {% endif %}
                             </div>
                         </td>
-                        <td class="instance-creation-date">{{ instance.creation_date.astimezone().isoformat() }}</td>
-                        <td class="instance-last-seen-date">{{ instance.last_seen.astimezone().isoformat() }}</td>
+                        <td class="instance-creation-date">{{ instance.creation_date | to_iso }}</td>
+                        <td class="instance-last-seen-date">{{ instance.last_seen | to_iso }}</td>
                         <td>
                             <div class="d-flex justify-content-evenly">
                                 {% set can_delete_instance = is_ui_api_method(instance['method']) %}

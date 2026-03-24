@@ -10,7 +10,7 @@ from html import escape
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from app.dependencies import BW_CONFIG, BW_INSTANCES_UTILS, DB
+from app.dependencies import API_CLIENT, BW_CONFIG, BW_INSTANCES_UTILS
 from app.utils import LOGGER, RESERVED_SERVICE_NAMES, flash
 
 from app.routes.utils import cors_required, get_redis_client, get_remain, handle_error, verify_data_in_form
@@ -469,7 +469,7 @@ def bans_fetch():
 @login_required
 def bans_ban():
     # Check database state
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "bans")
 
     # Validate input parameters
@@ -533,7 +533,7 @@ def bans_ban():
 @login_required
 def bans_unban():
     # Check database state
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "bans")
 
     # Validate input parameters
@@ -589,7 +589,7 @@ def bans_unban():
 @login_required
 def bans_update_duration():
     # Check database state
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "bans")
 
     # Validate input parameters

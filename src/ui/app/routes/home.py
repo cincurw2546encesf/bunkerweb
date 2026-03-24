@@ -4,7 +4,9 @@ from psutil import virtual_memory
 from flask import Blueprint, render_template
 from flask_login import login_required
 
-from app.dependencies import BW_INSTANCES_UTILS, DB
+from app.dependencies import API_CLIENT, BW_INSTANCES_UTILS
+from app.api_client import ApiClientError, ApiUnavailableError
+from app.utils import flash
 
 home = Blueprint("home", __name__)
 
@@ -78,10 +80,16 @@ def home_page():
         "memory_state": memory_state,
     }
 
+    try:
+        services = API_CLIENT.get_services(with_drafts=True)
+    except (ApiClientError, ApiUnavailableError) as e:
+        flash(f"Error fetching services: {e.message}", "error")
+        services = []
+
     return render_template(
         "home.html",
         instances=BW_INSTANCES_UTILS.get_instances(),
-        services=DB.get_services(with_drafts=True),
+        services=services,
         request_errors=dict(sorted(request_statuses.items(), key=itemgetter(0))),
         request_countries=dict(sorted(request_countries.items(), key=lambda item: (-item[1]["blocked"], item[0]))),
         request_ips=top_blocked_ips,

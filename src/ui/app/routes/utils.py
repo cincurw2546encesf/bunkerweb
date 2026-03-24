@@ -9,7 +9,8 @@ from flask import Response, redirect, request, url_for
 from qrcode.main import QRCode
 from regex import compile as re_compile
 
-from app.dependencies import BW_CONFIG, DB
+from app.api_client import ApiClientError, ApiUnavailableError
+from app.dependencies import API_CLIENT, BW_CONFIG
 from app.utils import LOGGER, flash
 
 from common_utils import get_redis_client as get_common_redis_client  # type: ignore
@@ -33,10 +34,13 @@ def wait_applying():
     current_time = datetime.now().astimezone()
     ready = False
     while not ready and (datetime.now().astimezone() - current_time).seconds < 120:
-        db_metadata = DB.get_metadata()
-        if isinstance(db_metadata, str):
-            LOGGER.error(f"An error occurred when checking for changes in the database : {db_metadata}")
-        elif not any(
+        try:
+            db_metadata = API_CLIENT.get_metadata()
+        except (ApiClientError, ApiUnavailableError) as e:
+            LOGGER.error(f"An error occurred when checking for changes in the database : {e}")
+            sleep(1)
+            continue
+        if not any(
             v
             for k, v in db_metadata.items()
             if k in ("custom_configs_changed", "external_plugins_changed", "pro_plugins_changed", "plugins_config_changed", "instances_changed")

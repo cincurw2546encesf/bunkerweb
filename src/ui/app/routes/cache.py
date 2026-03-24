@@ -5,9 +5,9 @@ from flask import Blueprint, Response, flash as flask_flash, redirect, render_te
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
-from app.dependencies import BW_CONFIG, DB
-from app.utils import LOGGER, get_printable_content
-
+from app.dependencies import API_CLIENT, BW_CONFIG
+from app.api_client import ApiClientError, ApiUnavailableError
+from app.utils import flash
 
 cache = Blueprint("cache", __name__)
 
@@ -20,9 +20,15 @@ def cache_page():
     service = request.args.get("service", "")
     cache_plugin = request.args.get("plugin", "")
     cache_job_name = request.args.get("job_name", "")
+    try:
+        caches = API_CLIENT.get_cache_files()
+    except (ApiClientError, ApiUnavailableError) as e:
+        flash(f"Error fetching cache files: {e.message}", "error")
+        caches = []
+
     return render_template(
         "cache.html",
-        caches=DB.get_jobs_cache_files(with_data=False),
+        caches=caches,
         services=BW_CONFIG.get_config(global_only=True, methods=False, with_drafts=True, filtered_settings=("SERVER_NAME",))["SERVER_NAME"],
         cache_service=service,
         cache_plugin=cache_plugin,
@@ -38,30 +44,33 @@ def cache_view(service: str, plugin_id: str, job_name: str, file_name: str):
     else:
         file_name = secure_filename(file_name)
 
-    cache_file = DB.get_job_cache_file(
-        job_name,
-        file_name,
-        service_id=service if service != "global" else None,
-        plugin_id=plugin_id,
-    )
-
     download = request.args.get("download", False)
-    if download:
-        if not cache_file:
-            return Response("Cache file not found", status=404)
-        return send_file(BytesIO(cache_file), as_attachment=True, download_name=file_name)
 
-    if not cache_file:
-        flask_flash(f"Cache file {file_name} from job {job_name}, plugin {plugin_id}{', service ' + service if service != 'global' else ''} not found", "error")
+    try:
+        if download:
+            resp = API_CLIENT.get_cache_file(service, plugin_id, job_name, file_name, download=True)
+            return send_file(BytesIO(resp.content), as_attachment=True, download_name=file_name)
+
+        data = API_CLIENT.get_cache_file(service, plugin_id, job_name, file_name)
+        cache_content = data.get("file", {}).get("data", "")
+        return render_template("cache_view.html", cache_file=cache_content)
+    except ApiClientError as e:
+        if e.status_code == 404:
+            flask_flash(
+                f"Cache file {file_name} from job {job_name}, plugin {plugin_id}{', service ' + service if service != 'global' else ''} not found", "error"
+            )
+            return redirect(url_for("cache.cache_page"))
+        flask_flash(f"Error fetching cache file: {e.message}", "error")
         return redirect(url_for("cache.cache_page"))
-
-    return render_template("cache_view.html", cache_file=get_printable_content(cache_file))
+    except ApiUnavailableError as e:
+        flask_flash(f"API unavailable: {e.message}", "error")
+        return redirect(url_for("cache.cache_page"))
 
 
 @cache.route("/cache/delete", methods=["POST"])
 @login_required
 def cache_delete_bulk():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return Response("Database is in read-only mode", status=403)
 
     try:
@@ -72,42 +81,16 @@ def cache_delete_bulk():
     if not cache_files:
         return Response("No cache files selected", status=400)
 
-    errors = []
-    changed_plugins = set()
-    deleted_count = 0
+    try:
+        result = API_CLIENT.delete_cache_files(cache_files)
+        deleted_count = result.get("deleted", 0)
+        errors = result.get("errors", [])
 
-    for cache_file in cache_files:
-        file_name = cache_file.get("fileName", "")
-        job_name = cache_file.get("jobName", "")
-        service = cache_file.get("service", "")
-        plugin = cache_file.get("plugin", "")
-
-        if file_name.startswith("folder:"):
-            file_name = file_name.replace("_", "/")
+        if errors:
+            flask_flash(f"Deleted {deleted_count} files with {len(errors)} errors: {'; '.join(errors)}", "warning")
         else:
-            file_name = secure_filename(file_name)
-
-        # Delete the cache file
-        result = DB.delete_job_cache(
-            file_name,
-            job_name=job_name,
-            service_id=service if service != "global" else None,
-        )
-
-        if result:
-            errors.append(f"Error deleting {file_name}: {result}")
-        else:
-            changed_plugins.add(plugin)
-            deleted_count += 1
-
-    ret = DB.checked_changes(changes=["config"], plugins_changes=list(changed_plugins), value=True)
-    if ret:
-        LOGGER.warning("Cache deletion changes were not committed to the database")
-        errors.append("Changes were not committed to the database")
-
-    if errors:
-        flask_flash(f"Deleted {deleted_count} files with {len(errors)} errors: {'; '.join(errors)}", "warning")
-    else:
-        flask_flash(f"Successfully deleted {deleted_count} cache file{'s' if deleted_count != 1 else ''}", "success")
+            flask_flash(f"Successfully deleted {deleted_count} cache file{'s' if deleted_count != 1 else ''}", "success")
+    except (ApiClientError, ApiUnavailableError) as e:
+        flask_flash(f"Error deleting cache files: {e.message}", "error")
 
     return redirect(url_for("cache.cache_page"))

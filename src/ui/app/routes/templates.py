@@ -5,11 +5,11 @@ from typing import Any, Dict, List, Optional, Set
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from app.dependencies import BW_CONFIG, DB
+from app.dependencies import API_CLIENT, BW_CONFIG
+from app.api_client import ApiClientError, ApiUnavailableError
 from app.routes.configs import CONFIG_TYPES
 from app.routes.utils import cors_required
 from app.utils import LOGGER, flash
-
 
 templates = Blueprint("templates", __name__)
 
@@ -128,7 +128,7 @@ def _build_multisite_settings_catalog() -> List[Dict[str, Any]]:
             append_entry(key, meta, general_info, -1, setting_index)
 
     try:
-        raw_plugin_records = DB.get_plugins(_type="all", with_data=True)
+        raw_plugin_records = API_CLIENT.get_plugins(type="all", with_data=True)
     except Exception as exc:  # pragma: no cover - defensive
         LOGGER.warning("Unable to load plugin order from database: %s", exc)
         raw_plugin_records = []
@@ -222,7 +222,7 @@ def _user_readonly() -> bool:
 
 
 def _check_permissions() -> Dict[str, Any]:
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return {"status": "error", "code": 409, "message": "Database is in read-only mode"}
     if _user_readonly():
         return {"status": "error", "code": 403, "message": "User is read-only"}
@@ -262,11 +262,11 @@ def _build_editor_context(
     clone_meta: Optional[Dict[str, str]] = None,
     view_mode: str = "easy",
 ) -> Dict[str, Any]:
-    templates_index = templates_index or DB.get_templates()
+    templates_index = templates_index or API_CLIENT.get_templates()
     template_meta = template_meta or {}
 
     user_readonly = _user_readonly()
-    database_readonly = DB.readonly
+    database_readonly = API_CLIENT.readonly
     method = template_meta.get("method", "ui")
     can_edit = not database_readonly and not user_readonly and (mode == "create" or method == "ui")
 
@@ -319,7 +319,7 @@ def _build_editor_context(
 @templates.route("/templates", methods=["GET"])
 @login_required
 def templates_page():
-    db_templates = DB.get_templates()
+    db_templates = API_CLIENT.get_templates()
     return render_template("templates.html", templates=db_templates)
 
 
@@ -327,7 +327,7 @@ def templates_page():
 @login_required
 def template_create_page():
     clone_id = request.args.get("clone", "").strip()
-    templates_index = DB.get_templates()
+    templates_index = API_CLIENT.get_templates()
     view_mode = _normalize_view_mode(request.args.get("view", request.args.get("mode")))
     template_payload = {
         "id": "",
@@ -338,7 +338,7 @@ def template_create_page():
     }
     clone_meta: Optional[Dict[str, str]] = None
     if clone_id:
-        details = DB.get_template_details(clone_id)
+        details = API_CLIENT.get_template(clone_id)
         if details:
             converted = _convert_template_details({**details, "id": clone_id})
             converted["id"] = ""
@@ -364,12 +364,12 @@ def template_create_page():
 @templates.route("/templates/<template_id>", methods=["GET"])
 @login_required
 def template_edit_page(template_id: str):
-    details = DB.get_template_details(template_id)
+    details = API_CLIENT.get_template(template_id)
     if not details:
         flash("Template not found.", "error")
         return redirect(url_for("templates.templates_page"))
 
-    templates_index = DB.get_templates()
+    templates_index = API_CLIENT.get_templates()
     template_meta = templates_index.get(template_id, {})
     view_mode = _normalize_view_mode(request.args.get("view", request.args.get("mode")))
     context = _build_editor_context(
@@ -387,7 +387,7 @@ def template_edit_page(template_id: str):
 @login_required
 @cors_required
 def templates_detail(template_id: str):
-    details = DB.get_template_details(template_id)
+    details = API_CLIENT.get_template(template_id)
     if not details:
         return jsonify({"status": "error", "message": "Template not found"}), 404
     return jsonify({"status": "success", "template": _convert_template_details({**details, "id": template_id})})
@@ -416,9 +416,10 @@ def templates_create():
         steps=template_data.get("steps", []),
         configs=template_data.get("configs", []),
     )
-    err = DB.create_template(template_id, **create_kwargs)
-    if err:
-        return jsonify({"status": "error", "message": err}), 400
+    try:
+        API_CLIENT.create_template(template_id, **create_kwargs)
+    except (ApiClientError, ApiUnavailableError) as e:
+        return jsonify({"status": "error", "message": e.message}), getattr(e, "status_code", None) or 400
 
     flash(f"Template {template_id} created successfully.", "success")
     return jsonify({"status": "success"})
@@ -432,7 +433,7 @@ def templates_update(template_id: str):
     if permission:
         return jsonify({"status": "error", "message": permission["message"]}), permission["code"]
 
-    details = DB.get_template_details(template_id)
+    details = API_CLIENT.get_template(template_id)
     if not details:
         return jsonify({"status": "error", "message": "Template not found"}), 404
 
@@ -454,9 +455,10 @@ def templates_update(template_id: str):
         steps=steps if steps is not None else current.get("steps", []),
         configs=configs if configs is not None else current.get("configs", []),
     )
-    err = DB.update_template(template_id, **update_kwargs)
-    if err:
-        return jsonify({"status": "error", "message": err}), 400
+    try:
+        API_CLIENT.update_template(template_id, **update_kwargs)
+    except (ApiClientError, ApiUnavailableError) as e:
+        return jsonify({"status": "error", "message": e.message}), getattr(e, "status_code", None) or 400
 
     flash(f"Template {template_id} updated successfully.", "success")
     return jsonify({"status": "success"})
@@ -480,11 +482,11 @@ def templates_delete_multiple():
     errors = []
     success_count = 0
     for template_id in template_ids:
-        err = DB.delete_template(template_id)
-        if err:
-            errors.append(f"Error deleting template {template_id}: {err}")
-        else:
+        try:
+            API_CLIENT.delete_template(template_id)
             success_count += 1
+        except (ApiClientError, ApiUnavailableError) as e:
+            errors.append(f"Error deleting template {template_id}: {e.message}")
 
     if success_count > 0:
         flash(f"Successfully deleted {success_count} template(s).", "success")
@@ -502,10 +504,11 @@ def templates_delete(template_id: str):
     if permission:
         return jsonify({"status": "error", "message": permission["message"]}), permission["code"]
 
-    err = DB.delete_template(template_id)
-    if err:
-        status = 409 if "currently used" in err.lower() else 400
-        return jsonify({"status": "error", "message": err}), status
+    try:
+        API_CLIENT.delete_template(template_id)
+    except (ApiClientError, ApiUnavailableError) as e:
+        status = 409 if "currently used" in e.message.lower() else (getattr(e, "status_code", None) or 400)
+        return jsonify({"status": "error", "message": e.message}), status
 
     flash(f"Template {template_id} deleted successfully.", "success")
     return jsonify({"status": "success"})

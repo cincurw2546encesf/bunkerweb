@@ -6,12 +6,12 @@ from urllib.parse import urlsplit
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from app.dependencies import BW_CONFIG, BW_INSTANCES_UTILS, CONFIG_TASKS_EXECUTOR, DATA, DB
+from app.dependencies import API_CLIENT, BW_CONFIG, BW_INSTANCES_UTILS, CONFIG_TASKS_EXECUTOR, DATA
+from app.api_client import ApiClientError, ApiUnavailableError
 from app.utils import flash, is_ui_api_method
 
 from app.models.instance import Instance
 from app.routes.utils import handle_error, verify_data_in_form
-
 
 instances = Blueprint("instances", __name__)
 
@@ -25,13 +25,19 @@ ACTIONS = {
 @instances.route("/instances", methods=["GET"])
 @login_required
 def instances_page():
-    return render_template("instances.html", instances=BW_INSTANCES_UTILS.get_instances())
+    try:
+        instances_list = BW_INSTANCES_UTILS.get_instances()
+    except (ApiClientError, ApiUnavailableError):
+        flash("Could not fetch instances from the API.", "error")
+        instances_list = []
+
+    return render_template("instances.html", instances=instances_list)
 
 
 @instances.route("/instances/new", methods=["POST"])
 @login_required
 def instances_new():
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "instances")
     verify_data_in_form(
         data={"hostname": None},
@@ -103,9 +109,10 @@ def instances_new():
         if db_instance.hostname == instance["hostname"]:
             return handle_error(f"The hostname {instance['hostname']} is already in use.", "instances", True)
 
-    ret = DB.add_instance(**instance)
-    if ret:
-        return handle_error(f"Couldn't create the instance in the database: {ret}", "instances", True)
+    try:
+        API_CLIENT.create_instance(**instance)
+    except (ApiClientError, ApiUnavailableError) as e:
+        return handle_error(f"Couldn't create the instance: {e.message}", "instances", True)
 
     flash(f"Instance {instance['hostname']} created successfully.")
 
@@ -115,7 +122,7 @@ def instances_new():
 @instances.route("/instances/<string:action>", methods=["POST"])
 @login_required
 def instances_action(action: Literal["ping", "reload", "stop", "delete"]):  # TODO: see if we can support start and restart
-    if DB.readonly:
+    if API_CLIENT.readonly:
         return handle_error("Database is in read-only mode", "instances")
 
     verify_data_in_form(
@@ -134,7 +141,7 @@ def instances_action(action: Literal["ping", "reload", "stop", "delete"]):  # TO
         failed = []
 
         def ping_instance(instance):
-            ret = Instance.from_hostname(instance, DB)
+            ret = Instance.from_hostname(instance, API_CLIENT)
             if not ret:
                 return {"hostname": instance, "message": f"The instance {instance} does not exist."}
             ret_tuple = ret.ping()
@@ -158,7 +165,7 @@ def instances_action(action: Literal["ping", "reload", "stop", "delete"]):  # TO
     elif action == "delete":
         delete_instances = set()
         non_deletable_instances = set()
-        for instance in DB.get_instances():
+        for instance in API_CLIENT.get_instances():
             if instance["hostname"] in instances:
                 if not is_ui_api_method(instance["method"]):
                     non_deletable_instances.add(instance["hostname"])
@@ -178,14 +185,15 @@ def instances_action(action: Literal["ping", "reload", "stop", "delete"]):  # TO
                 True,
             )
 
-        ret = DB.delete_instances(delete_instances)
-        if ret:
-            return handle_error(f"Couldn't delete the instance{'s' if len(delete_instances) > 1 else ''} in the database: {ret}", "instances", True)
+        try:
+            API_CLIENT.delete_instances(list(delete_instances))
+        except (ApiClientError, ApiUnavailableError) as e:
+            return handle_error(f"Couldn't delete the instance{'s' if len(delete_instances) > 1 else ''}: {e.message}", "instances", True)
         flash(f"Instance{'s' if len(delete_instances) > 1 else ''} {', '.join(delete_instances)} Deleted successfully.")
     else:
 
         def execute_action(instance):
-            ret = Instance.from_hostname(instance, DB)
+            ret = Instance.from_hostname(instance, API_CLIENT)
             if not ret:
                 DATA["TO_FLASH"].append({"content": f"The instance {instance} does not exist.", "type": "error"})
                 return

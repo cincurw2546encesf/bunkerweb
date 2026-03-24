@@ -5,11 +5,11 @@ from typing import Dict
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from app.dependencies import BW_CONFIG, CONFIG_TASKS_EXECUTOR, DATA, DB
-from app.utils import get_blacklisted_settings
+from app.dependencies import API_CLIENT, BW_CONFIG, CONFIG_TASKS_EXECUTOR, DATA
+from app.api_client import ApiClientError, ApiUnavailableError
+from app.utils import flash, get_blacklisted_settings
 
 from app.routes.utils import extract_file_setting_names, handle_error, wait_applying
-
 
 global_settings = Blueprint("global_settings", __name__)
 
@@ -18,10 +18,14 @@ global_settings = Blueprint("global_settings", __name__)
 @global_settings.route("/global-settings", methods=["GET", "POST"])
 @login_required
 def global_settings_page():
-    global_config = DB.get_config(global_only=True, methods=True)
+    try:
+        global_config = API_CLIENT.get_global_settings(full=True, methods=True)
+    except (ApiClientError, ApiUnavailableError):
+        flash("Could not fetch global settings from the API.", "error")
+        global_config = {}
 
     if request.method == "POST":
-        if DB.readonly:
+        if API_CLIENT.readonly:
             return handle_error("Database is in read-only mode", "global_settings")
         DATA.load_from_file()
 
@@ -35,7 +39,7 @@ def global_settings_page():
             wait_applying()
 
             # Edit check fields and remove already existing ones
-            config = DB.get_config(methods=True, with_drafts=True)
+            config = BW_CONFIG.get_config(methods=True, with_drafts=True)
             services = config["SERVER_NAME"]["value"].split()
             variables_to_check = variables.copy()
             has_file_name_changes = False
