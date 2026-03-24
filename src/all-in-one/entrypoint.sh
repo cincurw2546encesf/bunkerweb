@@ -239,6 +239,18 @@ fi
 
 # Enable autorestart for autoconf service if enabled
 if [ "${AUTOCONF_MODE}" = "yes" ]; then
+	# Autoconf requires the API service — enable it if not already
+	if [ "${SERVICE_API}" != "yes" ]; then
+		export SERVICE_API="yes"
+		export API_LISTEN_ADDR="${API_LISTEN_ADDR:-${LISTEN_ADDR:-0.0.0.0}}"
+		export API_LISTEN_PORT="${API_LISTEN_PORT:-${LISTEN_PORT:-8888}}"
+		sed -i 's/autorestart=false/autorestart=true/' /etc/supervisor.d/api.ini
+		sed -i 's/autostart=false/autostart=true/' /etc/supervisor.d/api.ini
+		log "ENTRYPOINT" "ℹ️" "Auto-enabled API service (required by autoconf)"
+	fi
+	# Set API connection defaults for autoconf
+	export API_URL="${API_URL:-http://127.0.0.1:${API_LISTEN_PORT:-8888}}"
+	export API_TOKEN="${API_TOKEN:-}"
 	sed -i 's/autorestart=false/autorestart=true/' /etc/supervisor.d/autoconf.ini
 	log "ENTRYPOINT" "✅" "Enabled autorestart for autoconf service"
 else
