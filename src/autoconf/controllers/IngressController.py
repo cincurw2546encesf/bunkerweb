@@ -11,8 +11,8 @@ from controllers.KubernetesController import KubernetesController
 
 
 class IngressController(KubernetesController):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *, api_client):
+        super().__init__(api_client=api_client)
         self._networkingv1 = client.NetworkingV1Api()
 
         self._ingress_class = getenv("KUBERNETES_INGRESS_CLASS", "")
@@ -114,7 +114,7 @@ class IngressController(KubernetesController):
                     if not annotation.startswith("bunkerweb.io/"):
                         continue
                     setting = annotation.replace("bunkerweb.io/", "", 1)
-                    success, _ = self._db.is_valid_setting(setting, value=value, multisite=True)
+                    success, _ = self._api.validate_setting(setting, value=value, multisite=True)
                     if success and not setting.startswith(f"{server_name}_"):
                         if any(setting.startswith(f"{s}_") for s in server_names):
                             continue

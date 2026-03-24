@@ -6,7 +6,7 @@ See also the [root CLAUDE.md](../../CLAUDE.md) for project-wide architecture, bu
 
 ## What This Is
 
-Autoconf is BunkerWeb's dynamic configuration component. It watches container/orchestrator events (Docker, Swarm, Kubernetes) and automatically reconfigures BunkerWeb instances by translating labels/annotations into settings and persisting them to the shared database. The Scheduler then picks up these changes.
+Autoconf is BunkerWeb's dynamic configuration component. It watches container/orchestrator events (Docker, Swarm, Kubernetes) and automatically reconfigures BunkerWeb instances by translating labels/annotations into settings and persisting them via the FastAPI API. The Scheduler then picks up these changes.
 
 ## Architecture
 
@@ -22,15 +22,18 @@ Config (Config.py)
               └── GatewayController (controllers/GatewayController.py)   # K8s Gateway API
 ```
 
-`Config` handles settings validation, change detection (`update_needed`), database writes (`apply`), and waiting for the Scheduler to finish (`wait_applying`). `Controller` adds instance/service discovery abstractions and the event loop skeleton. Concrete controllers implement platform-specific discovery and event handling.
+`Config` handles settings validation, change detection (`update_needed`), API writes (`apply`), and waiting for the Scheduler to finish (`wait_applying`). `Controller` adds instance/service discovery abstractions and the event loop skeleton. Concrete controllers implement platform-specific discovery and event handling.
+
+`AutoconfApiClient` (`api_client.py`) is Autoconf's HTTP client — a subclass of `BaseApiClient` (from `src/common/utils/base_api_client.py`) that wraps all API calls Autoconf needs. Shared with the UI's `ApiClient` which extends the same base.
 
 ### Startup Flow (main.py)
 
 1. Detect mode from env vars (`SWARM_MODE`, `KUBERNETES_MODE`, `KUBERNETES_GATEWAY_MODE`)
-2. Instantiate the appropriate controller
-3. `controller.wait()` — poll until DB is ready and at least one healthy BunkerWeb instance exists
-4. `controller.wait_applying(True)` — block until Scheduler finishes any in-progress config apply
-5. `controller.process_events()` — enter the infinite event loop
+2. Initialize `AutoconfApiClient` from `API_URL` and `API_TOKEN` env vars
+3. Instantiate the appropriate controller (passing `api_client` kwarg)
+4. `controller.wait()` — poll until API is ready and at least one healthy BunkerWeb instance exists
+5. `controller.wait_applying(True)` — block until Scheduler finishes any in-progress config apply
+6. `controller.process_events()` — enter the infinite event loop
 
 ### Event Processing Pattern
 
@@ -40,8 +43,8 @@ All controllers share a debounce pattern (2-second window):
 3. Set `pending_apply = True`, record timestamp
 4. Sleep until debounce window passes with no new events
 5. Re-discover instances, services, configs from the platform
-6. If `update_needed()` detects changes, call `apply()` to write to DB
-7. `apply()` calls `_db.save_config()`, `_db.save_custom_configs()`, `_db.update_instances()`, then `_db.checked_changes()` to signal the Scheduler
+6. If `update_needed()` detects changes, call `apply()` to write via API
+7. `apply()` calls `_api.save_config()`, `_api.save_custom_configs()`, `_api.update_instances()`, then `_api.checked_changes()` to signal the Scheduler
 
 ### Label/Annotation Conventions
 
@@ -72,13 +75,29 @@ All controllers share a debounce pattern (2-second window):
 | `KUBERNETES_DOMAIN_NAME` | `cluster.local` | K8s cluster domain |
 | `KUBERNETES_SERVICE_PROTOCOL` | `http` | Protocol for backend service URLs |
 | `KUBERNETES_REVERSE_PROXY_SUFFIX_START` | `1` | Starting index for numbered reverse proxy settings |
+| `API_URL` | `http://bw-api:5000` | FastAPI backend URL |
+| `API_TOKEN` | (empty) | Bearer token for API authentication |
 
-### Database Interaction
+### API Interaction
 
-Autoconf uses `Database` from `src/common/db/` (added to sys.path at startup). Key patterns:
-- Read-only fallback: `_try_database_readonly()` attempts write, falls back to readonly with retry logic
-- Change signaling: After writing config, calls `_db.checked_changes()` which sets metadata flags the Scheduler watches
-- Settings validation: `_db.is_valid_setting()` validates each setting extracted from labels/annotations
+Autoconf communicates exclusively through the FastAPI API via `AutoconfApiClient` (subclass of `BaseApiClient` from `src/common/utils/`). Key patterns:
+- **Hybrid availability**: `_check_api_available()` checks `_api.readonly` before writes. If the API is unreachable, enters degraded mode (`_api_available = False`) — continues watching events but skips `apply()`. Recovers automatically via `_api.ping()` on the next cycle.
+- **Change signaling**: After writing config, calls `_api.checked_changes()` which sets metadata flags the Scheduler watches
+- **Settings validation**: `_api.validate_setting()` validates each setting extracted from labels/annotations via `POST /global_settings/validate`
+
+API endpoints used:
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/plugins` | Fetch plugin settings schemas |
+| POST | `/global_settings/validate` | Validate setting name/value |
+| GET | `/services` | List existing services |
+| GET | `/instances?autoconf=true` | Get instances with health/env |
+| PUT | `/instances/bulk` | Bulk replace autoconf instances |
+| PUT | `/global_settings/config` | Save full config environment |
+| PUT | `/configs/bulk` | Bulk save custom configs |
+| GET | `/metadata` | Check scheduler readiness |
+| PATCH | `/metadata` | Set autoconf_loaded flag |
+| POST | `/system/checked-changes` | Signal changes to scheduler |
 
 ### Threading Model
 
@@ -99,11 +118,11 @@ docker compose -f misc/dev/docker-compose.autoconf.yml up -d
 pip install -r src/autoconf/requirements.in
 ```
 
-The Dockerfile is a multi-stage build: builder stage compiles Python deps (including DB requirements), final stage runs as `autoconf` user (UID 101).
+The Dockerfile is a multi-stage build: builder stage compiles Python deps, final stage runs as `autoconf` user (UID 101). Autoconf has no database dependencies — it communicates exclusively via the API.
 
 ## Conventions
 
 - Swarm integration is deprecated (logged at startup)
 - Health check: writes `/var/tmp/bunkerweb/autoconf.healthy` when event loop starts, removes on exit
 - All controllers use `_first_start` flag to unconditionally apply config on the first event cycle
-- `_set_autoconf_load_db()` sets `autoconf_loaded` metadata once after first successful apply
+- `_set_autoconf_loaded()` sets `autoconf_loaded` metadata once after first successful apply

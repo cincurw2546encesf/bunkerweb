@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
-from contextlib import suppress
 from datetime import datetime
+from os import getenv
 from time import sleep
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from Database import Database  # type: ignore
+from api_client import ApiUnavailableError  # type: ignore
 from logger import getLogger  # type: ignore
 
 
 class Config:
-    def __init__(self, ctrl_type: Union[Literal["docker"], Literal["swarm"], Literal["kubernetes"]]):
+    def __init__(self, ctrl_type: Union[Literal["docker"], Literal["swarm"], Literal["kubernetes"]], *, api_client):
         self._type = ctrl_type
         self.__logger = getLogger("CONFIG")
         self._settings = {}
@@ -31,16 +31,18 @@ class Config:
         self.__config = {}
         self.__extra_config = {}
 
-        self._db = Database(self.__logger)
+        self._api = api_client
+        self._api_available = True
+        self._api_error_timeout = int(getenv("API_ERROR_TIMEOUT", "60"))
 
     def _update_settings(self):
-        plugins = self._db.get_plugins()
+        plugins = self._api.get_plugins()
         if not plugins:
-            self.__logger.error("No plugins in database, can't update settings...")
+            self.__logger.error("No plugins from API, can't update settings...")
             return
         self._settings = {}
         for plugin in plugins:
-            self._settings.update(plugin["settings"])
+            self._settings.update(plugin.get("settings", {}))
 
     def __get_full_env(self) -> dict:
         config = {"SERVER_NAME": "", "MULTISITE": "yes"}
@@ -50,12 +52,12 @@ class Config:
                 continue
             config["SERVER_NAME"] += f" {server_name}"
 
-        db_services = []
-        for db_service in self._db.get_services():
-            server_name = db_service.get("id", "")
+        api_services = []
+        for api_service in self._api.get_services():
+            server_name = api_service.get("id", "")
             if not server_name:
                 continue
-            db_services.append(server_name)
+            api_services.append(server_name)
 
         for service in self.__services:
             server_name = service["SERVER_NAME"].split(" ")[0]
@@ -66,15 +68,15 @@ class Config:
                     continue
 
                 is_global = False
-                success, err = self._db.is_valid_setting(
+                success, err = self._api.validate_setting(
                     variable,
                     value=value,
                     multisite=True,
-                    extra_services=config["SERVER_NAME"].split() + db_services,
+                    extra_services=config["SERVER_NAME"].split() + api_services,
                 )
                 if not success:
                     if self._type == "kubernetes":
-                        success, err = self._db.is_valid_setting(variable, value=value)
+                        success, err = self._api.validate_setting(variable, value=value)
                         if success:
                             is_global = True
                             self.__logger.warning(f"Variable {variable} is a global value and will be applied globally")
@@ -122,13 +124,13 @@ class Config:
         return False
 
     def have_to_wait(self) -> bool:
-        db_metadata = self._db.get_metadata()
+        metadata = self._api.get_metadata()
         return (
-            isinstance(db_metadata, str)
-            or not db_metadata["is_initialized"]
+            isinstance(metadata, str)
+            or not metadata.get("is_initialized")
             or any(
                 v
-                for k, v in db_metadata.items()
+                for k, v in metadata.items()
                 if k in ("custom_configs_changed", "external_plugins_changed", "pro_plugins_changed", "plugins_config_changed", "instances_changed")
             )
         )
@@ -136,27 +138,43 @@ class Config:
     def wait_applying(self, startup: bool = False):
         current_time = datetime.now().astimezone()
         ready = False
-        while not ready and (datetime.now().astimezone() - current_time).seconds < 240:
-            db_metadata = self._db.get_metadata()
-            if isinstance(db_metadata, str):
-                if not startup:
-                    self.__logger.error(f"An error occurred when checking for changes in the database : {db_metadata}")
-            elif (
-                db_metadata["is_initialized"]
-                and db_metadata["first_config_saved"]
-                and not any(
-                    v
-                    for k, v in db_metadata.items()
-                    if k in ("custom_configs_changed", "external_plugins_changed", "pro_plugins_changed", "plugins_config_changed", "instances_changed")
-                )
-            ):
-                ready = True
-                continue
-            self.__logger.warning("Scheduler is already applying a configuration, retrying in 5 seconds ...")
-            sleep(5)
+        waited = False
+        error_since = None
+        with self._api.expect_errors():
+            while not ready and (datetime.now().astimezone() - current_time).seconds < 240:
+                metadata = self._api.get_metadata()
+                if isinstance(metadata, str):
+                    if error_since is None:
+                        error_since = datetime.now().astimezone()
+                    elapsed = (datetime.now().astimezone() - error_since).seconds
+                    if not startup:
+                        if elapsed >= self._api_error_timeout:
+                            self._api._expect_errors = False  # Escalate to real errors now
+                            self.__logger.error(f"API has been failing for {elapsed}s ({metadata})")
+                        else:
+                            self.__logger.warning(f"Could not check metadata via API ({metadata}), will retry ...")
+                elif (
+                    metadata.get("is_initialized")
+                    and metadata.get("first_config_saved")
+                    and not any(
+                        v
+                        for k, v in metadata.items()
+                        if k in ("custom_configs_changed", "external_plugins_changed", "pro_plugins_changed", "plugins_config_changed", "instances_changed")
+                    )
+                ):
+                    ready = True
+                    continue
+                else:
+                    error_since = None  # API is responding, just not ready yet
+                waited = True
+                self.__logger.warning("Scheduler is already applying a configuration, retrying in 5 seconds ...")
+                sleep(5)
 
         if not ready:
             raise Exception("Too many retries while waiting for scheduler to apply configuration...")
+
+        if waited:
+            self.__logger.info("Scheduler is ready, proceeding")
 
     def apply(
         self,
@@ -168,8 +186,7 @@ class Config:
     ) -> bool:
         success = True
 
-        err = self._try_database_readonly()
-        if err:
+        if not self._check_api_available():
             return False
 
         self.wait_applying()
@@ -212,68 +229,72 @@ class Config:
                         exploded = file.split("/")
                         site = exploded[0]
                         name = exploded[1]
-                    custom_configs.append({"value": data, "exploded": [site, config_type, name.replace(".conf", "")]})
+                    # Ensure data is a string (Swarm's b64decode returns bytes which can't be JSON-serialized)
+                    config_value = data.decode("utf-8") if isinstance(data, bytes) else data
+                    custom_configs.append({"value": config_value, "exploded": [site, config_type, name.replace(".conf", "")]})
 
-        # update instances in database
+        # update instances via API
         if "instances" in changes:
-            self.__logger.debug(f"Updating instances in database: {self.__instances}")
-            err = self._db.update_instances(self.__instances, "autoconf", changed=False)
+            self.__logger.debug(f"Updating instances via API: {self.__instances}")
+            err = self._api.update_instances(self.__instances, "autoconf", changed=False)
             if err:
                 self.__logger.error(f"Failed to update instances: {err}")
 
-        # save config to database
+        # save config via API
         changed_plugins = []
         if "config" in changes:
-            self.__logger.debug(f"Saving config in database: {self.__config}")
-            err = self._db.save_config(self.__config, "autoconf", changed=False)
+            self.__logger.debug(f"Saving config via API: {self.__config}")
+            err = self._api.save_config(self.__config, "autoconf", changed=False)
             if isinstance(err, str):
                 success = False
-                self.__logger.error(f"Can't save config in database: {err}, config may not work as expected")
-            changed_plugins = err
+                self.__logger.error(f"Can't save config via API: {err}, config may not work as expected")
+            else:
+                changed_plugins = err
 
-        # save custom configs to database
+        # save custom configs via API
         if "custom_configs" in changes:
-            self.__logger.debug(f"Saving custom configs in database: {custom_configs}")
-            err = self._db.save_custom_configs(custom_configs, "autoconf", changed=False)
+            self.__logger.debug(f"Saving custom configs via API: {custom_configs}")
+            err = self._api.save_custom_configs(custom_configs, "autoconf", changed=False)
             if err:
                 success = False
-                self.__logger.error(f"Can't save autoconf custom configs in database: {err}, custom configs may not work as expected")
+                self.__logger.error(f"Can't save autoconf custom configs via API: {err}, custom configs may not work as expected")
 
-        # update changes in db
-        ret = self._db.checked_changes(changes, plugins_changes=changed_plugins, value=True)
+        # signal changes via API
+        ret = self._api.checked_changes(changes, plugins_changes=changed_plugins, value=True)
         if ret:
-            self.__logger.error(f"An error occurred when setting the changes to checked in the database : {ret}")
+            self.__logger.error(f"An error occurred when setting the changes to checked via API : {ret}")
 
         self.__logger.info("Successfully saved new configuration 🚀")
 
         return success
 
-    def _try_database_readonly(self) -> bool:
-        if not self._db.readonly:
+    def _check_api_available(self) -> bool:
+        """Check if API is available and not readonly. Implements hybrid degraded mode.
+
+        The readonly property on BaseApiClient catches ApiUnavailableError internally
+        and returns True. So when readonly returns True, we ping() to distinguish
+        'DB is genuinely read-only' from 'API is unreachable'.
+        """
+        if not self._api_available:
             try:
-                self._db.test_write()
-            except BaseException:
-                self._db.readonly = True
-                return True
+                self._api.ping()
+                self._api_available = True
+                self.__logger.info("API connection recovered, resuming normal operation")
+            except ApiUnavailableError:
+                self.__logger.warning("API is still unavailable, configuration will not be saved")
+                return False
 
-        if self._db.database_uri and self._db.readonly:
+        if self._api.readonly:
+            # readonly returns True either because DB is read-only OR because API is unreachable.
+            # Use ping() to distinguish the two cases.
             try:
-                self._db.retry_connection(pool_timeout=1)
-                self._db.retry_connection(log=False)
-                self._db.readonly = False
-                self.__logger.info("The database is no longer read-only, defaulting to read-write mode")
-            except BaseException:
-                try:
-                    self._db.retry_connection(readonly=True, pool_timeout=1)
-                    self._db.retry_connection(readonly=True, log=False)
-                except BaseException:
-                    if self._db.database_uri_readonly:
-                        with suppress(BaseException):
-                            self._db.retry_connection(fallback=True, pool_timeout=1)
-                            self._db.retry_connection(fallback=True, log=False)
-                self._db.readonly = True
+                self._api.ping()
+                # API is up but DB is genuinely read-only
+                self.__logger.error("API reports read-only mode, configuration will not be saved")
+            except ApiUnavailableError:
+                # API is actually down — enter degraded mode
+                self._api_available = False
+                self.__logger.error("API became unavailable, entering degraded mode")
+            return False
 
-            if self._db.readonly:
-                self.__logger.error("Database is in read-only mode, configuration will not be saved")
-
-        return self._db.readonly
+        return True

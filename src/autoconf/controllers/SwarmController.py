@@ -16,8 +16,8 @@ from controllers.Controller import Controller
 
 
 class SwarmController(Controller):
-    def __init__(self, docker_host):
-        super().__init__("swarm")
+    def __init__(self, docker_host, *, api_client):
+        super().__init__("swarm", api_client=api_client)
         self.__client = DockerClient(base_url=docker_host)
         self.__internal_lock = Lock()
         self.__swarm_instances = []
@@ -222,6 +222,7 @@ class SwarmController(Controller):
         return False
 
     def __event(self, event_type):
+        listening_logged = True
         while True:
             locked = False
             error = False
@@ -240,7 +241,6 @@ class SwarmController(Controller):
                     # Mark event received and update time
                     self.__pending_apply = True
                     self.__last_event_time = time()
-                    self._logger.debug(f"Swarm event ({event_type}) received, will batch if more arrive...")
                     self.__internal_lock.release()
                     locked = False
 
@@ -267,36 +267,42 @@ class SwarmController(Controller):
 
                     try:
                         to_apply = False
-                        while not applied:
-                            waiting = self.have_to_wait()
-                            self._update_settings()
-                            self._instances = self.get_instances()
-                            self._services = self.get_services()
-                            self._configs = self.get_configs()
+                        with self._api.expect_errors():
+                            while not applied:
+                                waiting = self.have_to_wait()
+                                self._update_settings()
+                                self._instances = self.get_instances()
+                                self._services = self.get_services()
+                                self._configs = self.get_configs()
 
-                            if not to_apply and not self.update_needed(self._instances, self._services, configs=self._configs):
-                                if locked:
-                                    self.__internal_lock.release()
-                                    locked = False
+                                if not to_apply and not self.update_needed(self._instances, self._services, configs=self._configs):
+                                    if locked:
+                                        self.__internal_lock.release()
+                                        locked = False
+                                    applied = True
+                                    continue
+
+                                to_apply = True
+                                listening_logged = False
+                                if waiting:
+                                    sleep(1)
+                                    continue
+
+                                self._logger.info("Batched Swarm event(s), deploying configuration...")
+                                if not self.apply_config():
+                                    self._logger.error("Error while deploying new configuration")
+                                else:
+                                    self._logger.info(
+                                        "Successfully deployed new configuration 🚀",
+                                    )
+                                    self._set_autoconf_loaded()
                                 applied = True
-                                continue
-
-                            to_apply = True
-                            if waiting:
-                                sleep(1)
-                                continue
-
-                            self._logger.info("Batched Swarm event(s), deploying configuration...")
-                            if not self.apply_config():
-                                self._logger.error("Error while deploying new configuration")
-                            else:
-                                self._logger.info(
-                                    "Successfully deployed new configuration 🚀",
-                                )
-                                self._set_autoconf_load_db()
-                            applied = True
                     except BaseException:
                         self._logger.error(f"Exception while processing Swarm event ({event_type}) :\n{format_exc()}")
+                    finally:
+                        if applied and not listening_logged:
+                            self._logger.info("Listening for Swarm events ...")
+                            listening_logged = True
 
                     if locked:
                         self.__internal_lock.release()
@@ -314,7 +320,8 @@ class SwarmController(Controller):
                     sleep(10)
 
     def process_events(self):
-        self._set_autoconf_load_db()
+        self._set_autoconf_loaded()
+        self._logger.info("Listening for Swarm events ...")
         event_types = ("service", "config")
         threads = [Thread(target=self.__event, args=(event_type,)) for event_type in event_types]
         for thread in threads:

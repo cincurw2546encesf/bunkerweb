@@ -16,7 +16,7 @@ from controllers.Controller import Controller
 
 
 class KubernetesController(Controller):
-    def __init__(self):
+    def __init__(self, *, api_client):
         self._internal_lock = Lock()
         self._pending_apply = False
         self._last_event_time = 0.0
@@ -24,7 +24,7 @@ class KubernetesController(Controller):
         self._event_summary = {}
         self._event_summary_max = 8
         self._event_loggable_kinds = {"Ingress", "Gateway", "HTTPRoute", "GRPCRoute", "TLSRoute", "TCPRoute", "UDPRoute", "ConfigMap", "Secret"}
-        super().__init__("kubernetes")
+        super().__init__("kubernetes", api_client=api_client)
         config.load_incluster_config()
         self._managed_configmaps = set()
 
@@ -203,7 +203,7 @@ class KubernetesController(Controller):
                     if config_site and not config_name.startswith(config_site):
                         config_name = f"{config_site}{config_name}"
 
-                    if not self._db.is_valid_setting(config_name, value=config_data, multisite=bool(config_site), extra_services=extra_services)[0]:
+                    if not self._api.validate_setting(config_name, value=config_data, multisite=bool(config_site), extra_services=extra_services)[0]:
                         self._logger.warning(f"Ignoring invalid setting {config_name} for ConfigMap {configmap.metadata.name}")
                         continue
 
@@ -341,6 +341,7 @@ class KubernetesController(Controller):
         raise NotImplementedError
 
     def _watch(self, watch_type, what):
+        listening_logged = True
         while True:
             locked = False
             error = False
@@ -358,7 +359,6 @@ class KubernetesController(Controller):
 
                     self._pending_apply = True
                     self._last_event_time = time()
-                    self._logger.debug(f"Kubernetes event ({watch_type}) received, will batch if more arrive...")
                     self._internal_lock.release()
                     locked = False
 
@@ -381,40 +381,49 @@ class KubernetesController(Controller):
                     self._pending_apply = False
                     self._log_event_summary()
 
-                    to_apply = False
-                    while not applied:
-                        waiting = self.have_to_wait()
-                        self._update_settings()
-                        self._instances = self.get_instances()
-                        self._services = self.get_services()
-                        self._extra_config, self._configs = self.get_configs()
+                    try:
+                        to_apply = False
+                        with self._api.expect_errors():
+                            while not applied:
+                                waiting = self.have_to_wait()
+                                self._update_settings()
+                                self._instances = self.get_instances()
+                                self._services = self.get_services()
+                                self._extra_config, self._configs = self.get_configs()
 
-                        if not to_apply and not self.update_needed(self._instances, self._services, self._configs, self._extra_config):
-                            if locked:
-                                self._internal_lock.release()
-                                locked = False
-                            applied = True
-                            continue
+                                if not to_apply and not self.update_needed(self._instances, self._services, self._configs, self._extra_config):
+                                    if locked:
+                                        self._internal_lock.release()
+                                        locked = False
+                                    applied = True
+                                    continue
 
-                        to_apply = True
-                        if waiting:
-                            self._logger.info("Scheduler is already applying a configuration, retrying in 1 second ...")
-                            sleep(1)
-                            continue
+                                to_apply = True
+                                listening_logged = False
+                                if waiting:
+                                    self._logger.info("Scheduler is already applying a configuration, retrying in 1 second ...")
+                                    sleep(1)
+                                    continue
 
-                        self._logger.info("Batched kubernetes event(s), deploying configuration...")
-                        try:
-                            ret = self.apply_config()
-                            if not ret:
-                                self._logger.error("Error while deploying new configuration ...")
-                            else:
-                                self._logger.info("Successfully deployed new configuration")
+                                self._logger.info("Batched kubernetes event(s), deploying configuration...")
+                                try:
+                                    ret = self.apply_config()
+                                    if not ret:
+                                        self._logger.error("Error while deploying new configuration ...")
+                                    else:
+                                        self._logger.info("Successfully deployed new configuration")
 
-                                self._set_autoconf_load_db()
-                        except BaseException as e:
-                            self._logger.debug(format_exc())
-                            self._logger.error(f"Exception while deploying new configuration :\n{e}")
-                        applied = True
+                                        self._set_autoconf_loaded()
+                                except BaseException as e:
+                                    self._logger.debug(format_exc())
+                                    self._logger.error(f"Exception while deploying new configuration :\n{e}")
+                                applied = True
+                    except BaseException:
+                        self._logger.error(f"Exception while processing Kubernetes event ({watch_type}) :\n{format_exc()}")
+                    finally:
+                        if applied and not listening_logged:
+                            self._logger.info("Listening for Kubernetes events ...")
+                            listening_logged = True
 
                     if locked:
                         self._internal_lock.release()
@@ -439,7 +448,8 @@ class KubernetesController(Controller):
                     sleep(10)
 
     def process_events(self):
-        self._set_autoconf_load_db()
+        self._set_autoconf_loaded()
+        self._logger.info("Listening for Kubernetes events ...")
         watchers = self._get_watchers()
         threads = [Thread(target=self._watch, args=(watch_type, watcher)) for watch_type, watcher in watchers.items()]
         for thread in threads:

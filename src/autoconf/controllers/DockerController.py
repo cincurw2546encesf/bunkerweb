@@ -15,8 +15,8 @@ from controllers.Controller import Controller
 
 
 class DockerController(Controller):
-    def __init__(self, docker_host):
-        super().__init__("docker")
+    def __init__(self, docker_host, *, api_client):
+        super().__init__("docker", api_client=api_client)
         self.__client = DockerClient(base_url=docker_host)
         self.__internal_lock = Lock()
         self.__pending_apply = False
@@ -123,12 +123,17 @@ class DockerController(Controller):
             instance["env"][variable] = value
         return [instance]
 
+    # Image-level metadata labels that are not BunkerWeb settings
+    __METADATA_LABELS = frozenset(("bunkerweb.type", "bunkerweb.INSTANCE"))
+
     def _to_services(self, controller_service) -> List[dict]:
         service = {}
         for variable, value in controller_service.labels.items():
             if self.__should_ignore_label(variable):
                 continue
             if not variable.startswith("bunkerweb."):
+                continue
+            if variable in self.__METADATA_LABELS:
                 continue
             service[variable.replace("bunkerweb.", "", 1)] = value
         return [service]
@@ -202,10 +207,12 @@ class DockerController(Controller):
         return True
 
     def process_events(self):
-        self._set_autoconf_load_db()
+        self._set_autoconf_loaded()
+        self._logger.info("Listening for Docker events ...")
         locked = False
         error = False
         applied = False
+        listening_logged = True
         while True:
             try:
                 for event in self.__client.events(decode=True, filters={"type": "container"}):
@@ -221,7 +228,6 @@ class DockerController(Controller):
                     # Mark event received and update time
                     self.__pending_apply = True
                     self.__last_event_time = time()
-                    self._logger.debug("Docker event received, will batch if more arrive...")
                     self.__internal_lock.release()
                     locked = False
 
@@ -248,34 +254,40 @@ class DockerController(Controller):
 
                     try:
                         to_apply = False
-                        while not applied:
-                            waiting = self.have_to_wait()
-                            self._update_settings()
-                            self._instances = self.get_instances()
-                            self._services = self.get_services()
-                            self._configs = self.get_configs()
+                        with self._api.expect_errors():
+                            while not applied:
+                                waiting = self.have_to_wait()
+                                self._update_settings()
+                                self._instances = self.get_instances()
+                                self._services = self.get_services()
+                                self._configs = self.get_configs()
 
-                            if not to_apply and not self.update_needed(self._instances, self._services, configs=self._configs):
-                                if locked:
-                                    self.__internal_lock.release()
-                                    locked = False
+                                if not to_apply and not self.update_needed(self._instances, self._services, configs=self._configs):
+                                    if locked:
+                                        self.__internal_lock.release()
+                                        locked = False
+                                    applied = True
+                                    continue
+
+                                to_apply = True
+                                listening_logged = False
+                                if waiting:
+                                    sleep(1)
+                                    continue
+
+                                self._logger.info("Batched Docker event(s), deploying configuration...")
+                                if not self.apply_config():
+                                    self._logger.error("Error while deploying new configuration")
+                                else:
+                                    self._logger.info("Successfully deployed new configuration 🚀")
+                                    self._set_autoconf_loaded()
                                 applied = True
-                                continue
-
-                            to_apply = True
-                            if waiting:
-                                sleep(1)
-                                continue
-
-                            self._logger.info("Batched Docker event(s), deploying configuration...")
-                            if not self.apply_config():
-                                self._logger.error("Error while deploying new configuration")
-                            else:
-                                self._logger.info("Successfully deployed new configuration 🚀")
-                                self._set_autoconf_load_db()
-                            applied = True
                     except BaseException:
                         self._logger.error(f"Exception while processing Docker event :\n{format_exc()}")
+                    finally:
+                        if applied and not listening_logged:
+                            self._logger.info("Listening for Docker events ...")
+                            listening_logged = True
 
                     if locked:
                         self.__internal_lock.release()

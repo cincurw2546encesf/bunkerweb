@@ -4,20 +4,16 @@ FROM python:3.13-alpine@sha256:bb1f2fdb1065c85468775c9d680dcd344f6442a2d1181ef79
 ARG TARGETPLATFORM
 
 # Install python dependencies
-RUN apk add --no-cache build-base libffi-dev postgresql-dev cargo
+RUN apk add --no-cache build-base libffi-dev cargo
 
 # Copy python requirements
 COPY src/deps/requirements.txt /tmp/requirements-deps.txt
 COPY src/autoconf/requirements.txt /tmp/req/requirements-autoconf.txt
-COPY src/common/db/requirements.txt /tmp/req/requirements-db.txt
-COPY src/common/db/requirements.arm.txt /tmp/req/requirements-db.arm.txt
-COPY src/common/db/requirements.386.txt /tmp/req/requirements-db.386.txt
 
 WORKDIR /usr/share/bunkerweb
 
 # Install python requirements
 RUN export MAKEFLAGS="-j$(nproc)" && \
-  if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then mv /tmp/req/requirements-db.arm.txt /tmp/req/requirements-db.txt && rm -f /tmp/req/requirements-db.386.txt ; elif [ "$TARGETPLATFORM" = "linux/386" ] ; then mv /tmp/req/requirements-db.386.txt /tmp/req/requirements-db.txt && rm -f /tmp/req/requirements-db.arm.txt ; else rm -f /tmp/req/requirements-db.arm.txt /tmp/req/requirements-db.386.txt ; fi && \
   pip install --no-cache-dir --require-hashes --break-system-packages -r /tmp/requirements-deps.txt && \
   pip install --no-cache-dir --require-hashes --target deps/python $(for file in $(ls /tmp/req/requirements*.txt) ; do echo "-r ${file}" ; done | xargs)
 
@@ -26,7 +22,6 @@ RUN export MAKEFLAGS="-j$(nproc)" && \
 COPY src/common/api api
 COPY src/common/cli cli
 COPY src/common/core core
-COPY src/common/db db
 COPY src/common/helpers helpers
 COPY src/common/settings.json settings.json
 COPY src/common/utils utils
@@ -39,7 +34,7 @@ FROM python:3.13-alpine@sha256:bb1f2fdb1065c85468775c9d680dcd344f6442a2d1181ef79
 RUN umask 027
 
 # Install bash and create autoconf user
-RUN apk add --no-cache bash tzdata mariadb-connector-c mariadb-client sqlite postgresql-client && \
+RUN apk add --no-cache bash tzdata && \
   addgroup -g 101 autoconf && \
   adduser -h /usr/share/bunkerweb/autoconf -g autoconf -s /sbin/nologin -G autoconf -D -H -u 101 --disabled-password autoconf
 
@@ -62,8 +57,8 @@ RUN cp helpers/bwcli /usr/bin/ && \
   for dir in $(echo "pro/plugins configs/http configs/stream configs/server-http configs/server-stream configs/default-server-http configs/default-server-stream configs/modsec configs/modsec-crs configs/crs-plugins-before configs/crs-plugins-after") ; do mkdir "/data/${dir}" ; done && \
   chown -R root:autoconf INTEGRATION /data /var/cache/bunkerweb /var/lib/bunkerweb /var/www/html /etc/bunkerweb /var/tmp/bunkerweb /var/run/bunkerweb /var/log/bunkerweb /usr/bin/bwcli && \
   chmod -R 770 /data /var/cache/bunkerweb /var/lib/bunkerweb /var/www/html /etc/bunkerweb /var/tmp/bunkerweb /var/run/bunkerweb /var/log/bunkerweb && \
-  find . \( -path './autoconf' -o -path './cli' -o -path './core' -o -path './db' -o -path './helpers' -o -path './utils' -o -path './deps' \) -prune -o -type f -print0 | xargs -0 -P "$(nproc)" -n 1024 chmod 440 && \
-  find autoconf cli core db helpers utils deps -type f ! -path 'deps/python/bin/*' ! -name '*.py' ! -name '*.pyc' ! -name '*.sh' ! -name '*.so' -print0 | xargs -0 -P "$(nproc)" -n 1024 chmod 440 && \
+  find . \( -path './autoconf' -o -path './cli' -o -path './core' -o -path './helpers' -o -path './utils' -o -path './deps' \) -prune -o -type f -print0 | xargs -0 -P "$(nproc)" -n 1024 chmod 440 && \
+  find autoconf cli core helpers utils deps -type f ! -path 'deps/python/bin/*' ! -name '*.py' ! -name '*.pyc' ! -name '*.sh' ! -name '*.so' -print0 | xargs -0 -P "$(nproc)" -n 1024 chmod 440 && \
   chmod 660 INTEGRATION
 
 LABEL maintainer="Bunkerity <contact@bunkerity.com>"

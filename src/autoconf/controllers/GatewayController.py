@@ -14,8 +14,8 @@ GATEWAY_API_VERSIONS = ("v1", "v1alpha2", "v1alpha3", "v1beta1", "v1alpha1")
 
 
 class GatewayController(KubernetesController):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *, api_client):
+        super().__init__(api_client=api_client)
         self._custom_objects = client.CustomObjectsApi()
         self._gateways_cache: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
@@ -241,7 +241,7 @@ class GatewayController(KubernetesController):
                 prefixed_targets = [name for name in all_hosts if setting.startswith(f"{name}_")]
                 if prefixed_targets and not setting.startswith(f"{server_name}_"):
                     continue
-                success, _ = self._db.is_valid_setting(setting, value=value, multisite=True)
+                success, _ = self._api.validate_setting(setting, value=value, multisite=True)
                 if success and not setting.startswith(f"{server_name}_"):
                     if any(setting.startswith(f"{s}_") for s in all_hosts):
                         continue

@@ -7,10 +7,13 @@ from sys import exit as sys_exit, path as sys_path
 from traceback import format_exc
 from pathlib import Path
 
-for deps_path in [join(sep, "usr", "share", "bunkerweb", *paths) for paths in (("deps", "python"), ("utils",), ("api",), ("db",))]:
+for deps_path in [join(sep, "usr", "share", "bunkerweb", *paths) for paths in (("deps", "python"), ("utils",), ("api",))]:
     if deps_path not in sys_path:
         sys_path.append(deps_path)
 
+from time import sleep
+
+from api_client import AutoconfApiClient, ApiUnavailableError  # type: ignore
 from common_utils import handle_docker_secrets  # type: ignore
 from logger import getLogger  # type: ignore
 from controllers.SwarmController import SwarmController
@@ -35,6 +38,11 @@ gateway_api = getenv("KUBERNETES_GATEWAY_MODE", "no").lower() == "yes"
 kubernetes = gateway_api or getenv("KUBERNETES_MODE", "no").lower() == "yes"
 docker_host = getenv("DOCKER_HOST", "unix:///var/run/docker.sock")
 wait_retry_interval = getenv("WAIT_RETRY_INTERVAL", "5")
+api_url = getenv("API_URL", "http://bw-api:5000")
+api_token = getenv("API_TOKEN", "")
+
+if not api_token:
+    LOGGER.warning("API_TOKEN is not set — API authentication will likely fail")
 
 if not wait_retry_interval.isdigit():
     LOGGER.error("Invalid WAIT_RETRY_INTERVAL value, must be an integer")
@@ -52,20 +60,33 @@ signal(SIGINT, exit_handler)
 signal(SIGTERM, exit_handler)
 
 try:
+    # Create API client and wait for API to be reachable
+    api_client = AutoconfApiClient(api_url, api_token)
+    LOGGER.info("Waiting for API to be available ...")
+    with api_client.expect_errors():
+        while True:
+            try:
+                api_client.ping()
+                LOGGER.info("API is available")
+                break
+            except ApiUnavailableError:
+                LOGGER.warning(f"API is not yet available at {api_url}, retrying in {wait_retry_interval}s ...")
+                sleep(wait_retry_interval)
+
     # Instantiate the controller
     if swarm:
         LOGGER.info("Swarm mode detected")
-        controller = SwarmController(docker_host)
+        controller = SwarmController(docker_host, api_client=api_client)
     elif kubernetes:
         if gateway_api:
             LOGGER.info("Kubernetes Gateway API mode detected")
-            controller = GatewayController()
+            controller = GatewayController(api_client=api_client)
         else:
             LOGGER.info("Kubernetes mode detected")
-            controller = IngressController()
+            controller = IngressController(api_client=api_client)
     else:
         LOGGER.info("Docker mode detected")
-        controller = DockerController(docker_host)
+        controller = DockerController(docker_host, api_client=api_client)
 
     # Wait for instances
     LOGGER.info("Waiting for BunkerWeb instances ...")

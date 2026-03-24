@@ -33,7 +33,7 @@ class Controller(Config):
         all_ready = False
         while not all_ready:
             if self.have_to_wait():
-                self._logger.info(f"Waiting for the database to be ready, retrying in {wait_time}s ...")
+                self._logger.info(f"Waiting for the API to be ready, retrying in {wait_time}s ...")
                 sleep(wait_time)
                 continue
 
@@ -66,7 +66,7 @@ class Controller(Config):
             instances.extend(self._to_instances(controller_instance))
 
         if not instances and self._first_start:
-            for db_instance in self._db.get_instances(autoconf=True):
+            for db_instance in self._api.get_instances(autoconf=True):
                 if not any(db_instance["hostname"] == instance["hostname"] for instance in instances):
                     instances.append(db_instance)
 
@@ -80,11 +80,11 @@ class Controller(Config):
     def _to_services(self, controller_service):
         raise NotImplementedError
 
-    def _set_autoconf_load_db(self):
+    def _set_autoconf_loaded(self):
         if not self._loaded:
-            ret = self._db.set_metadata({"autoconf_loaded": True})
+            ret = self._api.set_metadata({"autoconf_loaded": True})
             if ret:
-                self._logger.warning(f"Can't set autoconf loaded metadata to true in database: {ret}")
+                self._logger.warning(f"Can't set autoconf loaded metadata to true via API: {ret}")
             else:
                 self._loaded = True
 
@@ -121,7 +121,7 @@ class Controller(Config):
             if normalized_server_name == service_name.strip().split(" ")[0]:
                 return True
 
-        db_services = self._db.get_services()
+        db_services = self._api.get_services()
         for service in db_services:
             db_service_name = service.get("id", "")
             if normalized_server_name == db_service_name:
