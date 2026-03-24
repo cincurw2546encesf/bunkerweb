@@ -124,6 +124,10 @@ sqlalchemy_loggers = (
 for logger_name in sqlalchemy_loggers:
     logging_getLogger(logger_name).setLevel(database_default_level)
 
+# Suppress noisy HTTP client logs (urllib3 retry warnings, connection pool debug, requests)
+for logger_name in ("urllib3", "urllib3.connectionpool", "urllib3.util.retry", "requests", "docker.utils.config", "docker.auth"):
+    logging_getLogger(logger_name).setLevel(ERROR)
+
 # Customize log level names with emojis
 addLevelName(CRITICAL, "🚨")
 addLevelName(DEBUG, "🐛")

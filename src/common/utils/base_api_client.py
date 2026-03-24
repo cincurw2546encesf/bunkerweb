@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from logging import getLogger
 from time import time
 
@@ -49,6 +50,19 @@ class BaseApiClient:
         self._readonly_cache = None
         self._readonly_cache_ttl = 5  # seconds
         self._readonly_cache_time = 0
+        self._expect_errors = False  # When True, log failures at WARNING instead of ERROR
+
+    @contextmanager
+    def expect_errors(self):
+        """Context manager to temporarily downgrade error logs to WARNING.
+
+        Use when failures are expected (e.g., initial API connectivity checks).
+        """
+        self._expect_errors = True
+        try:
+            yield
+        finally:
+            self._expect_errors = False
 
     # ── Core request methods ─────────────────────────────────────────────
 
@@ -61,15 +75,17 @@ class BaseApiClient:
         url = f"{self.base_url}{path}"
         kwargs.setdefault("timeout", self.timeout)
 
+        log = self._logger.warning if self._expect_errors else self._logger.error
+
         try:
             resp = self.session.request(method, url, **kwargs)
         except (RequestsConnectionError, Timeout) as e:
-            self._logger.error(f"API request failed ({method} {path}): {e}")
+            log(f"API unreachable ({method} {path}): {e}")
             raise ApiUnavailableError(f"Cannot reach API at {self.base_url}: {e}") from e
 
         if resp.status_code >= 500:
             msg = resp.text[:500] if resp.text else f"HTTP {resp.status_code}"
-            self._logger.error(f"API server error ({method} {path}): {resp.status_code} {msg}")
+            log(f"API returned {resp.status_code} ({method} {path}): {msg}")
             raise ApiUnavailableError(f"API returned {resp.status_code}")
 
         if resp.status_code >= 400:
@@ -133,16 +149,16 @@ class BaseApiClient:
         """Check if the database is in readonly mode. Cached with short TTL."""
         now = time()
         if self._readonly_cache is not None and (now - self._readonly_cache_time) < self._readonly_cache_ttl:
-            return self._readonly_cache
+            return bool(self._readonly_cache)
 
         try:
             data = self._get("/system/readonly")
-            self._readonly_cache = data.get("readonly", False)
+            self._readonly_cache = bool(data.get("readonly", False))
         except (ApiClientError, ApiUnavailableError):
             self._readonly_cache = True
 
         self._readonly_cache_time = now
-        return self._readonly_cache
+        return bool(self._readonly_cache)
 
     def ping(self) -> dict:
         """Call GET /ping and return the response dict."""
