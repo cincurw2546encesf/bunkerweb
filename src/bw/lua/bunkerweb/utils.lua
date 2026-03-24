@@ -16,7 +16,7 @@ local ERR = ngx.ERR
 local INFO = ngx.INFO
 local WARN = ngx.WARN
 local HTTP_FORBIDDEN = ngx.HTTP_FORBIDDEN
-local HTTP_CLOSED = ngx.HTTP_CLOSED
+local HTTP_CLOSE = ngx.HTTP_CLOSE or 444
 local null = ngx.null
 local re_match = ngx.re.match
 local subsystem = ngx.config.subsystem
@@ -743,7 +743,7 @@ utils.get_deny_status = function()
 		end
 		return tonumber(variables["global"]["DENY_HTTP_STATUS"])
 	end
-	return HTTP_CLOSED
+	return HTTP_CLOSE
 end
 
 utils.get_security_mode = function(ctx)
