@@ -1,6 +1,6 @@
 from ipaddress import ip_address
 from pydantic import BaseModel, Field, field_validator, RootModel, BeforeValidator
-from typing import Optional, List, Dict, Union, Literal, Annotated
+from typing import Optional, List, Dict, Union, Literal, Annotated, Any
 from re import compile as re_compile
 
 # Shared helpers for Configs
@@ -282,3 +282,53 @@ class GlobalSettingsUpdate(RootModel[Dict[str, Scalar]]):
             if isinstance(val, (dict, list)):
                 raise ValueError(f"Invalid value for {k}: must be scalar")
         return v
+
+
+class ValidateSettingRequest(BaseModel):
+    setting: str = Field(..., description="Setting name to validate")
+    value: Optional[str] = Field(None, description="Value to validate against the setting regex")
+    multisite: bool = Field(False, description="Whether to validate as a multisite setting")
+    extra_services: Optional[List[str]] = Field(None, description="Additional service names for context")
+
+
+_ALLOWED_BULK_METHODS = {"autoconf", "scheduler", "manual", "ui", "wizard"}
+
+
+def _validate_bulk_method(v: str) -> str:
+    """Only allow known bulk methods — prevents overwriting UI/API-managed records."""
+    if v not in _ALLOWED_BULK_METHODS:
+        raise ValueError(f"Method '{v}' is not allowed for bulk operations. Allowed: {', '.join(sorted(_ALLOWED_BULK_METHODS))}")
+    return v
+
+
+class SaveConfigRequest(BaseModel):
+    config: Dict[str, str] = Field(..., description="Full config environment dict")
+    method: str = Field(..., description="Source method (e.g. 'autoconf')")
+    changed: bool = Field(False, description="Whether to immediately signal changes")
+
+    @field_validator("method")
+    @classmethod
+    def _validate_method(cls, v: str) -> str:
+        return _validate_bulk_method(v)
+
+
+class BulkUpdateInstancesRequest(BaseModel):
+    instances: List[Dict[str, Any]] = Field(..., description="List of instance dicts to persist")
+    method: str = Field(..., description="Source method (e.g. 'autoconf')")
+    changed: bool = Field(False, description="Whether to signal instance changes")
+
+    @field_validator("method")
+    @classmethod
+    def _validate_method(cls, v: str) -> str:
+        return _validate_bulk_method(v)
+
+
+class BulkSaveCustomConfigsRequest(BaseModel):
+    custom_configs: List[Dict[str, Any]] = Field(..., description="List of custom config dicts")
+    method: str = Field(..., description="Source method (e.g. 'autoconf')")
+    changed: bool = Field(False, description="Whether to signal custom config changes")
+
+    @field_validator("method")
+    @classmethod
+    def _validate_method(cls, v: str) -> str:
+        return _validate_bulk_method(v)

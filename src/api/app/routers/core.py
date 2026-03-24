@@ -1,9 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from ..utils import get_api_db
-
-
 router = APIRouter(tags=["core"])  # Utils-only (ping, health)
 from .auth import router as auth_router
 from .instances import router as instances_router
@@ -14,6 +11,10 @@ from .configs import router as configs_router
 from .plugins import router as plugins_router
 from .cache import router as cache_router
 from .jobs import router as jobs_router
+from .system import router as system_router
+from .users import router as users_router
+from .templates import router as templates_router
+from .metadata import router as metadata_router
 
 
 @router.get("/ping")
@@ -33,13 +34,8 @@ def health() -> JSONResponse:
 
 
 # Mount category routers under core
-# Conditionally expose auth endpoints only if API users exist
-_adb = get_api_db(log=False)
-_has_api_user = _adb.has_api_user()
-
-if _has_api_user:
-    router.include_router(auth_router)
-
+# Auth router is always mounted; the endpoint itself handles the "no users" case
+router.include_router(auth_router)
 router.include_router(instances_router)
 router.include_router(bans_router)
 router.include_router(global_settings_router)
@@ -49,3 +45,7 @@ router.include_router(configs_router)
 router.include_router(plugins_router)
 router.include_router(cache_router)
 router.include_router(jobs_router)
+router.include_router(system_router)
+router.include_router(users_router)
+router.include_router(templates_router)
+router.include_router(metadata_router)

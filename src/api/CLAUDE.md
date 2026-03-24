@@ -43,12 +43,16 @@ Skipped paths: `/health`, `/ping`, `/auth/*`, `/docs*`, `/redoc*`, `/openapi.jso
 | `auth.py` | `/auth` | Login, Biscuit token issuance |
 | `instances.py` | `/instances` | Instance CRUD (sub-routes include `/{hostname}/*`), broadcast reload/stop/ping |
 | `services.py` | `/services` | Service config CRUD, convert, export |
-| `global_settings.py` | `/global_settings` + `/global_config` | Read/update global settings |
+| `global_settings.py` | `/global_settings` + `/global_config` | Read/update global settings. `PUT /global_settings/config` updates config, `POST /global_settings/validate` validates without applying |
 | `configs.py` | `/configs` | Custom NGINX config management (upload, CRUD) |
 | `bans.py` | `/bans` | Ban/unban IPs across instances |
-| `plugins.py` | `/plugins` | Plugin list, upload (tar.gz/zip), delete |
+| `plugins.py` | `/plugins` | Plugin list, upload (tar.gz/zip), delete. `GET /plugins?with_data=true` returns base64-encoded plugin data |
 | `cache.py` | `/cache` | Job cache file inspection/purge |
 | `jobs.py` | `/jobs` | List jobs, trigger execution |
+| `users.py` | `/users` | API user CRUD (create, list, update, delete) |
+| `system.py` | `/system` | System info, version, reload, restart |
+| `templates.py` | `/templates` | Server template CRUD |
+| `metadata.py` | `/metadata` | Plugin/setting metadata lookups |
 
 ### Configuration Loading (`app/config.py`)
 

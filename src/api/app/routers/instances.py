@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 
 from ..auth.guard import guard
 from ..deps import get_instances_api_caller, get_api_for_hostname
-from ..schemas import InstanceCreateRequest, InstancesDeleteRequest, InstanceUpdateRequest
+from ..schemas import BulkUpdateInstancesRequest, InstanceCreateRequest, InstancesDeleteRequest, InstanceUpdateRequest
 from ..config import api_config
 from ..utils import get_db, LOGGER
 
@@ -42,6 +42,21 @@ def stop(api_caller=Depends(get_instances_api_caller)) -> JSONResponse:
     """Stop all registered BunkerWeb instances."""
     ok, _ = api_caller.send_to_apis("POST", "/stop")
     return JSONResponse(status_code=200 if ok else 502, content={"status": "success" if ok else "error"})
+
+
+@router.put("/bulk", dependencies=[Depends(guard)])
+def bulk_update_instances(req: BulkUpdateInstancesRequest) -> JSONResponse:
+    """Bulk update instances for a given method.
+
+    Replaces all instances with the given method tag.
+    Used by Autoconf to sync discovered instances.
+    """
+    db = get_db()
+    err = db.update_instances(req.instances, req.method, changed=req.changed)
+    if err:
+        code = 400 if "read-only" in err else 500
+        return JSONResponse(status_code=code, content={"status": "error", "message": err})
+    return JSONResponse(status_code=200, content={"status": "success"})
 
 
 # ---------- Instance actions for a single instance ----------
@@ -120,9 +135,9 @@ def _validate_port(port: Optional[int]) -> Optional[int]:
 
 
 @router.get("", dependencies=[Depends(guard)])
-def list_instances() -> JSONResponse:
+def list_instances(autoconf: bool = False) -> JSONResponse:
     """List all registered BunkerWeb instances with their details."""
-    instances = get_db().get_instances()
+    instances = get_db().get_instances(autoconf=autoconf)
     for instance in instances:
         instance["creation_date"] = instance["creation_date"].astimezone().isoformat()
         instance["last_seen"] = instance["last_seen"].astimezone().isoformat() if instance.get("last_seen") else None

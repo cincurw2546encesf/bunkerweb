@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from ..auth.guard import guard
 from ..utils import get_db
 from ..schemas import (
+    BulkSaveCustomConfigsRequest,
     ConfigCreateRequest,
     ConfigUpdateRequest,
     ConfigsDeleteRequest,
@@ -17,7 +18,6 @@ from ..schemas import (
     OptionalConfigType,
     validate_config_name,
 )
-
 
 router = APIRouter(prefix="/configs", tags=["configs"])
 EDITABLE_METHODS = {"api", "ui"}
@@ -91,7 +91,7 @@ def list_configs(
 
 
 @router.post("/upload", dependencies=[Depends(guard)])
-async def upload_configs(
+def upload_configs(
     files: List[UploadFile] = File(..., description="One or more config files to create"),
     service: Optional[str] = Form(None, description='Service id; use "global" or leave empty for global'),
     type: Annotated[ConfigType, Form(description="Config type")] = ...,  # noqa: A002
@@ -124,7 +124,7 @@ async def upload_configs(
             if err:
                 errors.append({"file": filename or name, "error": err})
                 continue
-            content_bytes = await f.read()
+            content_bytes = f.file.read()
             # Decode as UTF-8 text; replace undecodable bytes
             config_content = ""
             with suppress(Exception):
@@ -159,6 +159,21 @@ async def upload_configs(
     if errors:
         content["errors"] = errors
     return JSONResponse(status_code=status_code, content=content)
+
+
+@router.put("/bulk", dependencies=[Depends(guard)])
+def bulk_save_custom_configs(req: BulkSaveCustomConfigsRequest) -> JSONResponse:
+    """Bulk save custom configs for a given method.
+
+    Replaces all custom configs with the given method tag.
+    Used by Autoconf to sync discovered custom configurations.
+    """
+    db = get_db()
+    err = db.save_custom_configs(req.custom_configs, req.method, changed=req.changed)
+    if err:
+        code = 400 if "read-only" in err else 500
+        return JSONResponse(status_code=code, content={"status": "error", "message": err})
+    return JSONResponse(status_code=200, content={"status": "success"})
 
 
 @router.get("/{service}/{config_type}/{name}", dependencies=[Depends(guard)])
@@ -283,7 +298,7 @@ def update_config(
 
 
 @router.patch("/{service}/{config_type}/{name}/upload", dependencies=[Depends(guard)])
-async def update_config_upload(
+def update_config_upload(
     service: str,
     config_type: Annotated[ConfigType, PathParam(description="Config type")],
     name: str,
@@ -331,7 +346,7 @@ async def update_config_upload(
     if not _service_exists(s_new):
         return JSONResponse(status_code=404, content={"status": "error", "message": "Service not found"})
 
-    content_bytes = await file.read()
+    content_bytes = file.file.read()
     try:
         content = content_bytes.decode("utf-8", errors="replace")
     except Exception:

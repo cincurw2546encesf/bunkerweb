@@ -37,7 +37,7 @@ class BiscuitWithAdminBearer:
         openapi_match = api_config.openapi_url and path == api_config.openapi_url
         docs_match = api_config.docs_url and path.startswith(api_config.docs_url)
         redoc_match = api_config.redoc_url and path.startswith(api_config.redoc_url)
-        if path in ("/health", "/ping") or bool(openapi_match) or bool(docs_match) or bool(redoc_match) or path.startswith("/auth"):
+        if path in ("/health", "/ping") or bool(openapi_match) or bool(docs_match) or bool(redoc_match) or path == "/auth" or path.startswith("/auth/"):
             self._logger.debug(f"Auth skip for path: {path}")
             return
 

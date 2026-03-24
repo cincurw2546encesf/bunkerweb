@@ -1,5 +1,6 @@
 from contextlib import suppress
 from datetime import datetime, timezone
+from hmac import compare_digest
 from typing import Optional, Tuple
 
 from fastapi import APIRouter, HTTPException, Request, Depends
@@ -13,7 +14,6 @@ from ..utils import LOGGER
 from ..utils import BISCUIT_PRIVATE_KEY_FILE, check_password, get_api_db
 from ..config import api_config
 from ..auth.common import get_auth_header
-
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBasic(auto_error=False)
@@ -58,7 +58,7 @@ async def login(request: Request, credentials: HTTPBasicCredentials | None = Dep
     is_admin_override = False
     if not creds and authz.lower().startswith("bearer ") and api_config.API_TOKEN:
         token_val = authz.split(" ", 1)[1].strip()
-        if token_val and token_val == api_config.API_TOKEN:
+        if token_val and compare_digest(token_val, api_config.API_TOKEN):
             is_admin_override = True
 
     if not creds and not is_admin_override:
@@ -118,15 +118,13 @@ async def login(request: Request, credentials: HTTPBasicCredentials | None = Dep
 
     client_ip = request.client.host if request.client else "0.0.0.0"
     host = request.headers.get("host", "bwapi")
-    builder = BiscuitBuilder(
-        f"""
+    builder = BiscuitBuilder(f"""
         user("{(user.get('username') if isinstance(user, dict) else username) or 'user'}");
         time({datetime.now(timezone.utc).isoformat()});
         client_ip("{client_ip}");
         domain("{host}");
         version("{get_version()}");
-        """
-    )
+        """)
 
     # API has no role logic; encode read/write under a fixed role name.
     role_name = "api_user"

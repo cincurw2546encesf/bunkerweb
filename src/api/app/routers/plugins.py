@@ -1,3 +1,4 @@
+from base64 import b64encode
 from contextlib import suppress
 from io import BytesIO
 from json import JSONDecodeError, loads as json_loads
@@ -115,6 +116,10 @@ def list_plugins(type: str = "all", with_data: bool = False) -> JSONResponse:  #
     if type not in _RECOGNIZED_TYPES:
         return JSONResponse(status_code=422, content={"status": "error", "message": "Invalid type"})
     plugins = get_db().get_plugins(_type=type, with_data=with_data)
+    if with_data:
+        for plugin in plugins:
+            if isinstance(plugin.get("data"), bytes):
+                plugin["data"] = b64encode(plugin["data"]).decode("ascii")
     return JSONResponse(status_code=200, content={"status": "success", "plugins": plugins})
 
 
@@ -133,8 +138,25 @@ def delete_plugin(plugin_id: str) -> JSONResponse:
     return JSONResponse(status_code=200, content={"status": "success"})
 
 
+@router.get("/{plugin_id}/page", dependencies=[Depends(guard)], response_model=None)
+def get_plugin_page(plugin_id: str):
+    """Get plugin UI page data (tar.gz blob).
+
+    Args:
+        plugin_id: ID of the plugin
+    """
+    if not _PLUGIN_ID_RX.match(plugin_id):
+        return JSONResponse(status_code=422, content={"status": "error", "message": "Invalid plugin id"})
+    page = get_db().get_plugin_page(plugin_id)
+    if not page:
+        return JSONResponse(status_code=404, content={"status": "error", "message": "Plugin page not found"})
+    from fastapi.responses import Response
+
+    return Response(content=page, media_type="application/gzip")
+
+
 @router.post("/upload", dependencies=[Depends(guard)])
-async def upload_plugins(files: List[UploadFile] = File(...), method: str = Form("ui")) -> JSONResponse:
+def upload_plugins(files: List[UploadFile] = File(...), method: str = Form("ui")) -> JSONResponse:
     """Upload and install UI plugins from archive files.
 
     Supports .zip, .tar.gz, .tar.xz formats. Each archive may contain
@@ -163,7 +185,7 @@ async def upload_plugins(files: List[UploadFile] = File(...), method: str = Form
         try:
             filename = up.filename or ""
             lower = filename.lower()
-            data = await up.read()
+            data = up.file.read()
             if not lower.endswith((".zip", ".tar.gz", ".tar.xz")):
                 errors.append({"file": filename, "error": "Unsupported archive format"})
                 continue
