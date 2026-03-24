@@ -13,8 +13,8 @@ BunkerWeb is an open-source Web Application Firewall (WAF) built on NGINX with a
 - **BunkerWeb Core** (`src/bw/`, `src/common/core/`): NGINX-based reverse proxy with security modules in Lua (request-time) and Python (jobs). Lua modules live in `src/bw/lua/bunkerweb/` (plugin.lua, ctx.lua, datastore.lua, etc.).
 - **Scheduler** (`src/scheduler/`): Central orchestrator ("brain"). `main.py` runs the main loop; `JobScheduler.py` manages job execution with thread pools. Uses Python's `schedule` library.
 - **Autoconf** (`src/autoconf/`): Listens for Docker/Swarm/Kubernetes events and dynamically reconfigures BunkerWeb. Controllers in `controllers/`: DockerController, SwarmController, IngressController, GatewayController (all inherit from `Controller.py`).
-- **API** (`src/api/`): FastAPI service. Entry point: `src/api/app/main.py`. Routers in `src/api/app/routers/` (auth, bans, cache, configs, global_settings, instances, jobs, plugins, services). `core.py` is the router hub that assembles all routers — it is NOT the FastAPI app entry point.
-- **Web UI** (`src/ui/`): Flask app using Blueprints. Entry point: `src/ui/main.py`. Routes in `src/ui/app/routes/` (22 blueprints including configs, plugins, jobs, logs, instances, services, bans, cache, global_settings, templates, reports, etc.). Uses Flask-Login for auth and Jinja2 templates. `dependencies.py` is the central dependency injection point providing DB, DATA, BW_CONFIG, BW_INSTANCES_UTILS, CORE_PLUGINS_PATH, EXTERNAL_PLUGINS_PATH, PRO_PLUGINS_PATH. Frontend assets are static files in `src/ui/app/static/` (no separate build system).
+- **API** (`src/api/`): FastAPI service. Entry point: `src/api/app/main.py`. Routers in `src/api/app/routers/` (auth, bans, cache, configs, global_settings, instances, jobs, plugins, services, users, system, templates, metadata). `core.py` is the router hub that assembles all routers — it is NOT the FastAPI app entry point.
+- **Web UI** (`src/ui/`): Flask app using Blueprints. Entry point: `src/ui/main.py`. Routes in `src/ui/app/routes/` (22 blueprints including configs, plugins, jobs, logs, instances, services, bans, cache, global_settings, templates, reports, etc.). Uses Flask-Login for auth and Jinja2 templates. `dependencies.py` is the central dependency injection point providing API_CLIENT, DATA, BW_CONFIG, BW_INSTANCES_UTILS, CORE_PLUGINS_PATH, EXTERNAL_PLUGINS_PATH, PRO_PLUGINS_PATH. The UI no longer accesses the database directly — all data flows through the API via `api_client.py`. Frontend assets are static files in `src/ui/app/static/` (no separate build system).
 - **Database** (`src/common/db/`): SQLAlchemy ORM with `model.py` defining all tables (Plugins, Settings, Services, Jobs, Custom_configs, Users, etc.). `Database.py` wraps high-level query methods. Supports SQLite (WAL mode), MariaDB, MySQL, PostgreSQL with QueuePool for connection pooling.
 
 ### Configuration Flow
@@ -109,7 +109,7 @@ docker compose -f misc/dev/docker-compose.ui.api.yml up -d
 Key dev compose files in `misc/dev/` (18 total):
 
 - `docker-compose.ui.api.yml` — Full stack (UI + API + core + MariaDB) — **recommended**
-- `docker-compose.ui.yml` — UI only (no API)
+- `docker-compose.ui.yml` — UI + API + core + MariaDB (UI requires bw-api)
 - `docker-compose.all-in-one.yml` — Single container with all components
 - `docker-compose.autoconf.yml` — Docker autoconf mode
 - `docker-compose.autoconf.ui.api.yml` — Autoconf with UI + API
@@ -136,6 +136,7 @@ Alembic migrations in `src/common/db/alembic/` with separate version directories
 - `src/scheduler/JobScheduler.py`: Job execution orchestrator
 - `src/ui/main.py`: Web UI entry point (registers all Blueprints)
 - `src/ui/app/dependencies.py`: UI dependency injection
+- `src/ui/app/api_client.py`: UI API client — all UI data access goes through the API
 - `src/api/app/main.py`: API entry point (FastAPI app creation)
 - `src/api/app/routers/core.py`: Router hub (assembles all API routers)
 - `pyproject.toml`: Black config (160 char lines)
