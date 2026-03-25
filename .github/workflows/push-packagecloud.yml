@@ -95,6 +95,9 @@ jobs:
       - name: Rename package
         if: inputs.BW_VERSION == '1.5'
         run: sudo apt update && sudo apt install -y rename && rename 's/dev/1.5-dev/' /tmp/${{ inputs.LINUX }}/*.${{ inputs.PACKAGE }}
+      - name: Rename package 1.7
+        if: inputs.BW_VERSION == '1.7'
+        run: sudo apt update && sudo apt install -y rename && rename 's/dev/1.7-dev/' /tmp/${{ inputs.LINUX }}/*.${{ inputs.PACKAGE }}
       # Push package (single generic step)
       - name: Push package to packagecloud
         uses: danielmundi/upload-packagecloud@46cd0e61152bf952dbc0d1759e609d3d22649030 # v1
