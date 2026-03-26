@@ -661,7 +661,7 @@ class InstancesUtils:
                 search_lower = search_value.lower()
                 if not any(
                     search_lower in str(report.get(field, "")).lower()
-                    for field in ("ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
+                    for field in ("id", "ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
                 ):
                     return False
 
@@ -862,7 +862,7 @@ class InstancesUtils:
                 for r in filtered
                 if any(
                     search_lower in str(r.get(field, "")).lower()
-                    for field in ("ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
+                    for field in ("id", "ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
                 )
             ]
 
