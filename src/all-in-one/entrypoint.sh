@@ -410,7 +410,9 @@ pid="$!"
 # wait while supervisor is running
 wait "$pid"
 while [ -f "/var/run/bunkerweb/supervisord.pid" ] ; do
-	wait "$pid"
+	# Break if the process is no longer alive (e.g. killed by OOM without cleaning up the PID file)
+	kill -0 "$pid" 2>/dev/null || break
+	sleep 1
 done
 
 log "ENTRYPOINT" "ℹ️" "BunkerWeb AIO stopped"
