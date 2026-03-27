@@ -345,7 +345,7 @@ services:
       - "traefik.http.routers.service1.entrypoints=websecure"
       - "traefik.http.routers.service1.tls.certresolver=myresolver"
       - "traefik.http.services.service1.loadbalancer.server.port=8080"
-      - "traefik.http.routers.service1.middlewares=security-headers"
+      - "traefik.http.routers.service1.middlewares=security-headers,compress"
 
   api-service:
     image: your-api:latest
@@ -355,7 +355,7 @@ services:
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls.certresolver=myresolver"
       - "traefik.http.services.api.loadbalancer.server.port=3000"
-      - "traefik.http.routers.api.middlewares=security-headers,rate-limit"
+      - "traefik.http.routers.api.middlewares=security-headers,rate-limit,compress"
 ```
 
 **Dynamic configuration (dynamic.yml):**
@@ -380,6 +380,9 @@ http:
         burst: 100
         average: 50
 
+    compress:
+      compress: {}
+
   routers:
     service1:
       rule: "Host(`example.com`)"
@@ -388,6 +391,7 @@ http:
         certResolver: "myresolver"
       middlewares:
         - "security-headers"
+        - "compress"
 
     api:
       rule: "Host(`api.example.com`)"
@@ -397,6 +401,7 @@ http:
       middlewares:
         - "security-headers"
         - "rate-limit"
+        - "compress"
 
   services:
     service1:
@@ -415,6 +420,8 @@ http:
           path: "/api/health"
           interval: "30s"
 ```
+
+If you define the middleware in `dynamic.yml`, updating the file is generally enough because Traefik reloads file-provider changes automatically. If you define the middleware through Docker labels, you must recreate the affected container for Docker to expose the updated labels to Traefik.
 
 </details>
 
@@ -2225,7 +2232,7 @@ Depending on your installation type:
 
 ### Installation using package manager
 
-Please ensure that you have **NGINX 1.28.2 installed before installing BunkerWeb**. For all distributions, it is mandatory to use prebuilt packages from the [official NGINX repository](https://nginx.org/en/linux_packages.html). Compiling NGINX from source or using packages from different repositories will not work with the official prebuilt packages of BunkerWeb. However, you have the option to build BunkerWeb from source.
+Please ensure that you have **NGINX 1.28.3 installed before installing BunkerWeb**. For all distributions, it is mandatory to use prebuilt packages from the [official NGINX repository](https://nginx.org/en/linux_packages.html). Compiling NGINX from source or using packages from different repositories will not work with the official prebuilt packages of BunkerWeb. However, you have the option to build BunkerWeb from source.
 
 === "Debian Bookworm/Trixie"
 
@@ -2240,11 +2247,11 @@ Please ensure that you have **NGINX 1.28.2 installed before installing BunkerWeb
     | sudo tee /etc/apt/sources.list.d/nginx.list
     ```
 
-    You should now be able to install NGINX 1.28.2:
+    You should now be able to install NGINX 1.28.3:
 
     ```shell
     sudo apt update && \
-    sudo apt install -y --allow-downgrades nginx=1.28.2-1~$(lsb_release -cs)
+    sudo apt install -y --allow-downgrades nginx=1.28.3-1~$(lsb_release -cs)
     ```
 
     !!! warning "Testing/dev version"
@@ -2288,11 +2295,11 @@ Please ensure that you have **NGINX 1.28.2 installed before installing BunkerWeb
     | sudo tee /etc/apt/sources.list.d/nginx.list
     ```
 
-    You should now be able to install NGINX 1.28.2:
+    You should now be able to install NGINX 1.28.3:
 
     ```shell
     sudo apt update && \
-    sudo apt install -y --allow-downgrades nginx=1.28.2-1~$(lsb_release -cs)
+    sudo apt install -y --allow-downgrades nginx=1.28.3-1~$(lsb_release -cs)
     ```
 
     !!! warning "Testing/dev version"
@@ -2332,10 +2339,10 @@ Please ensure that you have **NGINX 1.28.2 installed before installing BunkerWeb
         sudo dnf config-manager setopt updates-testing.enabled=1
         ```
 
-    Fedora already provides NGINX 1.28.2 that we support
+    Fedora already provides NGINX 1.28.3 that we support
 
     ```shell
-    sudo dnf install -y --allowerasing nginx-1.28.2
+    sudo dnf install -y --allowerasing nginx-1.28.3
     ```
 
     !!! example "Disable the setup wizard"
@@ -2382,10 +2389,10 @@ Please ensure that you have **NGINX 1.28.2 installed before installing BunkerWeb
     module_hotfixes=true
     ```
 
-    You should now be able to install NGINX 1.28.2:
+    You should now be able to install NGINX 1.28.3:
 
     ```shell
-    sudo dnf install --allowerasing nginx-1.28.2
+    sudo dnf install --allowerasing nginx-1.28.3
     ```
 
     !!! example "Disable the setup wizard"

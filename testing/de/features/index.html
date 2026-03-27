@@ -893,6 +893,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#acme-pro" class="md-nav__link">
+    <span class="md-ellipsis">
+      ACME (PRO)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#anti-ddos-pro" class="md-nav__link">
     <span class="md-ellipsis">
       Anti DDoS (PRO)
@@ -1864,6 +1873,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ldap-sso-pro" class="md-nav__link">
+    <span class="md-ellipsis">
+      LDAP SSO (PRO)
+    </span>
+  </a>
   
 </li>
       
@@ -3409,6 +3427,13 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 <td>Nein</td>
 <td><strong>Dateideskriptor-Limit:</strong> Maximale Anzahl offener Dateien pro Worker.</td>
 </tr>
+<tr>
+<td><code>WORKER_SHUTDOWN_TIMEOUT</code></td>
+<td><code>30s</code></td>
+<td>global</td>
+<td>Nein</td>
+<td><strong>Worker-Shutdown-Timeout:</strong> Zeitlimit für das ordnungsgemäße Herunterfahren der Worker-Prozesse. Alte Worker werden nach diesem Zeitlimit bei einem Reload erzwungen beendet.</td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -3649,6 +3674,267 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 </div>
 </div>
 </div>
+<h2 id="acme-pro">ACME <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)</h2>
+<p>STREAM-Unterstützung <img alt="✅" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/2705.svg" title=":white_check_mark:" /></p>
+<p>Advanced ACME certificate management with custom CA support, certificate monitoring dashboard, expiry alerting, CT log monitoring, and enhanced OCSP stapling. Complements the built-in Let's Encrypt plugin.</p>
+<table>
+<thead>
+<tr>
+<th>Einstellung</th>
+<th>Standardwert</th>
+<th>Kontext</th>
+<th>Mehrfach</th>
+<th>Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_ACME</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.</td>
+</tr>
+<tr>
+<td><code>ACME_DIRECTORY_URL</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI).</td>
+</tr>
+<tr>
+<td><code>ACME_EMAIL</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Email address for ACME account registration and notifications.</td>
+</tr>
+<tr>
+<td><code>ACME_EAB_KID</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).</td>
+</tr>
+<tr>
+<td><code>ACME_EAB_HMAC_KEY</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>External Account Binding HMAC key (base64-encoded, required when EAB Key ID is set).</td>
+</tr>
+<tr>
+<td><code>ACME_CA_CERT_PATH</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>File path to the root CA certificate for private ACME servers (Step CA, Vault PKI). Required when the CA root is not in the system trust store.</td>
+</tr>
+<tr>
+<td><code>ACME_CHALLENGE</code></td>
+<td><code>http</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>ACME challenge type. HTTP-01 is simplest; DNS-01 is required for wildcard certificates; TLS-ALPN-01 works when port 80 is unavailable.</td>
+</tr>
+<tr>
+<td><code>ACME_DNS_PROVIDER</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>DNS provider for DNS-01 challenges.</td>
+</tr>
+<tr>
+<td><code>ACME_DNS_CREDENTIAL_ITEM</code></td>
+<td></td>
+<td>multisite</td>
+<td>ja</td>
+<td>Configuration item for the DNS provider credentials (e.g. 'cloudflare_api_token 123456'). Values can be base64 encoded.</td>
+</tr>
+<tr>
+<td><code>ACME_DNS_CREDENTIAL_DECODE_BASE64</code></td>
+<td><code>yes</code></td>
+<td>multisite</td>
+<td>ja</td>
+<td>Automatically decode base64 encoded DNS provider credentials.</td>
+</tr>
+<tr>
+<td><code>ACME_DNS_PROPAGATION</code></td>
+<td><code>default</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Time to wait for DNS propagation in seconds for DNS challenges.</td>
+</tr>
+<tr>
+<td><code>ACME_KEY_TYPE</code></td>
+<td><code>ecdsa</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Key type for the certificate. ECDSA is smaller and faster; RSA has broader compatibility.</td>
+</tr>
+<tr>
+<td><code>ACME_KEY_SIZE</code></td>
+<td><code>256</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Key size in bits. For ECDSA: 256 or 384. For RSA: 2048 or 4096.</td>
+</tr>
+<tr>
+<td><code>ACME_PREFERRED_CHAIN</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Preferred certificate chain issuer CN. Selects the preferred chain when the CA provides multiple.</td>
+</tr>
+<tr>
+<td><code>ACME_RENEWAL_DAYS</code></td>
+<td><code>30</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Renew the certificate when it has fewer than this many days until expiry.</td>
+</tr>
+<tr>
+<td><code>ACME_SSL_VERIFY</code></td>
+<td><code>yes</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Verify SSL certificates when communicating with the ACME server. Disable only for testing with self-signed CA certs.</td>
+</tr>
+<tr>
+<td><code>ACME_WILDCARD</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Request wildcard certificate (requires DNS-01 challenge).</td>
+</tr>
+<tr>
+<td><code>ACME_MUST_STAPLE</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Request the OCSP Must-Staple extension in the certificate.</td>
+</tr>
+<tr>
+<td><code>ACME_MAX_RETRIES</code></td>
+<td><code>3</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Number of times to retry certificate generation on failure (0 disables retries).</td>
+</tr>
+<tr>
+<td><code>USE_ACME_MONITORING</code></td>
+<td><code>yes</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Enable certificate expiry monitoring and status tracking for all managed certificates (including OSS Let's Encrypt certificates).</td>
+</tr>
+<tr>
+<td><code>ACME_ALERT_DAYS</code></td>
+<td><code>30 14 7 1</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Space-separated list of day thresholds that trigger expiry alerts.</td>
+</tr>
+<tr>
+<td><code>USE_ACME_ALERT_WEBHOOK</code></td>
+<td><code>no</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Send certificate alerts via webhook.</td>
+</tr>
+<tr>
+<td><code>ACME_ALERT_WEBHOOK_URLS</code></td>
+<td></td>
+<td>global</td>
+<td>nein</td>
+<td>Space-separated list of webhook URLs for certificate alerts.</td>
+</tr>
+<tr>
+<td><code>USE_ACME_ALERT_EMAIL</code></td>
+<td><code>no</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Send certificate alerts via email.</td>
+</tr>
+<tr>
+<td><code>ACME_ALERT_SMTP_EMAILS</code></td>
+<td></td>
+<td>global</td>
+<td>nein</td>
+<td>Space-separated list of email recipients for certificate alerts.</td>
+</tr>
+<tr>
+<td><code>ACME_ALERT_SMTP_HOST</code></td>
+<td></td>
+<td>global</td>
+<td>nein</td>
+<td>SMTP host for certificate alert emails.</td>
+</tr>
+<tr>
+<td><code>ACME_ALERT_SMTP_PORT</code></td>
+<td><code>465</code></td>
+<td>global</td>
+<td>nein</td>
+<td>SMTP port for certificate alert emails (SSL=465, TLS=587).</td>
+</tr>
+<tr>
+<td><code>ACME_ALERT_SMTP_FROM_EMAIL</code></td>
+<td></td>
+<td>global</td>
+<td>nein</td>
+<td>Sender email address for certificate alerts.</td>
+</tr>
+<tr>
+<td><code>ACME_ALERT_SMTP_FROM_USER</code></td>
+<td></td>
+<td>global</td>
+<td>nein</td>
+<td>SMTP authentication user for certificate alert emails.</td>
+</tr>
+<tr>
+<td><code>ACME_ALERT_SMTP_FROM_PASSWORD</code></td>
+<td></td>
+<td>global</td>
+<td>nein</td>
+<td>SMTP authentication password for certificate alert emails.</td>
+</tr>
+<tr>
+<td><code>ACME_ALERT_SMTP_SSL</code></td>
+<td><code>SSL</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Connection type for certificate alert SMTP.</td>
+</tr>
+<tr>
+<td><code>USE_ACME_CT_MONITORING</code></td>
+<td><code>no</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Enable Certificate Transparency log monitoring. Queries crt.sh to detect unauthorized certificate issuance for your domains.</td>
+</tr>
+<tr>
+<td><code>ACME_CT_MONITORED_DOMAINS</code></td>
+<td></td>
+<td>global</td>
+<td>nein</td>
+<td>Space-separated list of domains to monitor in CT logs. Leave empty to auto-detect from configured services.</td>
+</tr>
+<tr>
+<td><code>USE_ACME_OCSP_STAPLING</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Enable enhanced OCSP stapling with proactive response fetching and caching.</td>
+</tr>
+<tr>
+<td><code>ACME_OCSP_CACHE_SIZE</code></td>
+<td><code>1m</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Size of the shared dictionary for OCSP response caching.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="anti-ddos-pro">Anti DDoS <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)</h2>
 <p>STREAM-Unterstützung <img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/274c.svg" title=":x:" /></p>
 <p>Provides enhanced protection against DDoS attacks by analyzing and filtering suspicious traffic.</p>
@@ -7823,6 +8109,239 @@ TrustedMonitor/\d+\.\d+
 </div>
 </div>
 </div>
+<h2 id="ldap-sso-pro">LDAP SSO <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)</h2>
+<p>STREAM-Unterstützung <img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/274c.svg" title=":x:" /></p>
+<p>LDAP-based single sign-on plugin with session-backed authentication.</p>
+<table>
+<thead>
+<tr>
+<th>Einstellung</th>
+<th>Standardwert</th>
+<th>Kontext</th>
+<th>Mehrfach</th>
+<th>Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_LDAP</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Enable or disable LDAP SSO authentication.</td>
+</tr>
+<tr>
+<td><code>LDAP_HOST</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>LDAP server hostname or IP address.</td>
+</tr>
+<tr>
+<td><code>LDAP_PORT</code></td>
+<td><code>389</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>LDAP server port (389 for LDAP/STARTTLS, 636 for LDAPS).</td>
+</tr>
+<tr>
+<td><code>LDAP_LDAPS</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Use LDAPS (TLS from connection start).</td>
+</tr>
+<tr>
+<td><code>LDAP_STARTTLS</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Use STARTTLS upgrade on LDAP connection.</td>
+</tr>
+<tr>
+<td><code>LDAP_SSL_VERIFY</code></td>
+<td><code>yes</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Verify server TLS certificate.</td>
+</tr>
+<tr>
+<td><code>LDAP_TIMEOUT</code></td>
+<td><code>10000</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>LDAP socket timeout in milliseconds.</td>
+</tr>
+<tr>
+<td><code>LDAP_KEEPALIVE_TIMEOUT</code></td>
+<td><code>60000</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>LDAP keepalive timeout in milliseconds.</td>
+</tr>
+<tr>
+<td><code>LDAP_KEEPALIVE_POOL_SIZE</code></td>
+<td><code>10</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>LDAP keepalive connection pool size.</td>
+</tr>
+<tr>
+<td><code>LDAP_KEEPALIVE_POOL_NAME</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Optional custom LDAP keepalive pool name.</td>
+</tr>
+<tr>
+<td><code>LDAP_BIND_DN</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Optional service account DN used to perform LDAP user searches.</td>
+</tr>
+<tr>
+<td><code>LDAP_BIND_PASSWORD</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Password for LDAP Bind DN service account.</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_SEARCH_BASE_DN</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Base DN for user discovery search (enables enterprise search mode when set).</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_SEARCH_FILTER</code></td>
+<td><code>(&amp;(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>LDAP user search filter template. Use {username} placeholder.</td>
+</tr>
+<tr>
+<td><code>LDAP_AUTHZ_FILTER</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Optional extra LDAP authorization filter (AND-ed with user search filter).</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_SEARCH_SCOPE</code></td>
+<td><code>subtree</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>LDAP search scope for user lookup.</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_SEARCH_DEREF_ALIASES</code></td>
+<td><code>always</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>LDAP alias dereferencing mode during user lookup.</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_SEARCH_SIZE_LIMIT</code></td>
+<td><code>10</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Maximum number of LDAP entries returned by user search.</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_SEARCH_TIME_LIMIT</code></td>
+<td><code>10</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Maximum LDAP user search time in seconds.</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_SEARCH_ATTRIBUTES</code></td>
+<td><code>dn</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Attributes requested during user search (space separated).</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_SEARCH_DN_FIELD</code></td>
+<td><code>object_name</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Preferred field name in search response to extract user DN (e.g. object_name, dn).</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_SEARCH_REQUIRE_UNIQUE</code></td>
+<td><code>yes</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Require exactly one search result before authenticating user.</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_DN_TEMPLATE</code></td>
+<td><code>uid={username},ou=people,dc=example,dc=com</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>User DN template used for direct bind fallback. Must include {username} when set.</td>
+</tr>
+<tr>
+<td><code>LDAP_USERNAME_REGEX</code></td>
+<td><code>^[A-Za-z0-9@._-]+$</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>PCRE regex used to validate submitted usernames.</td>
+</tr>
+<tr>
+<td><code>LDAP_LOGIN_PATH</code></td>
+<td><code>/ldap/login</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Login page path exposed by the LDAP plugin.</td>
+</tr>
+<tr>
+<td><code>LDAP_LOGOUT_PATH</code></td>
+<td><code>/ldap/logout</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Logout path exposed by the LDAP plugin.</td>
+</tr>
+<tr>
+<td><code>LDAP_SESSION_TTL</code></td>
+<td><code>3600</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>LDAP session validity duration in seconds.</td>
+</tr>
+<tr>
+<td><code>LDAP_REALM</code></td>
+<td><code>LDAP SSO</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Authentication realm displayed on LDAP login form.</td>
+</tr>
+<tr>
+<td><code>LDAP_USER_HEADER</code></td>
+<td><code>X-User</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Header to pass authenticated username to upstream (empty to disable).</td>
+</tr>
+<tr>
+<td><code>LDAP_REDIRECT_AFTER_LOGIN</code></td>
+<td><code>/</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Fallback relative path after successful login when no redirect target is provided.</td>
+</tr>
+<tr>
+<td><code>LDAP_REDIRECT_AFTER_LOGOUT</code></td>
+<td><code>/</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Relative path to redirect users to after logout.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="lets-encrypt">Let's Encrypt</h2>
 <p>STREAM-Unterstützung <img alt="✅" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/2705.svg" title=":white_check_mark:" /></p>
 <p>Das Let's Encrypt-Plugin vereinfacht die Verwaltung von SSL/TLS-Zertifikaten durch die Automatisierung der Erstellung, Erneuerung und Konfiguration von kostenlosen Zertifikaten von Let's Encrypt. Diese Funktion ermöglicht sichere HTTPS-Verbindungen für Ihre Websites ohne die Komplexität der manuellen Zertifikatsverwaltung, was sowohl Kosten als auch administrativen Aufwand reduziert.</p>
@@ -10168,6 +10687,41 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <td>global</td>
 <td>nein</td>
 <td>Size of the shared dictionary to cache JWKS data.</td>
+</tr>
+<tr>
+<td><code>OPENIDC_USE_ACL</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Enable claim-based access control (ACL) after OIDC authentication. When enabled, only users whose claims match the configured rules will be granted access.</td>
+</tr>
+<tr>
+<td><code>OPENIDC_ACL_MATCH_MODE</code></td>
+<td><code>all</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>How multiple ACL rules are evaluated. 'all' means every rule must pass (AND logic). 'any' means at least one rule must pass (OR logic).</td>
+</tr>
+<tr>
+<td><code>OPENIDC_ACL_DENIED_URL</code></td>
+<td></td>
+<td>multisite</td>
+<td>nein</td>
+<td>URL to redirect to when access is denied by ACL. If empty, returns a 403 Forbidden response.</td>
+</tr>
+<tr>
+<td><code>OPENIDC_ACL_CLAIM</code></td>
+<td></td>
+<td>multisite</td>
+<td>ja</td>
+<td>Name of the OIDC claim to check (e.g. groups, email, sub, preferred_username).</td>
+</tr>
+<tr>
+<td><code>OPENIDC_ACL_CLAIM_VALUE</code></td>
+<td></td>
+<td>multisite</td>
+<td>ja</td>
+<td>Expected value for the claim. For array claims (e.g. groups), checks if this value is a member. For string claims, checks strict equality.</td>
 </tr>
 </tbody>
 </table>
