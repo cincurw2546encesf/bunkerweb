@@ -12,6 +12,7 @@ from pathlib import Path
 from random import choice
 from ssl import PROTOCOL_TLS_SERVER, SSLContext
 from string import ascii_letters, digits
+from re import search as re_search, escape as re_escape
 from subprocess import run
 from sys import path as sys_path
 from time import perf_counter
@@ -43,7 +44,7 @@ def _supports_tls_group(name: str) -> bool:
     try:
         logger.debug(f"Python ssl module does not support TLS group '{name}', trying openssl CLI fallback")
         result = run(["openssl", "list", "-kem-algorithms"], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0 and name in result.stdout.split():
+        if result.returncode == 0 and re_search(r"\b" + re_escape(name) + r"\b", result.stdout):
             logger.debug(f"OpenSSL CLI confirms TLS group '{name}' is supported")
             return True
     except BaseException:
