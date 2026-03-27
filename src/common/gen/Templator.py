@@ -12,6 +12,8 @@ from pathlib import Path
 from random import choice
 from ssl import PROTOCOL_TLS_SERVER, SSLContext
 from string import ascii_letters, digits
+from re import search as re_search, escape as re_escape
+from subprocess import run
 from sys import path as sys_path
 from time import perf_counter
 from typing import Any, Dict, List, Optional, Type
@@ -30,12 +32,25 @@ logger = getLogger("TEMPLATOR")
 
 @lru_cache(maxsize=32)
 def _supports_tls_group(name: str) -> bool:
-    try:
+    with suppress(BaseException):
         ctx = SSLContext(PROTOCOL_TLS_SERVER)
         ctx.set_ecdh_curve(name)
         return True
+
+    # Fall through to subprocess probe below
+
+    # Python's ssl module doesn't recognize hybrid PQC groups (e.g. X25519MLKEM768)
+    # via set_ecdh_curve() even when OpenSSL supports them. Fall back to CLI probe.
+    try:
+        logger.debug(f"Python ssl module does not support TLS group '{name}', trying openssl CLI fallback")
+        result = run(["openssl", "list", "-kem-algorithms"], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0 and re_search(r"\b" + re_escape(name) + r"\b", result.stdout):
+            logger.debug(f"OpenSSL CLI confirms TLS group '{name}' is supported")
+            return True
     except BaseException:
-        return False
+        logger.debug(f"OpenSSL CLI fallback failed for TLS group '{name}'")
+
+    return False
 
 
 @lru_cache(maxsize=1)
@@ -65,8 +80,10 @@ def resolve_ssl_ecdh_curve(value: str, fallback: str = "X25519:prime256v1:secp38
 
     best_curve = _best_ssl_ecdh_curve()
     if best_curve:
+        logger.info(f"Resolved ssl_ecdh_curve (auto-detect): {best_curve}")
         return best_curve
 
+    logger.info(f"Resolved ssl_ecdh_curve (fallback): {fallback}")
     return fallback
 
 

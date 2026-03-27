@@ -124,11 +124,12 @@ Switching to `detect` mode can help you identify and resolve potential false pos
 
 === "Worker Settings"
 
-    | Setting                | Default | Context | Multiple | Description                                                                             |
-    | ---------------------- | ------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-    | `WORKER_PROCESSES`     | `auto`  | global  | No       | **Worker Processes:** Number of worker processes. Set to `auto` to use available cores. |
-    | `WORKER_CONNECTIONS`   | `1024`  | global  | No       | **Worker Connections:** Maximum number of connections per worker.                       |
-    | `WORKER_RLIMIT_NOFILE` | `2048`  | global  | No       | **File Descriptors Limit:** Maximum number of open files per worker.                    |
+    | Setting                   | Default | Context | Multiple | Description                                                                                                                                             |
+    | ------------------------- | ------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `WORKER_PROCESSES`        | `auto`  | global  | No       | **Worker Processes:** Number of worker processes. Set to `auto` to use available cores.                                                                 |
+    | `WORKER_CONNECTIONS`      | `1024`  | global  | No       | **Worker Connections:** Maximum number of connections per worker.                                                                                       |
+    | `WORKER_RLIMIT_NOFILE`    | `2048`  | global  | No       | **File Descriptors Limit:** Maximum number of open files per worker.                                                                                    |
+    | `WORKER_SHUTDOWN_TIMEOUT` | `30s`   | global  | No       | **Worker Shutdown Timeout:** Timeout for graceful shutdown of worker processes. Old workers are forcefully terminated after this delay during a reload. |
 
 === "Memory Settings"
 
@@ -1815,7 +1816,7 @@ Follow one of the environment-specific guides below so the CrowdSec agent ingest
     services:
       bunkerweb:
         # This is the name that will be used to identify the instance in the Scheduler
-        image: bunkerity/bunkerweb:1.6.10-rc1
+        image: bunkerity/bunkerweb:1.6.10-rc2
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1832,7 +1833,7 @@ Follow one of the environment-specific guides below so the CrowdSec agent ingest
             syslog-address: "udp://10.20.30.254:514" # The IP address of the syslog service
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc1
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc2
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Make sure to set the correct instance name
@@ -3067,7 +3068,7 @@ LDAP-based single sign-on plugin with session-backed authentication.
 | `LDAP_BIND_DN`                    |                                              | multisite                                                                                     | no        | Optional service account DN used to perform LDAP user searches.                    |
 | `LDAP_BIND_PASSWORD`              |                                              | multisite                                                                                     | no        | Password for LDAP Bind DN service account.                                         |
 | `LDAP_USER_SEARCH_BASE_DN`        |                                              | multisite                                                                                     | no        | Base DN for user discovery search (enables enterprise search mode when set).       |
-| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(                     | (uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | no                                                                                 | LDAP user search filter template. Use {username} placeholder. |
+| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | no                                                                                 | LDAP user search filter template. Use {username} placeholder. |
 | `LDAP_AUTHZ_FILTER`               |                                              | multisite                                                                                     | no        | Optional extra LDAP authorization filter (AND-ed with user search filter).         |
 | `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                    | multisite                                                                                     | no        | LDAP search scope for user lookup.                                                 |
 | `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                     | multisite                                                                                     | no        | LDAP alias dereferencing mode during user lookup.                                  |

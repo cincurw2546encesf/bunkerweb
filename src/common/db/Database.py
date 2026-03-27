@@ -630,7 +630,7 @@ class Database:
                 metadata = session.query(Metadata).with_entities(Metadata.version).filter_by(id=1).first()
                 if metadata:
                     return metadata.version
-                return "1.6.10~rc1"
+                return "1.6.10~rc2"
             except BaseException as e:
                 return f"Error: {e}"
 
@@ -664,7 +664,7 @@ class Database:
             "last_instances_change": None,
             "reload_ui_plugins": False,
             "integration": "unknown",
-            "version": "1.6.10~rc1",
+            "version": "1.6.10~rc2",
             "database_version": "Unknown",  # ? Extracted from the database
             "default": True,  # ? Extra field to know if the returned data is the default one
         }
@@ -1741,15 +1741,19 @@ class Database:
                 services = [service for service in services if service]  # Clean up empty strings
 
                 if db_services:
-                    # Guard: if the incoming services list is empty but DB has services for this method,
-                    # skip deletion to prevent catastrophic data loss from transient Docker API failure
+                    # Guard: if autoconf sends an empty services list but DB has services for this method,
+                    # abort the entire save_config to prevent catastrophic data loss from transient Docker API failure.
+                    # This parallels the instances guard in update_instances (lines 4531-4538).
+                    # We must return early because the settings cleanup loops above (global_settings_to_delete,
+                    # service_settings_to_delete) already collected all existing settings for deletion since
+                    # the incoming config has no service-prefixed keys.
                     method_services = [s for s in db_services if s.method == method or (s.method in ("ui", "api") and method in ("ui", "api"))]
-                    if not services and method_services:
+                    if not services and method_services and method == "autoconf":
                         self.logger.warning(
                             f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
-                            "skipping service deletion to prevent data loss"
+                            "skipping entire config save to prevent data loss from transient Docker API failure"
                         )
-                        missing_ids = []
+                        return changed_plugins
                     else:
                         missing_ids = [
                             service.id

@@ -124,11 +124,12 @@ Cambiar al modo `detect` puede ayudarte a identificar y resolver posibles falsos
 
 === "Ajustes de Workers"
 
-    | Parámetro              | Valor por defecto | Contexto | Múltiple | Descripción                                                                                              |
-    | ---------------------- | ----------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------- |
-    | `WORKER_PROCESSES`     | `auto`            | global   | No       | **Procesos Worker:** Número de procesos worker. Establécelo en `auto` para usar los núcleos disponibles. |
-    | `WORKER_CONNECTIONS`   | `1024`            | global   | No       | **Conexiones por Worker:** Número máximo de conexiones por worker.                                       |
-    | `WORKER_RLIMIT_NOFILE` | `2048`            | global   | No       | **Límite de Descriptores de Archivo:** Número máximo de archivos abiertos por worker.                    |
+    | Parámetro                 | Valor por defecto | Contexto | Múltiple | Descripción                                                                                                                                                                                            |
+    | ------------------------- | ----------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+    | `WORKER_PROCESSES`        | `auto`            | global   | No       | **Procesos Worker:** Número de procesos worker. Establécelo en `auto` para usar los núcleos disponibles.                                                                                               |
+    | `WORKER_CONNECTIONS`      | `1024`            | global   | No       | **Conexiones por Worker:** Número máximo de conexiones por worker.                                                                                                                                     |
+    | `WORKER_RLIMIT_NOFILE`    | `2048`            | global   | No       | **Límite de Descriptores de Archivo:** Número máximo de archivos abiertos por worker.                                                                                                                  |
+    | `WORKER_SHUTDOWN_TIMEOUT` | `30s`             | global   | No       | **Tiempo de espera de apagado de Workers:** Tiempo de espera para el apagado ordenado de los procesos worker. Los workers antiguos se terminan forzosamente después de este plazo durante una recarga. |
 
 === "Ajustes de Memoria"
 
@@ -1779,7 +1780,7 @@ Las siguientes secciones desarrollan cada paso.
     services:
       bunkerweb:
         # Este es el nombre que se utilizará para identificar la instancia en el Planificador
-        image: bunkerity/bunkerweb:1.6.10-rc1
+        image: bunkerity/bunkerweb:1.6.10-rc2
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1796,7 +1797,7 @@ Las siguientes secciones desarrollan cada paso.
             syslog-address: "udp://10.20.30.254:514" # La dirección IP del servicio syslog
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc1
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc2
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Asegúrese de establecer el nombre de instancia correcto
@@ -3021,7 +3022,7 @@ LDAP-based single sign-on plugin with session-backed authentication.
 | `LDAP_BIND_DN`                    |                                              | multisite                                                                                     | no        | Optional service account DN used to perform LDAP user searches.                    |
 | `LDAP_BIND_PASSWORD`              |                                              | multisite                                                                                     | no        | Password for LDAP Bind DN service account.                                         |
 | `LDAP_USER_SEARCH_BASE_DN`        |                                              | multisite                                                                                     | no        | Base DN for user discovery search (enables enterprise search mode when set).       |
-| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(                     | (uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | no                                                                                 | LDAP user search filter template. Use {username} placeholder. |
+| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | no                                                                                 | LDAP user search filter template. Use {username} placeholder. |
 | `LDAP_AUTHZ_FILTER`               |                                              | multisite                                                                                     | no        | Optional extra LDAP authorization filter (AND-ed with user search filter).         |
 | `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                    | multisite                                                                                     | no        | LDAP search scope for user lookup.                                                 |
 | `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                     | multisite                                                                                     | no        | LDAP alias dereferencing mode during user lookup.                                  |

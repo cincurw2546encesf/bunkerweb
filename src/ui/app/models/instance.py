@@ -661,7 +661,7 @@ class InstancesUtils:
                 search_lower = search_value.lower()
                 if not any(
                     search_lower in str(report.get(field, "")).lower()
-                    for field in ("ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
+                    for field in ("id", "ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
                 ):
                     return False
 
@@ -862,7 +862,7 @@ class InstancesUtils:
                 for r in filtered
                 if any(
                     search_lower in str(r.get(field, "")).lower()
-                    for field in ("ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
+                    for field in ("id", "ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
                 )
             ]
 
@@ -935,10 +935,11 @@ class InstancesUtils:
                 if not isinstance(request, dict):
                     continue
                 req_id = request.get("id")
-                if req_id is not None:
-                    if req_id in seen_ids:
-                        continue
-                    seen_ids.add(req_id)
+                if req_id is None:
+                    continue
+                if req_id in seen_ids:
+                    continue
+                seen_ids.add(req_id)
                 yield request
 
     def get_home_aggregates(self, hours: int = 24 * 7, top_ips_limit: int = 10) -> dict[str, Any]:

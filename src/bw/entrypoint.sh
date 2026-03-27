@@ -120,6 +120,17 @@ if [ -f /var/tmp/bunkerweb_reloading ] ; then
 	rm -f /var/tmp/bunkerweb_reloading
 fi
 
+# Clean orphaned NGINX temp files from previous runs
+for dir in client_temp proxy_temp fastcgi_temp uwsgi_temp scgi_temp; do
+	target="/var/tmp/bunkerweb/$dir"
+	if [ -d "$target" ] && [ ! -L "$target" ]; then
+		if [ -n "$(find "$target" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]; then
+			log "ENTRYPOINT" "ℹ️" "Cleaning orphaned temp files from $dir"
+		fi
+		find "$target" -mindepth 1 -delete 2>/dev/null || true
+	fi
+done
+
 # start nginx
 log "ENTRYPOINT" "ℹ️" "Starting nginx ..."
 nginx -g "daemon off;" &
@@ -128,7 +139,9 @@ pid="$!"
 # wait while nginx is running
 wait "$pid"
 while [ -f "/var/run/bunkerweb/nginx.pid" ] ; do
-	wait "$pid"
+	# Break if the process is no longer alive (e.g. killed by OOM without cleaning up the PID file)
+	kill -0 "$pid" 2>/dev/null || { rm -f "/var/run/bunkerweb/nginx.pid" ; break ; }
+	sleep 1
 done
 
 log "ENTRYPOINT" "ℹ️" "BunkerWeb stopped"

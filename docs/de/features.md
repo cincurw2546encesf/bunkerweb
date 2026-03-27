@@ -124,11 +124,12 @@ Das Umschalten in den `detect`-Modus kann Ihnen helfen, potenzielle Falsch-Posit
 
 === "Worker-Einstellungen"
 
-    | Einstellung            | Standard | Kontext | Mehrfach | Beschreibung                                                                                          |
-    | ---------------------- | -------- | ------- | -------- | ----------------------------------------------------------------------------------------------------- |
-    | `WORKER_PROCESSES`     | `auto`   | global  | Nein     | **Worker-Prozesse:** Anzahl der Worker-Prozesse. Auf `auto` setzen, um verfügbare Kerne zu verwenden. |
-    | `WORKER_CONNECTIONS`   | `1024`   | global  | Nein     | **Worker-Verbindungen:** Maximale Anzahl von Verbindungen pro Worker.                                 |
-    | `WORKER_RLIMIT_NOFILE` | `2048`   | global  | Nein     | **Dateideskriptor-Limit:** Maximale Anzahl offener Dateien pro Worker.                                |
+    | Einstellung               | Standard | Kontext | Mehrfach | Beschreibung                                                                                                                                                                   |
+    | ------------------------- | -------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+    | `WORKER_PROCESSES`        | `auto`   | global  | Nein     | **Worker-Prozesse:** Anzahl der Worker-Prozesse. Auf `auto` setzen, um verfügbare Kerne zu verwenden.                                                                          |
+    | `WORKER_CONNECTIONS`      | `1024`   | global  | Nein     | **Worker-Verbindungen:** Maximale Anzahl von Verbindungen pro Worker.                                                                                                          |
+    | `WORKER_RLIMIT_NOFILE`    | `2048`   | global  | Nein     | **Dateideskriptor-Limit:** Maximale Anzahl offener Dateien pro Worker.                                                                                                         |
+    | `WORKER_SHUTDOWN_TIMEOUT` | `30s`    | global  | Nein     | **Worker-Shutdown-Timeout:** Zeitlimit für das ordnungsgemäße Herunterfahren der Worker-Prozesse. Alte Worker werden nach diesem Zeitlimit bei einem Reload erzwungen beendet. |
 
 === "Speichereinstellungen"
 
@@ -1741,7 +1742,7 @@ Die folgenden Abschnitte führen diese Schritte im Detail durch.
     services:
       bunkerweb:
         # Dies ist der Name, der zur Identifizierung der Instanz im Scheduler verwendet wird
-        image: bunkerity/bunkerweb:1.6.10-rc1
+        image: bunkerity/bunkerweb:1.6.10-rc2
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1758,7 +1759,7 @@ Die folgenden Abschnitte führen diese Schritte im Detail durch.
             syslog-address: "udp://10.20.30.254:514" # Die IP-Adresse des syslog-Dienstes
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc1
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc2
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Stellen Sie sicher, dass Sie den richtigen Instanznamen festlegen
@@ -2938,7 +2939,7 @@ LDAP-based single sign-on plugin with session-backed authentication.
 | `LDAP_BIND_DN`                    |                                              | multisite                                                                                     | nein      | Optional service account DN used to perform LDAP user searches.                    |
 | `LDAP_BIND_PASSWORD`              |                                              | multisite                                                                                     | nein      | Password for LDAP Bind DN service account.                                         |
 | `LDAP_USER_SEARCH_BASE_DN`        |                                              | multisite                                                                                     | nein      | Base DN for user discovery search (enables enterprise search mode when set).       |
-| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(                     | (uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | nein                                                                               | LDAP user search filter template. Use {username} placeholder. |
+| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | nein                                                                               | LDAP user search filter template. Use {username} placeholder. |
 | `LDAP_AUTHZ_FILTER`               |                                              | multisite                                                                                     | nein      | Optional extra LDAP authorization filter (AND-ed with user search filter).         |
 | `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                    | multisite                                                                                     | nein      | LDAP search scope for user lookup.                                                 |
 | `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                     | multisite                                                                                     | nein      | LDAP alias dereferencing mode during user lookup.                                  |

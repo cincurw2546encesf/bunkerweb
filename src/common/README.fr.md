@@ -92,34 +92,35 @@ Passer en mode `detect` aide à identifier et corriger les faux positifs sans im
 
 === "Paramètres réseau et ports"
 
-    | Paramètre               | Valeur par défaut | Contexte | Multiple | Description                                                                          |
-    | ----------------------- | ----------------- | -------- | -------- | ------------------------------------------------------------------------------------ |
-    | `HTTP_PORT`             | `8080`            | global   | Oui      | **Port HTTP :** Numéro de port pour le trafic HTTP. Laisser vide pour désactiver l'écoute HTTP.                                 |
-    | `HTTPS_PORT`            | `8443`            | global   | Oui      | **Port HTTPS :** Numéro de port pour le trafic HTTPS. Laisser vide pour désactiver l'écoute HTTPS.                               |
-    | `USE_IPV6`              | `no`              | global   | Non      | **Support IPv6 :** Active la connectivité IPv6.                                     |
-    | `DNS_RESOLVERS`         | `127.0.0.11`      | global   | Non      | **Résolveurs DNS :** Adresses des résolveurs à utiliser.                            |
-    | `CLIENT_BODY_TIMEOUT`   | `10s`             | global   | Non      | **Timeout corps client :** Délai de lecture du corps de la requête client.          |
-    | `CLIENT_HEADER_TIMEOUT` | `10s`             | global   | Non      | **Timeout en-têtes client :** Délai de lecture des en-têtes de la requête client.   |
-    | `KEEPALIVE_TIMEOUT`     | `15s`             | global   | Non      | **Timeout keepalive :** Délai des connexions client en keepalive.                   |
-    | `SEND_TIMEOUT`          | `10s`             | global   | Non      | **Timeout d'envoi :** Délai maximal de transmission de la réponse au client.        |
+    | Paramètre               | Valeur par défaut | Contexte | Multiple | Description                                                                                        |
+    | ----------------------- | ----------------- | -------- | -------- | -------------------------------------------------------------------------------------------------- |
+    | `HTTP_PORT`             | `8080`            | global   | Oui      | **Port HTTP :** Numéro de port pour le trafic HTTP. Laisser vide pour désactiver l'écoute HTTP.    |
+    | `HTTPS_PORT`            | `8443`            | global   | Oui      | **Port HTTPS :** Numéro de port pour le trafic HTTPS. Laisser vide pour désactiver l'écoute HTTPS. |
+    | `USE_IPV6`              | `no`              | global   | Non      | **Support IPv6 :** Active la connectivité IPv6.                                                    |
+    | `DNS_RESOLVERS`         | `127.0.0.11`      | global   | Non      | **Résolveurs DNS :** Adresses des résolveurs à utiliser.                                           |
+    | `CLIENT_BODY_TIMEOUT`   | `10s`             | global   | Non      | **Timeout corps client :** Délai de lecture du corps de la requête client.                         |
+    | `CLIENT_HEADER_TIMEOUT` | `10s`             | global   | Non      | **Timeout en-têtes client :** Délai de lecture des en-têtes de la requête client.                  |
+    | `KEEPALIVE_TIMEOUT`     | `15s`             | global   | Non      | **Timeout keepalive :** Délai des connexions client en keepalive.                                  |
+    | `SEND_TIMEOUT`          | `10s`             | global   | Non      | **Timeout d'envoi :** Délai maximal de transmission de la réponse au client.                       |
 
 === "Paramètres serveur Stream"
 
-    | Paramètre                | Valeur par défaut | Contexte  | Multiple | Description                                                     |
-    | ------------------------ | ----------------- | --------- | -------- | --------------------------------------------------------------- |
-    | `LISTEN_STREAM`          | `yes`             | multisite | Non      | **Écoute stream :** Active l'écoute non-ssl (pass-through).     |
+    | Paramètre                | Valeur par défaut | Contexte  | Multiple | Description                                                                                                           |
+    | ------------------------ | ----------------- | --------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+    | `LISTEN_STREAM`          | `yes`             | multisite | Non      | **Écoute stream :** Active l'écoute non-ssl (pass-through).                                                           |
     | `LISTEN_STREAM_PORT`     | `1337`            | multisite | Oui      | **Port stream :** Port d'écoute pour le non-ssl (pass-through). Laisser vide pour désactiver l'écoute stream non-SSL. |
-    | `LISTEN_STREAM_PORT_SSL` | `4242`            | multisite | Oui      | **Port stream SSL :** Port d'écoute pour le SSL (pass-through). Laisser vide pour désactiver l'écoute stream SSL. |
-    | `USE_TCP`                | `yes`             | multisite | Non      | **Écoute TCP :** Active l’écoute TCP (stream).                  |
-    | `USE_UDP`                | `no`              | multisite | Non      | **Écoute UDP :** Active l’écoute UDP (stream).                  |
+    | `LISTEN_STREAM_PORT_SSL` | `4242`            | multisite | Oui      | **Port stream SSL :** Port d'écoute pour le SSL (pass-through). Laisser vide pour désactiver l'écoute stream SSL.     |
+    | `USE_TCP`                | `yes`             | multisite | Non      | **Écoute TCP :** Active l’écoute TCP (stream).                                                                        |
+    | `USE_UDP`                | `no`              | multisite | Non      | **Écoute UDP :** Active l’écoute UDP (stream).                                                                        |
 
 === "Paramètres des workers"
 
-    | Paramètre              | Valeur par défaut | Contexte | Multiple | Description                                                                             |
-    | ---------------------- | ----------------- | -------- | -------- | --------------------------------------------------------------------------------------- |
-    | `WORKER_PROCESSES`     | `auto`            | global   | Non      | **Processus workers :** Nombre de processus workers. `auto` utilise le nombre de cœurs. |
-    | `WORKER_CONNECTIONS`   | `1024`            | global   | Non      | **Connexions par worker :** Nombre maximal de connexions par worker.                    |
-    | `WORKER_RLIMIT_NOFILE` | `2048`            | global   | Non      | **Limite descripteurs :** Nombre maximal de fichiers ouverts par worker.                |
+    | Paramètre                 | Valeur par défaut | Contexte | Multiple | Description                                                                                                                                                         |
+    | ------------------------- | ----------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `WORKER_PROCESSES`        | `auto`            | global   | Non      | **Processus workers :** Nombre de processus workers. `auto` utilise le nombre de cœurs.                                                                             |
+    | `WORKER_CONNECTIONS`      | `1024`            | global   | Non      | **Connexions par worker :** Nombre maximal de connexions par worker.                                                                                                |
+    | `WORKER_RLIMIT_NOFILE`    | `2048`            | global   | Non      | **Limite descripteurs :** Nombre maximal de fichiers ouverts par worker.                                                                                            |
+    | `WORKER_SHUTDOWN_TIMEOUT` | `30s`             | global   | Non      | **Délai d'arrêt des workers :** Délai pour l'arrêt gracieux des processus workers. Les anciens workers sont arrêtés de force après ce délai lors d'un rechargement. |
 
 === "Paramètres mémoire"
 
@@ -148,13 +149,13 @@ Passer en mode `detect` aide à identifier et corriger les faux positifs sans im
 
 === "Paramètres d’intégration"
 
-    | Paramètre         | Valeur par défaut | Contexte  | Multiple | Description                                                                                                     |
-    | ----------------- | ----------------- | --------- | -------- | --------------------------------------------------------------------------------------------------------------- |
-    | `AUTOCONF_MODE`   | `no`              | global    | Non      | **Mode Autoconf :** Active l’intégration Docker Autoconf.                                                       |
-    | `SWARM_MODE`      | `no`              | global    | Non      | **Mode Swarm :** Active l’intégration Docker Swarm.                                                             |
-    | `KUBERNETES_MODE` | `no`              | global    | Non      | **Mode Kubernetes :** Active l’intégration Kubernetes.                                                          |
-    | `KEEP_CONFIG_ON_RESTART` | `no` | global | Non | **Garder la configuration au redémarrage :** Conserver la configuration au redémarrage. Mettre à 'yes' pour éviter la réinitialisation de la config au redémarrage. |
-    | `USE_TEMPLATE`    |                   | multisite | Non      | **Utiliser un template :** Modèle de configuration qui surcharge les valeurs par défaut de certains paramètres. |
+    | Paramètre                | Valeur par défaut | Contexte  | Multiple | Description                                                                                                                                                         |
+    | ------------------------ | ----------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `AUTOCONF_MODE`          | `no`              | global    | Non      | **Mode Autoconf :** Active l’intégration Docker Autoconf.                                                                                                           |
+    | `SWARM_MODE`             | `no`              | global    | Non      | **Mode Swarm :** Active l’intégration Docker Swarm.                                                                                                                 |
+    | `KUBERNETES_MODE`        | `no`              | global    | Non      | **Mode Kubernetes :** Active l’intégration Kubernetes.                                                                                                              |
+    | `KEEP_CONFIG_ON_RESTART` | `no`              | global    | Non      | **Garder la configuration au redémarrage :** Conserver la configuration au redémarrage. Mettre à 'yes' pour éviter la réinitialisation de la config au redémarrage. |
+    | `USE_TEMPLATE`           |                   | multisite | Non      | **Utiliser un template :** Modèle de configuration qui surcharge les valeurs par défaut de certains paramètres.                                                     |
 
 === "Paramètres Nginx"
 
