@@ -19,6 +19,7 @@
 - [DEPS] Updated NGINX version to v1.28.3 for all integrations.
 - [DEPS] Updated LuaJIT version to v2.1-20260311
 - [DEPS] Updated Brotli version to v1.2.0
+- [DEPS] Updated headers-more-nginx-module version to v0.39
 
 ## v1.6.10~rc1 - 2026/03/23
 
