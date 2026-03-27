@@ -935,10 +935,11 @@ class InstancesUtils:
                 if not isinstance(request, dict):
                     continue
                 req_id = request.get("id")
-                if req_id is not None:
-                    if req_id in seen_ids:
-                        continue
-                    seen_ids.add(req_id)
+                if req_id is None:
+                    continue
+                if req_id in seen_ids:
+                    continue
+                seen_ids.add(req_id)
                 yield request
 
     def get_home_aggregates(self, hours: int = 24 * 7, top_ips_limit: int = 10) -> dict[str, Any]:
