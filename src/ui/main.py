@@ -1038,8 +1038,9 @@ def before_request():
                 # Reset the flag BEFORE sending SIGHUP so new workers see it cleared
                 err = DB.checked_changes(changes=["ui_plugins"], value=False)
                 if err:
-                    LOGGER.error(f"Couldn't reset reload_ui_plugins flag: {err}")
-                schedule_restart_workers()
+                    LOGGER.error(f"Couldn't reset reload_ui_plugins flag: {err}, skipping worker restart to prevent loop")
+                else:
+                    schedule_restart_workers()
 
         if datetime.now().astimezone() - datetime.fromisoformat(DATA.get("LATEST_VERSION_LAST_CHECK", "1970-01-01T00:00:00")).astimezone() > timedelta(hours=1):
             DATA["LATEST_VERSION_LAST_CHECK"] = datetime.now().astimezone().isoformat()
