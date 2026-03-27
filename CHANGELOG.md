@@ -13,6 +13,8 @@
 - [BUGFIX] Fix `robots.txt` and `security.txt` plugins running expensive initialization on every request instead of only on their target URIs, causing severe slowdowns on pages with many parallel assets.
 - [BUGFIX] Fix entrypoint spinning at 100% CPU when nginx/supervisord is OOM-killed, by adding process liveness check and stale PID cleanup in the wait loop.
 - [BUGFIX] Fix `badbehavior:log()` crash caused by `resty.lock` calling `ngx.sleep()` in `log_by_lua*` context, by skipping the mlcache lock path in non-cosocket phases.
+- [BUGFIX] Fix whitelist default-server crash caused by `resty.lock` calling `ngx.sleep()` in `set_by_lua*` context. Use lock-free L1/L2 cache reads in non-cosocket phases instead of silently dropping cached whitelist data. (Fixes #2583)
+- [BUGFIX] Fix `is_cosocket_available()` never matching the SSL certificate phase (`"ssl_certificate"` vs actual `"ssl_cert"`), and add missing yieldable phases `server_rewrite`, `ssl_client_hello` and `ssl_session_fetch`.
 - [UI] Fix Reports page search not matching on Request ID. The global search field only checked IP, country, method, URL, status, user-agent, reason, and server name, causing searches by Request ID to always return "No matching Reports found" when using the Redis code path.
 
 ## v1.6.10~rc1 - 2026/03/23

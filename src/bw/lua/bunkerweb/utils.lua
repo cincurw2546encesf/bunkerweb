@@ -1154,9 +1154,12 @@ utils.is_cosocket_available = function()
 	local phases = {
 		"timer",
 		"rewrite",
+		"server_rewrite",
 		"access",
 		"content",
-		"ssl_certificate",
+		"ssl_cert",
+		"ssl_client_hello",
+		"ssl_session_fetch",
 		"preread",
 	}
 	local current_phase = get_phase()
