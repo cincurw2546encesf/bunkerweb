@@ -8,6 +8,8 @@
 - [BUGFIX] Clean orphaned NGINX temp files on startup to prevent unbounded disk usage after OOM kills or ungraceful shutdowns.
 - [BUGFIX] Fix Post-Quantum Cryptography (PQC) auto-detection failing on OpenSSL 3.5+ because Python's `SSLContext.set_ecdh_curve()` does not recognize hybrid KEM groups like `X25519MLKEM768`. Add subprocess fallback probing `openssl list -kem-algorithms` so that `SSL_ECDH_CURVE=auto` (the default) correctly enables PQC key exchange when the system OpenSSL supports it, with graceful fallback to classical curves when it does not.
 - [BUGFIX] Fix BunkerNet `log_stream()` crashing with `attempt to call field 'get_headers' (a nil value)` when reporting blocked IPs in stream (TCP proxy) context, where `ngx.req.get_headers()` is unavailable.
+- [BUGFIX] Fix unbanning IPs not working for stream (TCP/UDP) services due to stale local ban cache not being refreshed from Redis after unban.
+- [BUGFIX] Fix `ngx.exit(nil)` crash when `DENY_HTTP_STATUS` variable is missing from the internal store.
 - [UI] Fix Reports page search not matching on Request ID. The global search field only checked IP, country, method, URL, status, user-agent, reason, and server name, causing searches by Request ID to always return "No matching Reports found" when using the Redis code path.
 
 ## v1.6.10~rc1 - 2026/03/23
