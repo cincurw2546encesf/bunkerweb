@@ -229,6 +229,7 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
          * sees it.  Synthesize Host from :authority here.
          */
         if (r->http_version == NGX_HTTP_VERSION_30
+            && r->headers_in.host == NULL
             && r->headers_in.server.len > 0) {
             msc_add_n_request_header(ctx->modsec_transaction,
                 (const unsigned char *)"Host", 4,
