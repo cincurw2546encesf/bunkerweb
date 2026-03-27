@@ -248,6 +248,12 @@ function start() {
     log "SYSTEMCTL" "ℹ️" "BunkerWeb service started ..."
 
     while [ -f /var/run/bunkerweb/nginx.pid ] ; do
+        # Break if the process is no longer alive (e.g. killed by OOM without cleaning up the PID file)
+        nginx_pid=$(cat /var/run/bunkerweb/nginx.pid 2>/dev/null)
+        if [ -n "$nginx_pid" ] && ! kill -0 "$nginx_pid" 2>/dev/null ; then
+            rm -f /var/run/bunkerweb/nginx.pid
+            break
+        fi
         sleep 1
     done
 }

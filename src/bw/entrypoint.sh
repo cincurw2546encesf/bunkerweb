@@ -140,7 +140,7 @@ pid="$!"
 wait "$pid"
 while [ -f "/var/run/bunkerweb/nginx.pid" ] ; do
 	# Break if the process is no longer alive (e.g. killed by OOM without cleaning up the PID file)
-	kill -0 "$pid" 2>/dev/null || break
+	kill -0 "$pid" 2>/dev/null || { rm -f "/var/run/bunkerweb/nginx.pid" ; break ; }
 	sleep 1
 done
 
