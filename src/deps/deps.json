@@ -10,9 +10,9 @@
   "git_repository": [
     {
       "id": "brotli",
-      "name": "Brotli v1.1.0",
+      "name": "Brotli v1.2.0",
       "url": "https://github.com/google/brotli.git",
-      "commit": "ed738e842d2fbdf2d6459e39267a633c4a9b2f5d",
+      "commit": "028fb5a23661f123017c060daa546b55cf4bde29",
       "post_install": "rm -r src/deps/src/brotli/tests"
     },
     {
