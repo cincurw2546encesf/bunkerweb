@@ -1,6 +1,27 @@
 # Changelog
 
-## v1.6.10~rc1 - 2026/03/??
+## v1.6.10~rc2 - 2026/03/??
+
+- [BUGFIX] Add `WORKER_SHUTDOWN_TIMEOUT` setting (default `30s`) to force old NGINX workers to terminate after a config reload, preventing unbounded memory growth when workers linger in "shutting down" state.
+- [BUGFIX] Fix ModSecurity `REQUEST_HEADERS:Host` and `SERVER_NAME` being empty for HTTP/3 requests, causing custom rules with header matching (including chained rules) to silently fail. Patch the ModSecurity-nginx connector to synthesize the `Host` header from the `:authority` pseudo-header on HTTP/3 connections.
+- [BUGFIX] Add `MODSECURITY_SEC_REQUEST_BODY_LIMIT` and `MODSECURITY_SEC_REQUEST_BODY_LIMIT_ACTION` settings to decouple ModSecurity body inspection from `MAX_CLIENT_SIZE`, preventing OOM kills on large uploads. Also fix missing `SecRequestBodyLimitAction` and broken unit conversion in global CRS templates.
+- [BUGFIX] Clean orphaned NGINX temp files on startup to prevent unbounded disk usage after OOM kills or ungraceful shutdowns.
+- [BUGFIX] Fix Post-Quantum Cryptography (PQC) auto-detection failing on OpenSSL 3.5+ because Python's `SSLContext.set_ecdh_curve()` does not recognize hybrid KEM groups like `X25519MLKEM768`. Add subprocess fallback probing `openssl list -kem-algorithms` so that `SSL_ECDH_CURVE=auto` (the default) correctly enables PQC key exchange when the system OpenSSL supports it, with graceful fallback to classical curves when it does not.
+- [BUGFIX] Fix BunkerNet `log_stream()` crashing with `attempt to call field 'get_headers' (a nil value)` when reporting blocked IPs in stream (TCP proxy) context, where `ngx.req.get_headers()` is unavailable.
+- [BUGFIX] Fix unbanning IPs not working for stream (TCP/UDP) services due to stale local ban cache not being refreshed from Redis after unban.
+- [BUGFIX] Fix `ngx.exit(nil)` crash when `DENY_HTTP_STATUS` variable is missing from the internal store.
+- [BUGFIX] Fix `robots.txt` and `security.txt` plugins running expensive initialization on every request instead of only on their target URIs, causing severe slowdowns on pages with many parallel assets.
+- [BUGFIX] Fix entrypoint spinning at 100% CPU when nginx/supervisord is OOM-killed, by adding process liveness check and stale PID cleanup in the wait loop.
+- [BUGFIX] Fix `badbehavior:log()` crash caused by `resty.lock` calling `ngx.sleep()` in `log_by_lua*` context, by skipping the mlcache lock path in non-cosocket phases.
+- [BUGFIX] Fix whitelist default-server crash caused by `resty.lock` calling `ngx.sleep()` in `set_by_lua*` context. Use lock-free L1/L2 cache reads in non-cosocket phases instead of silently dropping cached whitelist data. (Fixes #2583)
+- [BUGFIX] Fix `is_cosocket_available()` never matching the SSL certificate phase (`"ssl_certificate"` vs actual `"ssl_cert"`), and add missing yieldable phases `server_rewrite`, `ssl_client_hello` and `ssl_session_fetch`.
+- [UI] Fix Reports page search not matching on Request ID. The global search field only checked IP, country, method, URL, status, user-agent, reason, and server name, causing searches by Request ID to always return "No matching Reports found" when using the Redis code path.
+- [DEPS] Updated NGINX version to v1.28.3 for all integrations.
+- [DEPS] Updated LuaJIT version to v2.1-20260311
+- [DEPS] Updated Brotli version to v1.2.0
+- [DEPS] Updated headers-more-nginx-module version to v0.39
+
+## v1.6.10~rc1 - 2026/03/23
 
 - [SECURITY] Replace Trivy with Docker Scout for container image vulnerability scanning in CI/CD pipeline.
 - [BUGFIX] Disable Gunicorn 25.1.0 control socket to prevent worker deadlock caused by fork in multi-threaded master process (UI, TMP-UI, API).

@@ -82,6 +82,15 @@
     "regex": "^\\d+$",
     "type": "number"
   },
+  "WORKER_SHUTDOWN_TIMEOUT": {
+    "context": "global",
+    "default": "30s",
+    "help": "Timeout for a graceful shutdown of worker processes. After this delay, old workers are forcefully terminated during a reload to prevent memory growth.",
+    "id": "worker-shutdown-timeout",
+    "label": "Worker shutdown timeout",
+    "regex": "^\\d+(ms?|[shdwMy])?$",
+    "type": "text"
+  },
   "DNS_RESOLVERS": {
     "context": "global",
     "default": "127.0.0.11",

@@ -126,11 +126,12 @@ BunkerWeb 中的某些设置支持同一功能的多个配置。要定义多组�
 
 === "工作进程设置"
 
-    | 设置                   | 默认值 | 上下文 | 多个 | 描述                                                              |
-    | ---------------------- | ------ | ------ | ---- | ----------------------------------------------------------------- |
-    | `WORKER_PROCESSES`     | `auto` | global | 否   | **工作进程数：** 工作进程的数量。设置为 `auto` 以使用可用核心数。 |
-    | `WORKER_CONNECTIONS`   | `1024` | global | 否   | **工作连接数：** 每个工作进程的最大连接数。                       |
-    | `WORKER_RLIMIT_NOFILE` | `2048` | global | 否   | **文件描述符限制：** 每个工作进程的最大打开文件数。               |
+    | 设置                      | 默认值 | 上下文 | 多个 | 描述                                                                                                  |
+    | ------------------------- | ------ | ------ | ---- | ----------------------------------------------------------------------------------------------------- |
+    | `WORKER_PROCESSES`        | `auto` | global | 否   | **工作进程数：** 工作进程的数量。设置为 `auto` 以使用可用核心数。                                     |
+    | `WORKER_CONNECTIONS`      | `1024` | global | 否   | **工作连接数：** 每个工作进程的最大连接数。                                                           |
+    | `WORKER_RLIMIT_NOFILE`    | `2048` | global | 否   | **文件描述符限制：** 每个工作进程的最大打开文件数。                                                   |
+    | `WORKER_SHUTDOWN_TIMEOUT` | `30s`  | global | 否   | **工作进程关闭超时：** 工作进程优雅关闭的超时时间。在重新加载期间，旧工作进程在此超时后将被强制终止。 |
 
 === "内存设置"
 
@@ -224,6 +225,51 @@ BunkerWeb 中的某些设置支持同一功能的多个配置。要定义多组�
     USE_TCP: "yes"
     USE_UDP: "no"
     ```
+
+## ACME <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
+
+
+STREAM 支持 :white_check_mark:
+
+Advanced ACME certificate management with custom CA support, certificate monitoring dashboard, expiry alerting, CT log monitoring, and enhanced OCSP stapling. Complements the built-in Let's Encrypt plugin.
+
+| 参数                                | 默认值      | 上下文    | 可重复 | 描述                                                                                                                                                                     |
+| ----------------------------------- | ----------- | --------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `USE_ACME`                          | `no`        | multisite | 否     | Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.                                                                |
+| `ACME_DIRECTORY_URL`                |             | multisite | 否     | ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI). |
+| `ACME_EMAIL`                        |             | multisite | 否     | Email address for ACME account registration and notifications.                                                                                                           |
+| `ACME_EAB_KID`                      |             | multisite | 否     | External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).                                                                              |
+| `ACME_EAB_HMAC_KEY`                 |             | multisite | 否     | External Account Binding HMAC key (base64-encoded, required when EAB Key ID is set).                                                                                     |
+| `ACME_CA_CERT_PATH`                 |             | multisite | 否     | File path to the root CA certificate for private ACME servers (Step CA, Vault PKI). Required when the CA root is not in the system trust store.                          |
+| `ACME_CHALLENGE`                    | `http`      | multisite | 否     | ACME challenge type. HTTP-01 is simplest; DNS-01 is required for wildcard certificates; TLS-ALPN-01 works when port 80 is unavailable.                                   |
+| `ACME_DNS_PROVIDER`                 |             | multisite | 否     | DNS provider for DNS-01 challenges.                                                                                                                                      |
+| `ACME_DNS_CREDENTIAL_ITEM`          |             | multisite | 是     | Configuration item for the DNS provider credentials (e.g. 'cloudflare_api_token 123456'). Values can be base64 encoded.                                                  |
+| `ACME_DNS_CREDENTIAL_DECODE_BASE64` | `yes`       | multisite | 是     | Automatically decode base64 encoded DNS provider credentials.                                                                                                            |
+| `ACME_DNS_PROPAGATION`              | `default`   | multisite | 否     | Time to wait for DNS propagation in seconds for DNS challenges.                                                                                                          |
+| `ACME_KEY_TYPE`                     | `ecdsa`     | multisite | 否     | Key type for the certificate. ECDSA is smaller and faster; RSA has broader compatibility.                                                                                |
+| `ACME_KEY_SIZE`                     | `256`       | multisite | 否     | Key size in bits. For ECDSA: 256 or 384. For RSA: 2048 or 4096.                                                                                                          |
+| `ACME_PREFERRED_CHAIN`              |             | multisite | 否     | Preferred certificate chain issuer CN. Selects the preferred chain when the CA provides multiple.                                                                        |
+| `ACME_RENEWAL_DAYS`                 | `30`        | multisite | 否     | Renew the certificate when it has fewer than this many days until expiry.                                                                                                |
+| `ACME_SSL_VERIFY`                   | `yes`       | multisite | 否     | Verify SSL certificates when communicating with the ACME server. Disable only for testing with self-signed CA certs.                                                     |
+| `ACME_WILDCARD`                     | `no`        | multisite | 否     | Request wildcard certificate (requires DNS-01 challenge).                                                                                                                |
+| `ACME_MUST_STAPLE`                  | `no`        | multisite | 否     | Request the OCSP Must-Staple extension in the certificate.                                                                                                               |
+| `ACME_MAX_RETRIES`                  | `3`         | multisite | 否     | Number of times to retry certificate generation on failure (0 disables retries).                                                                                         |
+| `USE_ACME_MONITORING`               | `yes`       | global    | 否     | Enable certificate expiry monitoring and status tracking for all managed certificates (including OSS Let's Encrypt certificates).                                        |
+| `ACME_ALERT_DAYS`                   | `30 14 7 1` | global    | 否     | Space-separated list of day thresholds that trigger expiry alerts.                                                                                                       |
+| `USE_ACME_ALERT_WEBHOOK`            | `no`        | global    | 否     | Send certificate alerts via webhook.                                                                                                                                     |
+| `ACME_ALERT_WEBHOOK_URLS`           |             | global    | 否     | Space-separated list of webhook URLs for certificate alerts.                                                                                                             |
+| `USE_ACME_ALERT_EMAIL`              | `no`        | global    | 否     | Send certificate alerts via email.                                                                                                                                       |
+| `ACME_ALERT_SMTP_EMAILS`            |             | global    | 否     | Space-separated list of email recipients for certificate alerts.                                                                                                         |
+| `ACME_ALERT_SMTP_HOST`              |             | global    | 否     | SMTP host for certificate alert emails.                                                                                                                                  |
+| `ACME_ALERT_SMTP_PORT`              | `465`       | global    | 否     | SMTP port for certificate alert emails (SSL=465, TLS=587).                                                                                                               |
+| `ACME_ALERT_SMTP_FROM_EMAIL`        |             | global    | 否     | Sender email address for certificate alerts.                                                                                                                             |
+| `ACME_ALERT_SMTP_FROM_USER`         |             | global    | 否     | SMTP authentication user for certificate alert emails.                                                                                                                   |
+| `ACME_ALERT_SMTP_FROM_PASSWORD`     |             | global    | 否     | SMTP authentication password for certificate alert emails.                                                                                                               |
+| `ACME_ALERT_SMTP_SSL`               | `SSL`       | global    | 否     | Connection type for certificate alert SMTP.                                                                                                                              |
+| `USE_ACME_CT_MONITORING`            | `no`        | global    | 否     | Enable Certificate Transparency log monitoring. Queries crt.sh to detect unauthorized certificate issuance for your domains.                                             |
+| `ACME_CT_MONITORED_DOMAINS`         |             | global    | 否     | Space-separated list of domains to monitor in CT logs. Leave empty to auto-detect from configured services.                                                              |
+| `USE_ACME_OCSP_STAPLING`            | `no`        | multisite | 否     | Enable enhanced OCSP stapling with proactive response fetching and caching.                                                                                              |
+| `ACME_OCSP_CACHE_SIZE`              | `1m`        | global    | 否     | Size of the shared dictionary for OCSP response caching.                                                                                                                 |
 
 ## Anti DDoS <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
@@ -1732,7 +1778,7 @@ CrowdSec 是一种现代的开源安全引擎，它基于行为分析和社区�
     services:
       bunkerweb:
         # 这是将用于在调度器中识别实例的名称
-        image: bunkerity/bunkerweb:1.6.9
+        image: bunkerity/bunkerweb:1.6.10-rc1
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1749,7 +1795,7 @@ CrowdSec 是一种现代的开源安全引擎，它基于行为分析和社区�
             syslog-address: "udp://10.20.30.254:514" # syslog 服务的 IP 地址
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.9
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc1
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # 确保设置正确的实例名称
@@ -2945,6 +2991,47 @@ HTML 注入插件允许您无缝地将自定义 HTML 代码添加到您网站页
     INJECT_HEAD: "<style>.cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #f1f1f1; padding: 20px; text-align: center; z-index: 1000; } .cookie-banner button { background: #4CAF50; border: none; color: white; padding: 10px 20px; cursor: pointer; }</style>"
     INJECT_BODY: "<div id=\"cookie-banner\" class=\"cookie-banner\">本网站使用 Cookie 以确保您获得最佳体验。 <button onclick=\"acceptCookies()\">接受</button></div><script>function acceptCookies() { document.getElementById('cookie-banner').style.display = 'none'; localStorage.setItem('cookies-accepted', 'true'); } if(localStorage.getItem('cookies-accepted') === 'true') { document.getElementById('cookie-banner').style.display = 'none'; }</script>"
     ```
+
+## LDAP SSO <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
+
+
+STREAM 支持 :x:
+
+LDAP-based single sign-on plugin with session-backed authentication.
+
+| 参数                              | 默认值                                       | 上下文                                                                                        | 可重复    | 描述                                                                               |
+| --------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------- |
+| `USE_LDAP`                        | `no`                                         | multisite                                                                                     | 否        | Enable or disable LDAP SSO authentication.                                         |
+| `LDAP_HOST`                       |                                              | multisite                                                                                     | 否        | LDAP server hostname or IP address.                                                |
+| `LDAP_PORT`                       | `389`                                        | multisite                                                                                     | 否        | LDAP server port (389 for LDAP/STARTTLS, 636 for LDAPS).                           |
+| `LDAP_LDAPS`                      | `no`                                         | multisite                                                                                     | 否        | Use LDAPS (TLS from connection start).                                             |
+| `LDAP_STARTTLS`                   | `no`                                         | multisite                                                                                     | 否        | Use STARTTLS upgrade on LDAP connection.                                           |
+| `LDAP_SSL_VERIFY`                 | `yes`                                        | multisite                                                                                     | 否        | Verify server TLS certificate.                                                     |
+| `LDAP_TIMEOUT`                    | `10000`                                      | multisite                                                                                     | 否        | LDAP socket timeout in milliseconds.                                               |
+| `LDAP_KEEPALIVE_TIMEOUT`          | `60000`                                      | multisite                                                                                     | 否        | LDAP keepalive timeout in milliseconds.                                            |
+| `LDAP_KEEPALIVE_POOL_SIZE`        | `10`                                         | multisite                                                                                     | 否        | LDAP keepalive connection pool size.                                               |
+| `LDAP_KEEPALIVE_POOL_NAME`        |                                              | multisite                                                                                     | 否        | Optional custom LDAP keepalive pool name.                                          |
+| `LDAP_BIND_DN`                    |                                              | multisite                                                                                     | 否        | Optional service account DN used to perform LDAP user searches.                    |
+| `LDAP_BIND_PASSWORD`              |                                              | multisite                                                                                     | 否        | Password for LDAP Bind DN service account.                                         |
+| `LDAP_USER_SEARCH_BASE_DN`        |                                              | multisite                                                                                     | 否        | Base DN for user discovery search (enables enterprise search mode when set).       |
+| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | 否                                                                                 | LDAP user search filter template. Use {username} placeholder. |
+| `LDAP_AUTHZ_FILTER`               |                                              | multisite                                                                                     | 否        | Optional extra LDAP authorization filter (AND-ed with user search filter).         |
+| `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                    | multisite                                                                                     | 否        | LDAP search scope for user lookup.                                                 |
+| `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                     | multisite                                                                                     | 否        | LDAP alias dereferencing mode during user lookup.                                  |
+| `LDAP_USER_SEARCH_SIZE_LIMIT`     | `10`                                         | multisite                                                                                     | 否        | Maximum number of LDAP entries returned by user search.                            |
+| `LDAP_USER_SEARCH_TIME_LIMIT`     | `10`                                         | multisite                                                                                     | 否        | Maximum LDAP user search time in seconds.                                          |
+| `LDAP_USER_SEARCH_ATTRIBUTES`     | `dn`                                         | multisite                                                                                     | 否        | Attributes requested during user search (space separated).                         |
+| `LDAP_USER_SEARCH_DN_FIELD`       | `object_name`                                | multisite                                                                                     | 否        | Preferred field name in search response to extract user DN (e.g. object_name, dn). |
+| `LDAP_USER_SEARCH_REQUIRE_UNIQUE` | `yes`                                        | multisite                                                                                     | 否        | Require exactly one search result before authenticating user.                      |
+| `LDAP_USER_DN_TEMPLATE`           | `uid={username},ou=people,dc=example,dc=com` | multisite                                                                                     | 否        | User DN template used for direct bind fallback. Must include {username} when set.  |
+| `LDAP_USERNAME_REGEX`             | `^[A-Za-z0-9@._-]+$`                         | multisite                                                                                     | 否        | PCRE regex used to validate submitted usernames.                                   |
+| `LDAP_LOGIN_PATH`                 | `/ldap/login`                                | multisite                                                                                     | 否        | Login page path exposed by the LDAP plugin.                                        |
+| `LDAP_LOGOUT_PATH`                | `/ldap/logout`                               | multisite                                                                                     | 否        | Logout path exposed by the LDAP plugin.                                            |
+| `LDAP_SESSION_TTL`                | `3600`                                       | multisite                                                                                     | 否        | LDAP session validity duration in seconds.                                         |
+| `LDAP_REALM`                      | `LDAP SSO`                                   | multisite                                                                                     | 否        | Authentication realm displayed on LDAP login form.                                 |
+| `LDAP_USER_HEADER`                | `X-User`                                     | multisite                                                                                     | 否        | Header to pass authenticated username to upstream (empty to disable).              |
+| `LDAP_REDIRECT_AFTER_LOGIN`       | `/`                                          | multisite                                                                                     | 否        | Fallback relative path after successful login when no redirect target is provided. |
+| `LDAP_REDIRECT_AFTER_LOGOUT`      | `/`                                          | multisite                                                                                     | 否        | Relative path to redirect users to after logout.                                   |
 
 ## Let's Encrypt
 
@@ -4148,43 +4235,48 @@ STREAM 支持 :x:
 
 OpenID Connect authentication plugin providing SSO capabilities with identity providers.
 
-| 参数                                      | 默认值                 | 上下文    | 可重复 | 描述                                                                                                                                                    |
-| ----------------------------------------- | ---------------------- | --------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `USE_OPENIDC`                             | `no`                   | multisite | 否     | Enable or disable OpenID Connect authentication.                                                                                                        |
-| `OPENIDC_DISCOVERY`                       |                        | multisite | 否     | OpenID Connect discovery URL (e.g. https://idp.example.com/.well-known/openid-configuration).                                                           |
-| `OPENIDC_CLIENT_ID`                       |                        | multisite | 否     | OAuth 2.0 client identifier registered with the IdP.                                                                                                    |
-| `OPENIDC_CLIENT_SECRET`                   |                        | multisite | 否     | OAuth 2.0 client secret registered with the IdP.                                                                                                        |
-| `OPENIDC_TOKEN_ENDPOINT_AUTH_METHOD`      | `basic`                | multisite | 否     | Token endpoint auth method: basic (recommended, HTTP Basic), post (POST body), secret_jwt (JWT with client secret), private_key_jwt (JWT with RSA key). |
-| `OPENIDC_CLIENT_RSA_PRIVATE_KEY`          |                        | multisite | 否     | PEM-encoded RSA private key for private_key_jwt authentication.                                                                                         |
-| `OPENIDC_CLIENT_RSA_PRIVATE_KEY_ID`       |                        | multisite | 否     | Optional key ID (kid) for private_key_jwt authentication.                                                                                               |
-| `OPENIDC_CLIENT_JWT_ASSERTION_EXPIRES_IN` |                        | multisite | 否     | JWT assertion lifetime in seconds (empty to use library default).                                                                                       |
-| `OPENIDC_REDIRECT_URI`                    | `/callback`            | multisite | 否     | URI path where the IdP redirects after authentication.                                                                                                  |
-| `OPENIDC_SCOPE`                           | `openid email profile` | multisite | 否     | Space-separated list of OAuth 2.0 scopes to request.                                                                                                    |
-| `OPENIDC_AUTHORIZATION_PARAMS`            |                        | multisite | 否     | Additional authorization params as comma-separated key=value pairs (e.g. audience=api,resource=xyz). URL-encode values if needed.                       |
-| `OPENIDC_USE_NONCE`                       | `yes`                  | multisite | 否     | Use nonce in authentication requests to prevent replay attacks.                                                                                         |
-| `OPENIDC_USE_PKCE`                        | `no`                   | multisite | 否     | Use PKCE (Proof Key for Code Exchange) for authorization code flow.                                                                                     |
-| `OPENIDC_FORCE_REAUTHORIZE`               | `no`                   | multisite | 否     | Force re-authorization on every request (not recommended for production).                                                                               |
-| `OPENIDC_REFRESH_SESSION_INTERVAL`        |                        | multisite | 否     | Interval in seconds to silently re-authenticate (empty to disable).                                                                                     |
-| `OPENIDC_IAT_SLACK`                       | `120`                  | multisite | 否     | Allowed clock skew in seconds for token validation.                                                                                                     |
-| `OPENIDC_ACCESS_TOKEN_EXPIRES_IN`         | `3600`                 | multisite | 否     | Default access token lifetime (seconds) if not provided by IdP.                                                                                         |
-| `OPENIDC_RENEW_ACCESS_TOKEN_ON_EXPIRY`    | `yes`                  | multisite | 否     | Automatically renew access token using refresh token when expired.                                                                                      |
-| `OPENIDC_ACCEPT_UNSUPPORTED_ALG`          | `no`                   | multisite | 否     | Accept tokens signed with unsupported algorithms (not recommended).                                                                                     |
-| `OPENIDC_LOGOUT_PATH`                     | `/logout`              | multisite | 否     | URI path for logout requests.                                                                                                                           |
-| `OPENIDC_REVOKE_TOKENS_ON_LOGOUT`         | `no`                   | multisite | 否     | Revoke tokens at the IdP when logging out.                                                                                                              |
-| `OPENIDC_REDIRECT_AFTER_LOGOUT_URI`       |                        | multisite | 否     | URI to redirect after logout (leave empty for IdP default).                                                                                             |
-| `OPENIDC_POST_LOGOUT_REDIRECT_URI`        |                        | multisite | 否     | URI to redirect after IdP logout is complete.                                                                                                           |
-| `OPENIDC_TIMEOUT_CONNECT`                 | `10000`                | multisite | 否     | Connection timeout in milliseconds for IdP requests.                                                                                                    |
-| `OPENIDC_TIMEOUT_SEND`                    | `10000`                | multisite | 否     | Send timeout in milliseconds for IdP requests.                                                                                                          |
-| `OPENIDC_TIMEOUT_READ`                    | `10000`                | multisite | 否     | Read timeout in milliseconds for IdP requests.                                                                                                          |
-| `OPENIDC_SSL_VERIFY`                      | `yes`                  | multisite | 否     | Verify SSL certificates when communicating with the IdP.                                                                                                |
-| `OPENIDC_KEEPALIVE`                       | `yes`                  | multisite | 否     | Enable HTTP keepalive for connections to the IdP.                                                                                                       |
-| `OPENIDC_HTTP_PROXY`                      |                        | multisite | 否     | HTTP proxy URL for IdP connections (e.g. http://proxy:8080).                                                                                            |
-| `OPENIDC_HTTPS_PROXY`                     |                        | multisite | 否     | HTTPS proxy URL for IdP connections (e.g. http://proxy:8080).                                                                                           |
-| `OPENIDC_USER_HEADER`                     | `X-User`               | multisite | 否     | Header to pass user info to upstream (empty to disable).                                                                                                |
-| `OPENIDC_USER_HEADER_CLAIM`               | `sub`                  | multisite | 否     | ID token claim to use for the user header (e.g. sub, email, preferred_username).                                                                        |
-| `OPENIDC_DISPLAY_CLAIM`                   | `preferred_username`   | multisite | 否     | Claim to use for display in logs and metrics (e.g. preferred_username, name, email). Falls back to User Header Claim if not found.                      |
-| `OPENIDC_DISCOVERY_DICT_SIZE`             | `1m`                   | global    | 否     | Size of the shared dictionary to cache discovery data.                                                                                                  |
-| `OPENIDC_JWKS_DICT_SIZE`                  | `1m`                   | global    | 否     | Size of the shared dictionary to cache JWKS data.                                                                                                       |
+| 参数                                      | 默认值                 | 上下文    | 可重复 | 描述                                                                                                                                                        |
+| ----------------------------------------- | ---------------------- | --------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_OPENIDC`                             | `no`                   | multisite | 否     | Enable or disable OpenID Connect authentication.                                                                                                            |
+| `OPENIDC_DISCOVERY`                       |                        | multisite | 否     | OpenID Connect discovery URL (e.g. https://idp.example.com/.well-known/openid-configuration).                                                               |
+| `OPENIDC_CLIENT_ID`                       |                        | multisite | 否     | OAuth 2.0 client identifier registered with the IdP.                                                                                                        |
+| `OPENIDC_CLIENT_SECRET`                   |                        | multisite | 否     | OAuth 2.0 client secret registered with the IdP.                                                                                                            |
+| `OPENIDC_TOKEN_ENDPOINT_AUTH_METHOD`      | `basic`                | multisite | 否     | Token endpoint auth method: basic (recommended, HTTP Basic), post (POST body), secret_jwt (JWT with client secret), private_key_jwt (JWT with RSA key).     |
+| `OPENIDC_CLIENT_RSA_PRIVATE_KEY`          |                        | multisite | 否     | PEM-encoded RSA private key for private_key_jwt authentication.                                                                                             |
+| `OPENIDC_CLIENT_RSA_PRIVATE_KEY_ID`       |                        | multisite | 否     | Optional key ID (kid) for private_key_jwt authentication.                                                                                                   |
+| `OPENIDC_CLIENT_JWT_ASSERTION_EXPIRES_IN` |                        | multisite | 否     | JWT assertion lifetime in seconds (empty to use library default).                                                                                           |
+| `OPENIDC_REDIRECT_URI`                    | `/callback`            | multisite | 否     | URI path where the IdP redirects after authentication.                                                                                                      |
+| `OPENIDC_SCOPE`                           | `openid email profile` | multisite | 否     | Space-separated list of OAuth 2.0 scopes to request.                                                                                                        |
+| `OPENIDC_AUTHORIZATION_PARAMS`            |                        | multisite | 否     | Additional authorization params as comma-separated key=value pairs (e.g. audience=api,resource=xyz). URL-encode values if needed.                           |
+| `OPENIDC_USE_NONCE`                       | `yes`                  | multisite | 否     | Use nonce in authentication requests to prevent replay attacks.                                                                                             |
+| `OPENIDC_USE_PKCE`                        | `no`                   | multisite | 否     | Use PKCE (Proof Key for Code Exchange) for authorization code flow.                                                                                         |
+| `OPENIDC_FORCE_REAUTHORIZE`               | `no`                   | multisite | 否     | Force re-authorization on every request (not recommended for production).                                                                                   |
+| `OPENIDC_REFRESH_SESSION_INTERVAL`        |                        | multisite | 否     | Interval in seconds to silently re-authenticate (empty to disable).                                                                                         |
+| `OPENIDC_IAT_SLACK`                       | `120`                  | multisite | 否     | Allowed clock skew in seconds for token validation.                                                                                                         |
+| `OPENIDC_ACCESS_TOKEN_EXPIRES_IN`         | `3600`                 | multisite | 否     | Default access token lifetime (seconds) if not provided by IdP.                                                                                             |
+| `OPENIDC_RENEW_ACCESS_TOKEN_ON_EXPIRY`    | `yes`                  | multisite | 否     | Automatically renew access token using refresh token when expired.                                                                                          |
+| `OPENIDC_ACCEPT_UNSUPPORTED_ALG`          | `no`                   | multisite | 否     | Accept tokens signed with unsupported algorithms (not recommended).                                                                                         |
+| `OPENIDC_LOGOUT_PATH`                     | `/logout`              | multisite | 否     | URI path for logout requests.                                                                                                                               |
+| `OPENIDC_REVOKE_TOKENS_ON_LOGOUT`         | `no`                   | multisite | 否     | Revoke tokens at the IdP when logging out.                                                                                                                  |
+| `OPENIDC_REDIRECT_AFTER_LOGOUT_URI`       |                        | multisite | 否     | URI to redirect after logout (leave empty for IdP default).                                                                                                 |
+| `OPENIDC_POST_LOGOUT_REDIRECT_URI`        |                        | multisite | 否     | URI to redirect after IdP logout is complete.                                                                                                               |
+| `OPENIDC_TIMEOUT_CONNECT`                 | `10000`                | multisite | 否     | Connection timeout in milliseconds for IdP requests.                                                                                                        |
+| `OPENIDC_TIMEOUT_SEND`                    | `10000`                | multisite | 否     | Send timeout in milliseconds for IdP requests.                                                                                                              |
+| `OPENIDC_TIMEOUT_READ`                    | `10000`                | multisite | 否     | Read timeout in milliseconds for IdP requests.                                                                                                              |
+| `OPENIDC_SSL_VERIFY`                      | `yes`                  | multisite | 否     | Verify SSL certificates when communicating with the IdP.                                                                                                    |
+| `OPENIDC_KEEPALIVE`                       | `yes`                  | multisite | 否     | Enable HTTP keepalive for connections to the IdP.                                                                                                           |
+| `OPENIDC_HTTP_PROXY`                      |                        | multisite | 否     | HTTP proxy URL for IdP connections (e.g. http://proxy:8080).                                                                                                |
+| `OPENIDC_HTTPS_PROXY`                     |                        | multisite | 否     | HTTPS proxy URL for IdP connections (e.g. http://proxy:8080).                                                                                               |
+| `OPENIDC_USER_HEADER`                     | `X-User`               | multisite | 否     | Header to pass user info to upstream (empty to disable).                                                                                                    |
+| `OPENIDC_USER_HEADER_CLAIM`               | `sub`                  | multisite | 否     | ID token claim to use for the user header (e.g. sub, email, preferred_username).                                                                            |
+| `OPENIDC_DISPLAY_CLAIM`                   | `preferred_username`   | multisite | 否     | Claim to use for display in logs and metrics (e.g. preferred_username, name, email). Falls back to User Header Claim if not found.                          |
+| `OPENIDC_DISCOVERY_DICT_SIZE`             | `1m`                   | global    | 否     | Size of the shared dictionary to cache discovery data.                                                                                                      |
+| `OPENIDC_JWKS_DICT_SIZE`                  | `1m`                   | global    | 否     | Size of the shared dictionary to cache JWKS data.                                                                                                           |
+| `OPENIDC_USE_ACL`                         | `no`                   | multisite | 否     | Enable claim-based access control (ACL) after OIDC authentication. When enabled, only users whose claims match the configured rules will be granted access. |
+| `OPENIDC_ACL_MATCH_MODE`                  | `all`                  | multisite | 否     | How multiple ACL rules are evaluated. 'all' means every rule must pass (AND logic). 'any' means at least one rule must pass (OR logic).                     |
+| `OPENIDC_ACL_DENIED_URL`                  |                        | multisite | 否     | URL to redirect to when access is denied by ACL. If empty, returns a 403 Forbidden response.                                                                |
+| `OPENIDC_ACL_CLAIM`                       |                        | multisite | 是     | Name of the OIDC claim to check (e.g. groups, email, sub, preferred_username).                                                                              |
+| `OPENIDC_ACL_CLAIM_VALUE`                 |                        | multisite | 是     | Expected value for the claim. For array claims (e.g. groups), checks if this value is a member. For string claims, checks strict equality.                  |
 
 ## PHP
 

@@ -103,8 +103,14 @@ function cachestore:get(key)
 	local value, err, hit_level
 	if self.use_redis and is_cosocket_available() then
 		value, err, hit_level = cache:get(key, nil, callback, key, self.clusterstore)
-	else
+	elseif is_cosocket_available() then
 		value, err, hit_level = cache:get(key, nil, callback_no_miss)
+	else
+		-- Phases like set_by_lua* and log_by_lua* don't support cosocket APIs
+		-- (ngx.sleep), which mlcache's resty.lock uses internally on contention.
+		-- Passing nil as callback skips the lock/callback path entirely while
+		-- still checking L1 (worker LRU) and L2 (shared dict).
+		value, err, hit_level = cache:get(key, nil, nil)
 	end
 	if value == nil and err ~= nil then
 		return false, err
