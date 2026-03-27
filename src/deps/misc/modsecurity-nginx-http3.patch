@@ -12,7 +12,7 @@
              default :
                  http_version = ngx_str_to_char(r->http_protocol, r->pool);
                  if (http_version == (char*)-1) {
-@@ -215,6 +220,23 @@
+@@ -215,6 +220,24 @@
           * Since incoming request headers are already in place, lets send it to ModSecurity
           *
           */
