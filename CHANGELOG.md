@@ -1,6 +1,11 @@
 # Changelog
 
-## v1.6.10~rc2 - 2026/03/??
+## v1.6.10~rc3 - 2026/03/??
+
+- [SECURITY] Updated coreruleset-v3 version to v3.3.9 (fixes CVE-2026-33691)
+- [SECURITY] Updated coreruleset-v4 version to v4.25.0 (fixes CVE-2026-33691)
+
+## v1.6.10~rc2 - 2026/03/28
 
 - [BUGFIX] Add `WORKER_SHUTDOWN_TIMEOUT` setting (default `30s`) to force old NGINX workers to terminate after a config reload, preventing unbounded memory growth when workers linger in "shutting down" state.
 - [BUGFIX] Fix ModSecurity `REQUEST_HEADERS:Host` and `SERVER_NAME` being empty for HTTP/3 requests, causing custom rules with header matching (including chained rules) to silently fail. Patch the ModSecurity-nginx connector to synthesize the `Host` header from the `:authority` pseudo-header on HTTP/3 connections.
