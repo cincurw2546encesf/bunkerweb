@@ -4,6 +4,9 @@
 
 - [SECURITY] Updated coreruleset-v3 version to v3.3.9 (fixes CVE-2026-33691)
 - [SECURITY] Updated coreruleset-v4 version to v4.25.0 (fixes CVE-2026-33691)
+- [SECURITY] Harden all tar/zip extraction with centralized `safe_tar_extractall`/`safe_zip_extractall` helpers, pre-extraction member validation, and `Path.is_relative_to()` containment checks (mitigates CVE-2025-4517 on Python < 3.13.4).
+- [BUGFIX] Fix scheduler memory leak from unbounded job module cache, broken `sys.modules` cleanup, bulk cache loading, and infrequent garbage collection.
+- [BUGFIX] Fix `bw_plugin_pages` and `bw_jobs_cache` PostgreSQL table bloat caused by non-deterministic tar archives and unconditional UPDATEs triggering massive TOAST dead tuple accumulation on every scheduler restart.
 - [ALL-IN-ONE] Update CrowdSec version to 1.7.7
 - [MISC] Update default value for Permissions-Policy header to include additional features (`local-network`, `local-network-access` and `loopback-network`).
 

@@ -31,7 +31,7 @@ for deps_path in [BUNKERWEB_PATH.joinpath(*paths).as_posix() for paths in (("dep
 
 from schedule import every as schedule_every, run_pending
 
-from common_utils import bytes_hash, dict_to_frozenset, handle_docker_secrets, create_plugin_tar_gz, plugin_tar_exclude  # type: ignore
+from common_utils import bytes_hash, dict_to_frozenset, handle_docker_secrets, create_plugin_tar_gz, plugin_tar_exclude, safe_tar_extractall  # type: ignore
 from logger import getLogger  # type: ignore
 from Database import Database  # type: ignore
 from JobScheduler import JobScheduler
@@ -354,10 +354,7 @@ def generate_external_plugins(original_path: Union[Path, str] = EXTERNAL_PLUGINS
             try:
                 if plugin["data"]:
                     with tar_open(fileobj=BytesIO(plugin["data"]), mode="r:gz") as tar:
-                        try:
-                            tar.extractall(original_path, filter="fully_trusted")
-                        except TypeError:
-                            tar.extractall(original_path)
+                        safe_tar_extractall(tar, original_path)
 
                     # Add u+x permissions to executable files
                     plugin_path = original_path.joinpath(plugin["id"])
@@ -413,10 +410,7 @@ def generate_caches():
                 with tar_open(fileobj=BytesIO(data), mode="r:gz") as tar:
                     assert isinstance(tar, TarFile)
                     try:
-                        try:
-                            tar.extractall(extract_path, filter="fully_trusted")
-                        except TypeError:
-                            tar.extractall(extract_path)
+                        safe_tar_extractall(tar, extract_path)
                     except Exception as e:
                         LOGGER.error(f"Error extracting tar file: {e}")
                 LOGGER.debug(f"Restored cache directory {extract_path}")

@@ -16,7 +16,7 @@ from typing import Any, Dict, Literal, Optional, Tuple, Union
 from tempfile import NamedTemporaryFile
 from stat import S_IMODE
 
-from common_utils import bytes_hash, file_hash
+from common_utils import bytes_hash, file_hash, safe_tar_extractall
 
 LOCK = Lock()
 EXPIRE_TIME = {
@@ -135,11 +135,7 @@ class Job:
                         with tar_open(fileobj=BytesIO(job_cache_file["data"]), mode="r:gz") as tar:
                             assert isinstance(tar, TarFile)
                             try:
-                                for member in tar.getmembers():
-                                    try:
-                                        tar.extract(member, path=extract_path)
-                                    except Exception as e:
-                                        self.logger.error(f"Error extracting {member.name}: {e}")
+                                safe_tar_extractall(tar, extract_path)
                                 ignored_dirs.add(extract_path.as_posix())
                                 self.logger.debug(f"Restored cache directory {extract_path}")
                             except Exception as e:

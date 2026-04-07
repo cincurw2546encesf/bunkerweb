@@ -3,6 +3,7 @@ from gzip import GzipFile
 from hashlib import new as new_hash
 from io import BytesIO
 from os import getenv, sched_getaffinity, sep, access, R_OK, cpu_count
+from os.path import join as path_join, normpath
 from packaging.version import InvalidVersion, Version
 from pathlib import Path
 from platform import machine
@@ -277,6 +278,66 @@ def create_plugin_tar_gz(dir_path: Union[str, Path], arc_root: Optional[str] = N
         gz.write(raw_bytes)
     result.seek(0)
     return result
+
+
+def _validate_tar_members(members, *, allow_symlinks=False):
+    """Pre-validate tar members before extraction (defense-in-depth against CVE-2025-4517).
+
+    Checks archive metadata only — no disk access — so PATH_MAX symlink chain attacks are impossible.
+    When allow_symlinks is False, all symlinks/hardlinks are rejected (matching filter="data").
+    When allow_symlinks is True, symlinks are permitted but their targets are still validated.
+    """
+    for member in members:
+        # Block absolute paths
+        if member.name.startswith("/"):
+            raise ValueError(f"Tar member {member.name!r} has absolute path")
+        # Block path traversal in member name
+        if ".." in Path(member.name).parts:
+            raise ValueError(f"Tar member {member.name!r} contains '..'")
+        # Block device files and pipes
+        if member.isdev() or member.isfifo():
+            raise ValueError(f"Tar member {member.name!r} is a device or pipe")
+        # Check symlinks/hardlinks
+        if member.issym() or member.islnk():
+            if not allow_symlinks:
+                raise ValueError(f"Tar member {member.name!r} is a symlink/hardlink (not permitted)")
+            # Even when symlinks are allowed, validate their targets
+            if Path(member.linkname).is_absolute():
+                raise ValueError(f"Tar member {member.name!r} links to absolute path {member.linkname!r}")
+            # Normalize to collapse valid .. segments, then check if any remain (= escaping)
+            normalized = normpath(path_join(str(Path(member.name).parent), member.linkname))
+            if ".." in Path(normalized).parts:
+                raise ValueError(f"Tar member {member.name!r} links outside target directory")
+
+
+def safe_tar_extractall(tar, path, *, tar_filter="data", **kwargs):
+    """Extract a tar archive safely with pre-validation and Python 3.12+ filter.
+
+    Pre-validates all members before extraction to defend against CVE-2025-4517
+    (PATH_MAX symlink chain bypass of tarfile filters). Then applies the filter
+    as additional defense-in-depth.
+
+    Use tar_filter="tar" instead of "data" when symlinks must be preserved
+    (e.g. Let's Encrypt certs).
+    """
+    members_to_check = kwargs.get("members")
+    if members_to_check is None:
+        members_to_check = tar.getmembers()
+    _validate_tar_members(members_to_check, allow_symlinks=(tar_filter != "data"))
+    try:
+        tar.extractall(path, filter=tar_filter, **kwargs)
+    except TypeError:
+        tar.extractall(path, **kwargs)
+
+
+def safe_zip_extractall(zf, path):
+    """Extract a zip archive safely, rejecting members with absolute paths or path traversal."""
+    dest = Path(path).resolve()
+    for member in zf.namelist():
+        member_path = (dest / member).resolve()
+        if not member_path.is_relative_to(dest):
+            raise ValueError(f"Zip member {member!r} would escape target directory")
+    zf.extractall(path)
 
 
 def normalize_bunkerweb_version(version: str) -> str:
