@@ -85,6 +85,185 @@ class KubernetesController(Controller):
             return True
         return False
 
+    # ------------------------------------------------------------------
+    # Multi-Ingress merge helpers
+    # ------------------------------------------------------------------
+
+    def _build_multiple_groups_lookup(self) -> Dict[str, str]:
+        """Build {setting_name: group_id} from self._settings for settings
+        that have a ``"multiple"`` field (e.g. REVERSE_PROXY_HOST -> "reverse-proxy")."""
+        lookup: Dict[str, str] = {}
+        for setting_name, meta in self._settings.items():
+            group = meta.get("multiple")
+            if group:
+                lookup[setting_name] = group
+        return lookup
+
+    def _extract_slots(self, service: dict, multiple_lookup: Dict[str, str], server_name_prefix: str) -> Dict[str, Dict[int, Dict[str, tuple]]]:
+        """Extract numbered slots from *service* dict.
+
+        Returns ``{group_id: {slot_num: {base_setting: (original_key, value, was_prefixed)}}}``
+
+        Matched keys are **removed** from *service* in-place so that only
+        scalar settings remain.
+        """
+        slots: Dict[str, Dict[int, Dict[str, tuple]]] = {}
+        keys_to_remove = []
+
+        for key in list(service.keys()):
+            raw_key = key
+            was_prefixed = False
+            setting_part = key
+
+            # Strip server_name prefix if present
+            if server_name_prefix and key.startswith(server_name_prefix):
+                setting_part = key.removeprefix(server_name_prefix)
+                was_prefixed = True
+
+            # Check for exact match (slot 0 / unsuffixed)
+            if setting_part in multiple_lookup:
+                group_id = multiple_lookup[setting_part]
+                base_setting = setting_part
+                slot_num = 0
+                slots.setdefault(group_id, {}).setdefault(slot_num, {})[base_setting] = (raw_key, service[key], was_prefixed)
+                keys_to_remove.append(key)
+                continue
+
+            # Check for {BASE}_{N} pattern
+            last_underscore = setting_part.rfind("_")
+            if last_underscore > 0:
+                base_candidate = setting_part[:last_underscore]
+                candidate_suffix = setting_part[last_underscore + 1 :]  # noqa: E203
+                if candidate_suffix.isdigit() and base_candidate in multiple_lookup:
+                    suffix_num = int(candidate_suffix)
+                    group_id = multiple_lookup[base_candidate]
+                    slots.setdefault(group_id, {}).setdefault(suffix_num, {})[base_candidate] = (raw_key, service[key], was_prefixed)
+                    keys_to_remove.append(key)
+                    continue
+
+        for key in keys_to_remove:
+            del service[key]
+
+        return slots
+
+    def _write_slots(self, service: dict, all_slots: Dict[str, List[Dict[str, tuple]]], server_name_prefix: str) -> None:
+        """Write renumbered slots back into *service*.
+
+        *all_slots* is ``{group_id: [slot_dict, ...]}`` where each
+        ``slot_dict`` is ``{base_setting: (original_key, value, was_prefixed)}``.
+
+        Enumeration starts from ``self._reverse_proxy_suffix_start``.
+        Index 0 means unsuffixed key; index > 0 means ``_{N}`` suffix.
+        The server-name prefix is restored if the original key had it.
+        """
+        for slot_list in all_slots.values():
+            for idx, slot_dict in enumerate(slot_list, start=self._reverse_proxy_suffix_start):
+                for base_setting, (_orig_key, value, was_prefixed) in slot_dict.items():
+                    if idx == 0:
+                        new_setting = base_setting
+                    else:
+                        new_setting = f"{base_setting}_{idx}"
+                    if was_prefixed:
+                        new_key = f"{server_name_prefix}{new_setting}"
+                    else:
+                        new_key = new_setting
+                    service[new_key] = value
+
+    # OR-merge keys: if any service has "yes", the merged result is "yes"
+    _OR_MERGE_KEYS = frozenset({"USE_REVERSE_PROXY", "USE_GRPC", "USE_CUSTOM_SSL"})
+
+    def _merge_services_by_server_name(self, services: list) -> list:
+        """Merge services that share the same primary SERVER_NAME.
+
+        This combines numbered-suffix settings from multiple Ingresses/Routes
+        into a single service with renumbered slots.
+        """
+        if not services:
+            return []
+
+        # Group by primary hostname (first token of SERVER_NAME)
+        groups: Dict[str, List[dict]] = {}
+        order: list = []  # preserve first-seen order
+        for svc in services:
+            primary = svc.get("SERVER_NAME", "").split(" ")[0]
+            if primary not in groups:
+                groups[primary] = []
+                order.append(primary)
+            groups[primary].append(svc)
+
+        multiple_lookup = self._build_multiple_groups_lookup()
+        result = []
+
+        for primary in order:
+            group = groups[primary]
+
+            # No duplicates — passthrough
+            if len(group) == 1:
+                result.append(group[0])
+                continue
+
+            # Namespace ownership: first service establishes the owner namespace
+            owner_namespace = group[0].get("NAMESPACE")
+
+            # Merged service starts as a copy of the first service's scalar keys
+            merged: dict = {}
+            or_merge_accum: Dict[str, bool] = {k: False for k in self._OR_MERGE_KEYS}
+            collected_slots: Dict[str, list] = {}  # group_id -> [slot_dict, ...]
+
+            server_name_prefix = f"{primary}_"
+
+            for svc in group:
+                # Cross-namespace check (fail-closed: if either has a namespace, they must match)
+                svc_ns = svc.get("NAMESPACE")
+                if owner_namespace or svc_ns:
+                    if svc_ns != owner_namespace:
+                        self._logger.warning(f"Skipping service for {primary} from namespace {svc_ns}: already owned by namespace {owner_namespace}")
+                        continue
+
+                # Extract multiple-group slots (modifies svc in-place, leaving only scalars)
+                svc_slots = self._extract_slots(svc, multiple_lookup, server_name_prefix)
+
+                # Collect slots per group
+                for group_id, numbered_slots in svc_slots.items():
+                    collected_slots.setdefault(group_id, [])
+                    for _slot_num, slot_dict in sorted(numbered_slots.items()):
+                        collected_slots[group_id].append(slot_dict)
+
+                # OR-merge accumulation
+                for key in self._OR_MERGE_KEYS:
+                    # Check both prefixed and unprefixed variants
+                    if "yes" in (svc.get(key, "").lower(), svc.get(f"{server_name_prefix}{key}", "").lower()):
+                        or_merge_accum[key] = True
+
+                # Scalar settings: last-wins
+                for key, value in svc.items():
+                    if (key not in self._OR_MERGE_KEYS and not key.startswith(server_name_prefix)) or key in ("SERVER_NAME", "NAMESPACE"):
+                        merged[key] = value
+                    elif key.startswith(server_name_prefix):
+                        stripped = key.removeprefix(server_name_prefix)
+                        if stripped not in self._OR_MERGE_KEYS:
+                            merged[key] = value
+
+            # Deterministic sort: for each group, sort slot lists by their content
+            for group_id in collected_slots:
+                collected_slots[group_id].sort(key=lambda slot: tuple(sorted((k, v[1]) for k, v in slot.items())))
+
+            # Write renumbered slots into merged service
+            self._write_slots(merged, collected_slots, server_name_prefix)
+
+            # Apply OR-merge
+            for key, any_yes in or_merge_accum.items():
+                if any_yes:
+                    merged[key] = "yes"
+
+            result.append(merged)
+
+        return result
+
+    def get_services(self) -> list:
+        services = super().get_services()
+        return self._merge_services_by_server_name(services)
+
     def _get_controller_instances(self) -> list:
         instances = []
         pods = self._corev1.list_pod_for_all_namespaces(watch=False).items
