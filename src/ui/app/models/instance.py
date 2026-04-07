@@ -339,17 +339,6 @@ class InstancesUtils:
                     continue
                 seen_ids.add(report_id)
 
-            status = report.get("status", 0)
-            if not isinstance(status, int):
-                try:
-                    status = int(status)
-                except Exception:
-                    status = 0
-
-            security_mode = report.get("security_mode")
-            if not (400 <= status < 500 or security_mode == "detect"):
-                continue
-
             for field in pane_fields:
                 value = str(report.get(field, "N/A"))
                 if value not in pane_counts[field]:
@@ -735,16 +724,6 @@ class InstancesUtils:
                         if report_id in seen_ids:
                             continue
                         seen_ids.add(report_id)
-
-                    status = report.get("status", 0)
-                    if not isinstance(status, int):
-                        try:
-                            status = int(status)
-                        except Exception:
-                            status = 0
-                    security_mode = report.get("security_mode")
-                    if not (400 <= status < 500 or security_mode == "detect"):
-                        continue
 
                     valid_total += 1
                     matches = matches_filters(report, search, pane_filters)
