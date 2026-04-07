@@ -60,6 +60,7 @@ repos:
       - id: refurb
         name: Refurb Python Refactoring Tool
         exclude: ^tests/
+        additional_dependencies: ["mypy<1.20"]
 
   - repo: https://github.com/codespell-project/codespell
     rev: 63c8f8312b7559622c0d82815639671ae42132ac # frozen: v2.4.1
