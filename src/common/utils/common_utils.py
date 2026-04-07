@@ -210,6 +210,11 @@ def plugin_tar_filter(tarinfo):
             return None
         if p.name in _EXCLUDED_FILE_NAMES:
             return None
+        tarinfo.mtime = 0
+        tarinfo.uid = 0
+        tarinfo.gid = 0
+        tarinfo.uname = "root"
+        tarinfo.gname = "root"
         return tarinfo
     except Exception:
         return None
@@ -237,7 +242,7 @@ def add_dir_to_tar_safely(tar: Any, dir_path: Union[str, Path], arc_root: Option
         if not plugin_tar_exclude(d):
             tar.add(d.as_posix(), arcname=arc_root, recursive=False, filter=plugin_tar_filter)
 
-    for p in d.rglob("*"):
+    for p in sorted(d.rglob("*")):
         if plugin_tar_exclude(p):
             continue
         arcname = f"{arc_root}/{p.relative_to(d).as_posix()}"

@@ -200,6 +200,7 @@ class JobScheduler(ApiCaller):
 
         # Register in sys.modules to allow proper imports
         qualified_name = f"bw_job_{name}_{hash(module_key) & 0x7FFFFFFF}"
+        module.__bw_qualified_name__ = qualified_name
         sys_modules[qualified_name] = module
 
         # Execute the module
@@ -337,6 +338,9 @@ class JobScheduler(ApiCaller):
             # Reset flag for next batch
             self.__cache_permissions_updated = False
 
+            # Clean up cached modules to free memory
+            self.cleanup_modules()
+
             # Clean up module paths thread-safely
             with self.__module_paths_lock:
                 for module_path in self.__module_paths.copy():
@@ -388,6 +392,9 @@ class JobScheduler(ApiCaller):
         finally:
             # Reset flag for next batch
             self.__cache_permissions_updated = False
+
+            # Clean up cached modules to free memory
+            self.cleanup_modules()
 
             with self.__module_paths_lock:
                 for module_path in self.__module_paths.copy():
@@ -454,14 +461,16 @@ class JobScheduler(ApiCaller):
         """Clean up cached modules to free memory."""
         with self.__module_cache_lock:
             for module_key, module in self.__module_cache.items():
-                # Try to get the qualified name from sys.modules and remove it
-                qualified_name = f"bw_job_{getattr(module, '__name__', 'unknown')}_{hash(module_key) & 0x7FFFFFFF}"
+                # Use the stored qualified name for reliable cleanup
+                qualified_name = getattr(module, "__bw_qualified_name__", None)
+                if qualified_name is None:
+                    qualified_name = f"bw_job_{getattr(module, '__name__', 'unknown')}_{hash(module_key) & 0x7FFFFFFF}"
                 if qualified_name in sys_modules:
                     del sys_modules[qualified_name]
 
             module_count = len(self.__module_cache)
             self.__module_cache.clear()
-            self.__logger.info(f"Cleared {module_count} cached job modules")
+            self.__logger.debug(f"Cleared {module_count} cached job modules")
 
     def __del__(self):
         """Destructor to clean up resources."""

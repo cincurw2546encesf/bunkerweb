@@ -386,7 +386,8 @@ def generate_external_plugins(original_path: Union[Path, str] = EXTERNAL_PLUGINS
 def generate_caches():
     assert SCHEDULER is not None
 
-    job_cache_files = SCHEDULER.db.get_jobs_cache_files()
+    # Fetch metadata only (no binary data) to avoid loading GBs into memory
+    job_cache_files = SCHEDULER.db.get_jobs_cache_files(with_data=False)
     plugin_cache_files = set()
     ignored_dirs = set()
 
@@ -396,6 +397,12 @@ def generate_caches():
         plugin_cache_files.add(cache_path)
 
         try:
+            # Fetch binary data for this single file to keep memory usage bounded
+            data = SCHEDULER.db.get_job_cache_file(job_cache_file["job_name"], job_cache_file["file_name"], service_id=job_cache_file["service_id"] or "")
+            if data is None:
+                LOGGER.warning(f"Cache file {job_cache_file['file_name']} not found in database, skipping")
+                continue
+
             if job_cache_file["file_name"].endswith(".tgz"):
                 extract_path = cache_path.parent
                 if job_cache_file["file_name"].startswith("folder:"):
@@ -403,7 +410,7 @@ def generate_caches():
                 ignored_dirs.add(extract_path.as_posix())
                 rmtree(extract_path, ignore_errors=True)
                 extract_path.mkdir(parents=True, exist_ok=True)
-                with tar_open(fileobj=BytesIO(job_cache_file["data"]), mode="r:gz") as tar:
+                with tar_open(fileobj=BytesIO(data), mode="r:gz") as tar:
                     assert isinstance(tar, TarFile)
                     try:
                         try:
@@ -414,7 +421,7 @@ def generate_caches():
                         LOGGER.error(f"Error extracting tar file: {e}")
                 LOGGER.debug(f"Restored cache directory {extract_path}")
                 continue
-            _write_atomic(cache_path, job_cache_file["data"])
+            _write_atomic(cache_path, data)
             desired_perms = S_IRUSR | S_IWUSR | S_IRGRP  # 0o640
             if cache_path.stat().st_mode & 0o777 != desired_perms:
                 cache_path.chmod(desired_perms)
@@ -1220,7 +1227,7 @@ if __name__ == "__main__":
                     run_pending()
                     SCHEDULER.run_pending()
                     _gc_counter += 1
-                    if _gc_counter >= 60:
+                    if _gc_counter >= 10:
                         collect()
                         _gc_counter = 0
                     current_time = datetime.now().astimezone()

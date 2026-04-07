@@ -6,7 +6,6 @@ from contextlib import contextmanager, suppress
 from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import wraps
-from io import BytesIO
 from json import JSONDecodeError, loads
 from logging import Logger
 from os import _exit, getenv, sep
@@ -14,7 +13,6 @@ from os.path import join as os_join
 from pathlib import Path
 from re import DOTALL, Match, compile as re_compile, escape, error as RegexError, search
 from sys import argv, path as sys_path
-from tarfile import open as tar_open
 from threading import Lock
 from traceback import format_exc
 from typing import Any, Callable, Dict, List, Literal, Optional, Set, Tuple, TypeVar, Union
@@ -51,7 +49,7 @@ for deps_path in [os_join(sep, "usr", "share", "bunkerweb", *paths) for paths in
     if deps_path not in sys_path:
         sys_path.append(deps_path)
 
-from common_utils import bytes_hash, PLUGIN_TAR_COMPRESS_LEVEL  # type: ignore
+from common_utils import bytes_hash, create_plugin_tar_gz  # type: ignore
 
 from pymysql import install_as_MySQLdb
 from sqlalchemy import case, create_engine, event, MetaData as sql_metadata, func, join, select as db_select, text
@@ -803,11 +801,14 @@ class Database:
 
         assert isinstance(meta_cls, sql_metadata)
 
-        # Fetch old data
+        # Fetch old data (skip bw_plugin_pages data column to avoid loading large binary blobs)
         old_data = {}
         with self._db_session() as session:
             for table_name in Base.metadata.tables.keys():
-                old_data[table_name] = session.query(meta_cls.tables[table_name]).all()
+                if table_name == "bw_plugin_pages":
+                    old_data[table_name] = session.query(Plugin_pages).with_entities(Plugin_pages.plugin_id, Plugin_pages.checksum).all()
+                else:
+                    old_data[table_name] = session.query(meta_cls.tables[table_name]).all()
 
         # Prepare structures to track changes
         to_put = []
@@ -992,21 +993,15 @@ class Database:
                     )
                     path_ui = plugin_path.joinpath("ui")
                     if path_ui.is_dir():
-                        with BytesIO() as plugin_page_content:
-                            tar_success = True
-                            with tar_open(fileobj=plugin_page_content, mode="w:gz", compresslevel=PLUGIN_TAR_COMPRESS_LEVEL) as tar:
-                                try:
-                                    tar.add(path_ui, arcname=path_ui.name, recursive=True)
-                                except (FileNotFoundError, OSError) as e:
-                                    self.logger.warning(f"Some files in {path_ui} could not be archived: {e}")
-                                    tar_success = False
-                            if tar_success:
-                                plugin_page_content.seek(0)
-                                checksum = bytes_hash(plugin_page_content, algorithm="sha256")
-                                desired_plugin_pages[base_plugin["id"]] = {
-                                    "data": plugin_page_content.getvalue(),
-                                    "checksum": checksum,
-                                }
+                        try:
+                            plugin_page_content = create_plugin_tar_gz(path_ui)
+                            checksum = bytes_hash(plugin_page_content, algorithm="sha256")
+                            desired_plugin_pages[base_plugin["id"]] = {
+                                "data": plugin_page_content.getvalue(),
+                                "checksum": checksum,
+                            }
+                        except (FileNotFoundError, OSError) as e:
+                            self.logger.warning(f"Some files in {path_ui} could not be archived: {e}")
 
             for plugins in default_plugins:
                 if not isinstance(plugins, list):
@@ -3068,9 +3063,13 @@ class Database:
                     )
                 )
             else:
-                cache.data = data
-                cache.last_update = datetime.now().astimezone()
-                cache.checksum = checksum
+                if checksum is None or cache.checksum != checksum:
+                    cache.data = data
+                    cache.last_update = datetime.now().astimezone()
+                    cache.checksum = checksum
+                else:
+                    # Data unchanged — refresh timestamp to reset expiry window
+                    cache.last_update = datetime.now().astimezone()
 
             try:
                 session.commit()
@@ -3487,21 +3486,14 @@ class Database:
 
                     if path_ui.is_dir():
                         remove = True
-                        with BytesIO() as plugin_page_content:
-                            tar_success = True
-                            with tar_open(fileobj=plugin_page_content, mode="w:gz", compresslevel=PLUGIN_TAR_COMPRESS_LEVEL) as tar:
-                                try:
-                                    tar.add(path_ui, arcname=path_ui.name, recursive=True)
-                                except (FileNotFoundError, OSError) as e:
-                                    self.logger.warning(f"Some files in {path_ui} could not be archived: {e}")
-                                    tar_success = False
-                            if tar_success:
-                                plugin_page_content.seek(0)
-                                checksum = bytes_hash(plugin_page_content, algorithm="sha256")
-                                content = plugin_page_content.getvalue()
-                            else:
-                                remove = False
-                                continue
+                        try:
+                            plugin_page_content = create_plugin_tar_gz(path_ui)
+                            checksum = bytes_hash(plugin_page_content, algorithm="sha256")
+                            content = plugin_page_content.getvalue()
+                        except (FileNotFoundError, OSError) as e:
+                            self.logger.warning(f"Some files in {path_ui} could not be archived: {e}")
+                            remove = False
+                            continue
 
                         if not db_plugin_page:
                             changes = True
@@ -3917,19 +3909,12 @@ class Database:
                 if page:
                     path_ui = plugin_path.joinpath("ui")
                     if path_ui.is_dir():
-                        with BytesIO() as plugin_page_content:
-                            tar_success = True
-                            with tar_open(fileobj=plugin_page_content, mode="w:gz", compresslevel=PLUGIN_TAR_COMPRESS_LEVEL) as tar:
-                                try:
-                                    tar.add(path_ui, arcname=path_ui.name, recursive=True)
-                                except (FileNotFoundError, OSError) as e:
-                                    self.logger.warning(f"Some files in {path_ui} could not be archived: {e}")
-                                    tar_success = False
-                            if tar_success:
-                                plugin_page_content.seek(0)
-                                checksum = bytes_hash(plugin_page_content, algorithm="sha256")
-
-                                local_to_put.append(Plugin_pages(plugin_id=plugin["id"], data=plugin_page_content.getvalue(), checksum=checksum))
+                        try:
+                            plugin_page_content = create_plugin_tar_gz(path_ui)
+                            checksum = bytes_hash(plugin_page_content, algorithm="sha256")
+                            local_to_put.append(Plugin_pages(plugin_id=plugin["id"], data=plugin_page_content.getvalue(), checksum=checksum))
+                        except (FileNotFoundError, OSError) as e:
+                            self.logger.warning(f"Some files in {path_ui} could not be archived: {e}")
 
                 for command, file_name in commands.items():
                     if not plugin_path.joinpath("bwcli", file_name).is_file():
