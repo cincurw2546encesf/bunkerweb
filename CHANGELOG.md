@@ -5,6 +5,7 @@
 - [SECURITY] Updated coreruleset-v3 version to v3.3.9 (fixes CVE-2026-33691)
 - [SECURITY] Updated coreruleset-v4 version to v4.25.0 (fixes CVE-2026-33691)
 - [ALL-IN-ONE] Update CrowdSec version to 1.7.7
+- [MISC] Update default value for Permissions-Policy header to include additional features (`local-network`, `local-network-access` and `loopback-network`).
 
 ## v1.6.10~rc2 - 2026/03/28
 
