@@ -560,7 +560,6 @@ class KubernetesController(Controller):
                     self._pending_apply = False
                     self._log_event_summary()
 
-                    to_apply = False
                     while not applied:
                         waiting = self.have_to_wait()
                         self._update_settings()
@@ -568,14 +567,13 @@ class KubernetesController(Controller):
                         self._services = self.get_services()
                         self._extra_config, self._configs = self.get_configs()
 
-                        if not to_apply and not self.update_needed(self._instances, self._services, self._configs, self._extra_config):
+                        if not self.update_needed(self._instances, self._services, self._configs, self._extra_config):
                             if locked:
                                 self._internal_lock.release()
                                 locked = False
                             applied = True
                             continue
 
-                        to_apply = True
                         if waiting:
                             self._logger.info("Scheduler is already applying a configuration, retrying in 1 second ...")
                             sleep(1)

@@ -7,7 +7,12 @@
 - [SECURITY] Harden all tar/zip extraction with centralized `safe_tar_extractall`/`safe_zip_extractall` helpers, pre-extraction member validation, and `Path.is_relative_to()` containment checks (mitigates CVE-2025-4517 on Python < 3.13.4).
 - [BUGFIX] Fix scheduler memory leak from unbounded job module cache, broken `sys.modules` cleanup, bulk cache loading, and infrequent garbage collection.
 - [BUGFIX] Fix `bw_plugin_pages` and `bw_jobs_cache` PostgreSQL table bloat caused by non-deterministic tar archives and unconditional UPDATEs triggering massive TOAST dead tuple accumulation on every scheduler restart.
+- [BUGFIX] Fix `cachestore:set()` silently dropping cache writes in non-cosocket phases due to an incorrect guard.
+- [BUGFIX] Fix `cachestore:del_redis()` calling non-existent `clusterstore:del()` method.
+- [BUGFIX] Fix metrics Redis sync cascading failures after a mid-cycle connection drop by adding auto-reconnect with circuit-breaker.
+- [BUGFIX] Fix dead Redis connections being returned to the keepalive pool by tracking connection health in `clusterstore`.
 - [AUTOCONF] Fix multiple Kubernetes Ingress/Route resources for the same hostname overwriting each other instead of merging their paths into a single service configuration.
+- [AUTOCONF] Fix Docker autoconf feedback loop where healthcheck exec events caused endless config regeneration and NGINX reloads by filtering events to container lifecycle actions only.
 - [ALL-IN-ONE] Update CrowdSec version to 1.7.7
 - [MISC] Update default value for Permissions-Policy header to include additional features (`local-network`, `local-network-access` and `loopback-network`).
 
@@ -26,10 +31,6 @@
 - [BUGFIX] Fix entrypoint spinning at 100% CPU when nginx/supervisord is OOM-killed, by adding process liveness check and stale PID cleanup in the wait loop.
 - [BUGFIX] Fix `badbehavior:log()` crash caused by `resty.lock` calling `ngx.sleep()` in `log_by_lua*` context, by skipping the mlcache lock path in non-cosocket phases.
 - [BUGFIX] Fix whitelist default-server crash caused by `resty.lock` calling `ngx.sleep()` in `set_by_lua*` context. Use lock-free L1/L2 cache reads in non-cosocket phases instead of silently dropping cached whitelist data. (Fixes #2583)
-- [BUGFIX] Fix `cachestore:set()` silently dropping cache writes in non-cosocket phases due to an incorrect guard.
-- [BUGFIX] Fix `cachestore:del_redis()` calling non-existent `clusterstore:del()` method.
-- [BUGFIX] Fix metrics Redis sync cascading failures after a mid-cycle connection drop by adding auto-reconnect with circuit-breaker.
-- [BUGFIX] Fix dead Redis connections being returned to the keepalive pool by tracking connection health in `clusterstore`.
 - [BUGFIX] Fix `is_cosocket_available()` never matching the SSL certificate phase (`"ssl_certificate"` vs actual `"ssl_cert"`), and add missing yieldable phases `server_rewrite`, `ssl_client_hello` and `ssl_session_fetch`.
 - [UI] Fix service template switching so the newly selected template applies its defaults immediately while preserving fields already customized by the user.
 - [UI] Fix Reports page search not matching on Request ID. The global search field only checked IP, country, method, URL, status, user-agent, reason, and server name, causing searches by Request ID to always return "No matching Reports found" when using the Redis code path.
