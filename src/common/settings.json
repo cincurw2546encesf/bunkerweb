@@ -142,7 +142,7 @@
     "help": "Size of lua_shared_dict for initialization workers",
     "id": "workerlock-memory-size",
     "label": "Initialization Workerlock memory size",
-    "regex": "^\\d+(?:[kKmM])?$",
+    "regex": "^\\d+(?:[kKmMgG])?$",
     "type": "text"
   },
   "INTERNALSTORE_MEMORY_SIZE": {
@@ -151,7 +151,7 @@
     "help": "Size of the internal internalstore.",
     "id": "internalstore-memory-size",
     "label": "Internalstore memory size",
-    "regex": "^\\d+(?:[kKmM])?$",
+    "regex": "^\\d+(?:[kKmMgG])?$",
     "type": "text"
   },
   "DATASTORE_MEMORY_SIZE": {
@@ -160,7 +160,7 @@
     "help": "Size of the internal datastore.",
     "id": "datastore-memory-size",
     "label": "Datastore memory size",
-    "regex": "^\\d+(?:[kKmM])?$",
+    "regex": "^\\d+(?:[kKmMgG])?$",
     "type": "text"
   },
   "CACHESTORE_MEMORY_SIZE": {
@@ -169,7 +169,7 @@
     "help": "Size of the internal cachestore.",
     "id": "cachestore-memory-size",
     "label": "Cachestore memory size",
-    "regex": "^\\d+(?:[kKmM])?$",
+    "regex": "^\\d+(?:[kKmMgG])?$",
     "type": "text"
   },
   "CACHESTORE_IPC_MEMORY_SIZE": {
@@ -178,7 +178,7 @@
     "help": "Size of the internal cachestore (ipc).",
     "id": "cachestore-ipc-memory-size",
     "label": "Cachestore ipc memory size",
-    "regex": "^\\d+(?:[kKmM])?$",
+    "regex": "^\\d+(?:[kKmMgG])?$",
     "type": "text"
   },
   "CACHESTORE_MISS_MEMORY_SIZE": {
@@ -187,7 +187,7 @@
     "help": "Size of the internal cachestore (miss).",
     "id": "cachestore-miss-memory-size",
     "label": "Cachestore miss memory size",
-    "regex": "^\\d+(?:[kKmM])?$",
+    "regex": "^\\d+(?:[kKmMgG])?$",
     "type": "text"
   },
   "CACHESTORE_LOCKS_MEMORY_SIZE": {
@@ -196,7 +196,7 @@
     "help": "Size of the internal cachestore (locks).",
     "id": "cachestore-locks-memory-size",
     "label": "Cachestore locks memory size",
-    "regex": "^\\d+(?:[kKmM])?$",
+    "regex": "^\\d+(?:[kKmMgG])?$",
     "type": "text"
   },
   "USE_API": {
