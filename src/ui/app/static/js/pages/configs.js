@@ -544,6 +544,15 @@ $(document).ready(function () {
               },
               {
                 label:
+                  '<i class="bx bx-xs bx-network-chart"></i>DEFAULT_SERVER_STREAM',
+                value: function (rowData, rowIdx) {
+                  return (
+                    $(rowData[3]).text().trim() === "DEFAULT_SERVER_STREAM"
+                  );
+                },
+              },
+              {
+                label:
                   '<i class="bx bx-xs bx-shield-alt"></i>CRS_PLUGINS_BEFORE',
                 value: function (rowData, rowIdx) {
                   return $(rowData[3]).text().trim() === "CRS_PLUGINS_BEFORE";
