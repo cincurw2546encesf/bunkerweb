@@ -1589,9 +1589,16 @@ class Database:
         return True, ""
 
     def save_config(
-        self, config: Dict[str, Any], method: str, changed: Optional[bool] = True, file_names: Optional[Dict[str, str]] = None
+        self, config: Dict[str, Any], method: str, changed: Optional[bool] = True, file_names: Optional[Dict[str, str]] = None, global_only: bool = False
     ) -> Union[str, Set[str]]:
-        """Save the config in the database"""
+        """Save the config in the database.
+
+        Args:
+            global_only: When True, only global settings are processed — service management,
+                         service settings cleanup, and multisite logic are skipped entirely.
+                         This prevents accidental deletion of services when the caller only
+                         intends to update global settings.
+        """
         to_put = []
         to_update = []
         to_delete = []
@@ -1692,9 +1699,9 @@ class Database:
                     continue
 
             self.logger.debug(f"Cleaning up {method} old services settings")
-            # Collect service settings to delete
+            # Collect service settings to delete (skip entirely when global_only to avoid deleting service settings)
             service_settings_to_delete = []
-            for db_service_config in session.query(Services_settings).filter_by(method=method).all():
+            for db_service_config in ([] if global_only else session.query(Services_settings).filter_by(method=method).all()):
                 key = f"{db_service_config.service_id}_{db_service_config.setting_id}"
                 if db_service_config.suffix:
                     key = f"{key}_{db_service_config.suffix}"
@@ -1724,86 +1731,86 @@ class Database:
             if config:
                 config.pop("DATABASE_URI", None)
 
-                self.logger.debug("Checking if the services have changed")
-                db_services = session.query(Services).with_entities(Services.id, Services.method, Services.is_draft).all()
-                db_ids: Dict[str, dict] = {service.id: {"method": service.method, "is_draft": service.is_draft} for service in db_services}
-                missing_ids = []
-                services = config.get("SERVER_NAME", [])
-
-                if isinstance(services, str):
-                    services = services.strip().split()
-
-                services = [service for service in services if service]  # Clean up empty strings
-
-                if db_services:
-                    # Guard: if autoconf sends an empty services list but DB has services for this method,
-                    # abort the entire save_config to prevent catastrophic data loss from transient Docker API failure.
-                    # This parallels the instances guard in update_instances (lines 4531-4538).
-                    # We must return early because the settings cleanup loops above (global_settings_to_delete,
-                    # service_settings_to_delete) already collected all existing settings for deletion since
-                    # the incoming config has no service-prefixed keys.
-                    method_services = [s for s in db_services if s.method == method or (s.method in ("ui", "api") and method in ("ui", "api"))]
-                    if not services and method_services and method == "autoconf":
-                        self.logger.warning(
-                            f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
-                            "skipping entire config save to prevent data loss from transient Docker API failure"
-                        )
-                        return changed_plugins
-                    else:
-                        missing_ids = [
-                            service.id
-                            for service in db_services
-                            if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api"))) and service.id not in services
-                        ]
-
-                    if missing_ids:
-                        self.logger.debug(f"Removing {len(missing_ids)} services that are no longer in the list")
-                        # Remove services that are no longer in the list
-                        session.query(Services).filter(Services.id.in_(missing_ids)).delete(synchronize_session=False)
-                        session.query(Services_settings).filter(Services_settings.service_id.in_(missing_ids)).delete(synchronize_session=False)
-                        session.query(Custom_configs).filter(Custom_configs.service_id.in_(missing_ids)).delete(synchronize_session=False)
-                        session.query(Jobs_cache).filter(Jobs_cache.service_id.in_(missing_ids)).delete(synchronize_session=False)
-                        session.query(Metadata).filter_by(id=1).update(
-                            {Metadata.custom_configs_changed: True, Metadata.last_custom_configs_change: datetime.now().astimezone()}
-                        )
-                        changed_services = True
-                        if any(config.get(f"{sid}_USE_TEMPLATE", "") for sid in missing_ids):
-                            service_template_change = True
-
-                self.logger.debug("Checking if the drafts have changed")
-                drafts = {service for service in services if config.pop(f"{service}_IS_DRAFT", "no") == "yes"}
-                db_drafts = {service.id for service in db_services if service.is_draft}
-
-                if db_drafts:
-                    missing_drafts = [
-                        service.id
-                        for service in db_services
-                        if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api")))
-                        and service.id not in drafts
-                        and service.id not in missing_ids
-                    ]
-
-                    if missing_drafts:
-                        self.logger.debug(f"Removing {len(missing_drafts)} drafts that are no longer in the list")
-                        # Update services to remove draft status
-                        session.query(Services).filter(Services.id.in_(missing_drafts)).update({Services.is_draft: False}, synchronize_session=False)
-                        changed_services = True
-
-                for draft in drafts:
-                    if draft not in db_drafts:
-                        current_time = datetime.now().astimezone()
-                        if draft not in db_ids:
-                            self.logger.debug(f"Adding draft {draft}")
-                            to_put.append(Services(id=draft, method=method, is_draft=True, creation_date=current_time, last_update=current_time))
-                            db_ids[draft] = {"method": method, "is_draft": True}
-                        elif db_ids[draft]["method"] == method or (db_ids[draft]["method"] in ("ui", "api") and method in ("ui", "api")):
-                            self.logger.debug(f"Updating draft {draft}")
-                            to_update.append({"model": Services, "filter": {"id": draft}, "values": {"is_draft": True, "last_update": current_time}})
-                            changed_services = True
-
                 template = config.get("USE_TEMPLATE", "")
 
-                if config.get("MULTISITE", "no") == "yes":
+                if not global_only:
+                    self.logger.debug("Checking if the services have changed")
+                    db_services = session.query(Services).with_entities(Services.id, Services.method, Services.is_draft).all()
+                    db_ids: Dict[str, dict] = {service.id: {"method": service.method, "is_draft": service.is_draft} for service in db_services}
+                    missing_ids = []
+                    services = config.get("SERVER_NAME", [])
+
+                    if isinstance(services, str):
+                        services = services.strip().split()
+
+                    services = [service for service in services if service]  # Clean up empty strings
+
+                    if db_services:
+                        # Guard: if an empty services list is received but DB has services for this method,
+                        # abort the entire save_config to prevent catastrophic data loss.
+                        # For autoconf: protects against transient Docker API failures.
+                        # For other methods: protects against callers that omit SERVER_NAME entirely
+                        # (e.g. a global-only config update that forgot to set global_only=True).
+                        method_services = [s for s in db_services if s.method == method or (s.method in ("ui", "api") and method in ("ui", "api"))]
+                        if not services and method_services and (method == "autoconf" or "SERVER_NAME" not in config):
+                            self.logger.warning(
+                                f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
+                                "skipping entire config save to prevent data loss"
+                            )
+                            return changed_plugins
+                        else:
+                            missing_ids = [
+                                service.id
+                                for service in db_services
+                                if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api"))) and service.id not in services
+                            ]
+
+                        if missing_ids:
+                            self.logger.debug(f"Removing {len(missing_ids)} services that are no longer in the list")
+                            # Remove services that are no longer in the list
+                            session.query(Services).filter(Services.id.in_(missing_ids)).delete(synchronize_session=False)
+                            session.query(Services_settings).filter(Services_settings.service_id.in_(missing_ids)).delete(synchronize_session=False)
+                            session.query(Custom_configs).filter(Custom_configs.service_id.in_(missing_ids)).delete(synchronize_session=False)
+                            session.query(Jobs_cache).filter(Jobs_cache.service_id.in_(missing_ids)).delete(synchronize_session=False)
+                            session.query(Metadata).filter_by(id=1).update(
+                                {Metadata.custom_configs_changed: True, Metadata.last_custom_configs_change: datetime.now().astimezone()}
+                            )
+                            changed_services = True
+                            if any(config.get(f"{sid}_USE_TEMPLATE", "") for sid in missing_ids):
+                                service_template_change = True
+
+                    self.logger.debug("Checking if the drafts have changed")
+                    drafts = {service for service in services if config.pop(f"{service}_IS_DRAFT", "no") == "yes"}
+                    db_drafts = {service.id for service in db_services if service.is_draft}
+
+                    if db_drafts:
+                        missing_drafts = [
+                            service.id
+                            for service in db_services
+                            if (service.method == method or (service.method in ("ui", "api") and method in ("ui", "api")))
+                            and service.id not in drafts
+                            and service.id not in missing_ids
+                        ]
+
+                        if missing_drafts:
+                            self.logger.debug(f"Removing {len(missing_drafts)} drafts that are no longer in the list")
+                            # Update services to remove draft status
+                            session.query(Services).filter(Services.id.in_(missing_drafts)).update({Services.is_draft: False}, synchronize_session=False)
+                            changed_services = True
+
+                    for draft in drafts:
+                        if draft not in db_drafts:
+                            current_time = datetime.now().astimezone()
+                            if draft not in db_ids:
+                                self.logger.debug(f"Adding draft {draft}")
+                                to_put.append(Services(id=draft, method=method, is_draft=True, creation_date=current_time, last_update=current_time))
+                                db_ids[draft] = {"method": method, "is_draft": True}
+                            elif db_ids[draft]["method"] == method or (db_ids[draft]["method"] in ("ui", "api") and method in ("ui", "api")):
+                                self.logger.debug(f"Updating draft {draft}")
+                                to_update.append({"model": Services, "filter": {"id": draft}, "values": {"is_draft": True, "last_update": current_time}})
+                                changed_services = True
+
+                if not global_only and config.get("MULTISITE", "no") == "yes":
                     self.logger.debug("Checking if the multisite settings have changed")
 
                     service_configs = defaultdict(dict)
@@ -2065,26 +2072,33 @@ class Database:
                     # Non-multisite configuration
                     self.logger.debug("Checking if non-multisite settings have changed")
 
-                    server_name = config.get("SERVER_NAME", None)
-                    if template and server_name is None:
-                        server_name = (
-                            session.query(Template_settings)
-                            .with_entities(Template_settings.value)
-                            .filter_by(template_id=template, setting_id="SERVER_NAME")
-                            .first()
-                        )
-
-                    if server_name is None or server_name:
-                        server_name = server_name or "www.example.com"
-                        first_server = server_name.split(" ")[0]
-
-                        if not session.query(Services).with_entities(Services.id).filter_by(id=first_server).first():
-                            self.logger.debug(f"Adding service {first_server}")
-                            current_time = datetime.now().astimezone()
-                            to_put.append(
-                                Services(id=first_server, method=method, is_draft=first_server in drafts, creation_date=current_time, last_update=current_time)
+                    if not global_only:
+                        server_name = config.get("SERVER_NAME", None)
+                        if template and server_name is None:
+                            server_name = (
+                                session.query(Template_settings)
+                                .with_entities(Template_settings.value)
+                                .filter_by(template_id=template, setting_id="SERVER_NAME")
+                                .first()
                             )
-                            changed_services = True
+
+                        if server_name is None or server_name:
+                            server_name = server_name or "www.example.com"
+                            first_server = server_name.split(" ")[0]
+
+                            if not session.query(Services).with_entities(Services.id).filter_by(id=first_server).first():
+                                self.logger.debug(f"Adding service {first_server}")
+                                current_time = datetime.now().astimezone()
+                                to_put.append(
+                                    Services(
+                                        id=first_server,
+                                        method=method,
+                                        is_draft=first_server in drafts,
+                                        creation_date=current_time,
+                                        last_update=current_time,
+                                    )
+                                )
+                                changed_services = True
 
                     for original_key, value in config.items():
                         key = deepcopy(original_key)

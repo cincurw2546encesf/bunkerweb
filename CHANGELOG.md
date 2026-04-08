@@ -2,6 +2,7 @@
 
 ## v1.6.10~rc3 - 2026/03/??
 
+- [API/SECURITY] Fix `PATCH /global_config` accidentally deleting all services, custom configs, and jobs cache.
 - [SECURITY] Updated coreruleset-v3 version to v3.3.9 (fixes CVE-2026-33691)
 - [SECURITY] Updated coreruleset-v4 version to v4.25.0 (fixes CVE-2026-33691)
 - [SECURITY] Harden all tar/zip extraction with centralized `safe_tar_extractall`/`safe_zip_extractall` helpers, pre-extraction member validation, and `Path.is_relative_to()` containment checks (mitigates CVE-2025-4517 on Python < 3.13.4).
