@@ -20,7 +20,7 @@
       "help": "Size of the internal storage for metrics.",
       "id": "metrics-memory-size",
       "label": "Metrics memory size",
-      "regex": "^\\d+[kKmMgG]?$",
+      "regex": "^\\d+(?:[kKmM])?$",
       "type": "text"
     },
     "METRICS_MEMORY_MAX_RETRIES": {

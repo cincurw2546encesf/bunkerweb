@@ -214,3 +214,25 @@ Cambiar al modo `detect` puede ayudarte a identificar y resolver posibles falsos
     USE_TCP: "yes"
     USE_UDP: "no"
     ```
+
+=== "Desactivar modos de escucha"
+
+    Puede desactivar modos de escucha específicos dejando vacíos los ajustes de puerto:
+
+    ```yaml
+    # Desactivar la escucha HTTP (solo HTTPS)
+    HTTP_PORT: ""
+    HTTPS_PORT: "8443"
+
+    # Desactivar la escucha HTTPS (solo HTTP)
+    HTTP_PORT: "8080"
+    HTTPS_PORT: ""
+
+    # Stream: desactivar la escucha no SSL (solo SSL)
+    LISTEN_STREAM_PORT: ""
+    LISTEN_STREAM_PORT_SSL: "4242"
+
+    # Stream: desactivar la escucha SSL (solo no SSL)
+    LISTEN_STREAM_PORT: "1337"
+    LISTEN_STREAM_PORT_SSL: ""
+    ```
