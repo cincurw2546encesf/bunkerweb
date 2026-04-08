@@ -80,10 +80,10 @@ def resolve_ssl_ecdh_curve(value: str, fallback: str = "X25519:prime256v1:secp38
 
     best_curve = _best_ssl_ecdh_curve()
     if best_curve:
-        logger.info(f"Resolved ssl_ecdh_curve (auto-detect): {best_curve}")
+        logger.debug(f"Resolved ssl_ecdh_curve (auto-detect): {best_curve}")
         return best_curve
 
-    logger.info(f"Resolved ssl_ecdh_curve (fallback): {fallback}")
+    logger.warning(f"Resolved ssl_ecdh_curve (fallback): {fallback}")
     return fallback
 
 
