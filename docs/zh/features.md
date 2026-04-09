@@ -226,6 +226,28 @@ BunkerWeb 中的某些设置支持同一功能的多个配置。要定义多组�
     USE_UDP: "no"
     ```
 
+=== "禁用监听模式"
+
+    您可以通过将端口设置留空来禁用特定的监听模式：
+
+    ```yaml
+    # 禁用 HTTP 监听（仅 HTTPS）
+    HTTP_PORT: ""
+    HTTPS_PORT: "8443"
+
+    # 禁用 HTTPS 监听（仅 HTTP）
+    HTTP_PORT: "8080"
+    HTTPS_PORT: ""
+
+    # Stream：禁用非 SSL 监听（仅 SSL）
+    LISTEN_STREAM_PORT: ""
+    LISTEN_STREAM_PORT_SSL: "4242"
+
+    # Stream：禁用 SSL 监听（仅非 SSL）
+    LISTEN_STREAM_PORT: "1337"
+    LISTEN_STREAM_PORT_SSL: ""
+    ```
+
 ## ACME <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
@@ -1395,12 +1417,12 @@ STREAM 支持 :x:
 
 ### 配置设置
 
-| 设置                      | 默认值                     | 上下文    | 多个 | 描述                                                                      |
-| ------------------------- | -------------------------- | --------- | ---- | ------------------------------------------------------------------------- |
-| `USE_CLIENT_CACHE`        | `no`                       | multisite | 否   | **启用客户端缓存：** 设置为 `yes` 以启用静态文件的客户端缓存。            |
-| `CLIENT_CACHE_EXTENSIONS` | `jpg                       | jpeg      | png  | bmp                                                                       | ico | svg | tif | css | js | otf | ttf | eot | woff | woff2` | 全局 | 否 | **可缓存的扩展名：** 应由客户端缓存的文件扩展名列表（以管道符分隔）。 |
-| `CLIENT_CACHE_CONTROL`    | `public, max-age=15552000` | multisite | 否   | **Cache-Control 标头：** 用于控制缓存行为的 Cache-Control HTTP 标头的值。 |
-| `CLIENT_CACHE_ETAG`       | `yes`                      | multisite | 否   | **启用 ETags：** 设置为 `yes` 以发送静态资源的 HTTP ETag 标头。           |
+| 设置                      | 默认值                                                                    | 上下文    | 多个 | 描述                                                                      |
+| ------------------------- | ------------------------------------------------------------------------- | --------- | ---- | ------------------------------------------------------------------------- |
+| `USE_CLIENT_CACHE`        | `no`                                                                      | multisite | 否   | **启用客户端缓存：** 设置为 `yes` 以启用静态文件的客户端缓存。            |
+| `CLIENT_CACHE_EXTENSIONS` | `jpg\|jpeg\|png\|bmp\|ico\|svg\|tif\|css\|js\|otf\|ttf\|eot\|woff\|woff2` | 全局      | 否   | **可缓存的扩展名：** 应由客户端缓存的文件扩展名列表（以管道符分隔）。     |
+| `CLIENT_CACHE_CONTROL`    | `public, max-age=15552000`                                                | multisite | 否   | **Cache-Control 标头：** 用于控制缓存行为的 Cache-Control HTTP 标头的值。 |
+| `CLIENT_CACHE_ETAG`       | `yes`                                                                     | multisite | 否   | **启用 ETags：** 设置为 `yes` 以发送静态资源的 HTTP ETag 标头。           |
 
 !!! tip "优化缓存设置"
     对于频繁更新的内容，请考虑使用较短的 max-age 值。对于很少更改的内容（如带版本的 JavaScript 库或徽标），请使用较长的缓存时间。默认值 15552000 秒（180 天）适用于大多数静态资产。
@@ -2999,39 +3021,39 @@ STREAM 支持 :x:
 
 LDAP-based single sign-on plugin with session-backed authentication.
 
-| 参数                              | 默认值                                       | 上下文                                                                                        | 可重复    | 描述                                                                               |
-| --------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------- |
-| `USE_LDAP`                        | `no`                                         | multisite                                                                                     | 否        | Enable or disable LDAP SSO authentication.                                         |
-| `LDAP_HOST`                       |                                              | multisite                                                                                     | 否        | LDAP server hostname or IP address.                                                |
-| `LDAP_PORT`                       | `389`                                        | multisite                                                                                     | 否        | LDAP server port (389 for LDAP/STARTTLS, 636 for LDAPS).                           |
-| `LDAP_LDAPS`                      | `no`                                         | multisite                                                                                     | 否        | Use LDAPS (TLS from connection start).                                             |
-| `LDAP_STARTTLS`                   | `no`                                         | multisite                                                                                     | 否        | Use STARTTLS upgrade on LDAP connection.                                           |
-| `LDAP_SSL_VERIFY`                 | `yes`                                        | multisite                                                                                     | 否        | Verify server TLS certificate.                                                     |
-| `LDAP_TIMEOUT`                    | `10000`                                      | multisite                                                                                     | 否        | LDAP socket timeout in milliseconds.                                               |
-| `LDAP_KEEPALIVE_TIMEOUT`          | `60000`                                      | multisite                                                                                     | 否        | LDAP keepalive timeout in milliseconds.                                            |
-| `LDAP_KEEPALIVE_POOL_SIZE`        | `10`                                         | multisite                                                                                     | 否        | LDAP keepalive connection pool size.                                               |
-| `LDAP_KEEPALIVE_POOL_NAME`        |                                              | multisite                                                                                     | 否        | Optional custom LDAP keepalive pool name.                                          |
-| `LDAP_BIND_DN`                    |                                              | multisite                                                                                     | 否        | Optional service account DN used to perform LDAP user searches.                    |
-| `LDAP_BIND_PASSWORD`              |                                              | multisite                                                                                     | 否        | Password for LDAP Bind DN service account.                                         |
-| `LDAP_USER_SEARCH_BASE_DN`        |                                              | multisite                                                                                     | 否        | Base DN for user discovery search (enables enterprise search mode when set).       |
-| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | 否                                                                                 | LDAP user search filter template. Use {username} placeholder. |
-| `LDAP_AUTHZ_FILTER`               |                                              | multisite                                                                                     | 否        | Optional extra LDAP authorization filter (AND-ed with user search filter).         |
-| `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                    | multisite                                                                                     | 否        | LDAP search scope for user lookup.                                                 |
-| `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                     | multisite                                                                                     | 否        | LDAP alias dereferencing mode during user lookup.                                  |
-| `LDAP_USER_SEARCH_SIZE_LIMIT`     | `10`                                         | multisite                                                                                     | 否        | Maximum number of LDAP entries returned by user search.                            |
-| `LDAP_USER_SEARCH_TIME_LIMIT`     | `10`                                         | multisite                                                                                     | 否        | Maximum LDAP user search time in seconds.                                          |
-| `LDAP_USER_SEARCH_ATTRIBUTES`     | `dn`                                         | multisite                                                                                     | 否        | Attributes requested during user search (space separated).                         |
-| `LDAP_USER_SEARCH_DN_FIELD`       | `object_name`                                | multisite                                                                                     | 否        | Preferred field name in search response to extract user DN (e.g. object_name, dn). |
-| `LDAP_USER_SEARCH_REQUIRE_UNIQUE` | `yes`                                        | multisite                                                                                     | 否        | Require exactly one search result before authenticating user.                      |
-| `LDAP_USER_DN_TEMPLATE`           | `uid={username},ou=people,dc=example,dc=com` | multisite                                                                                     | 否        | User DN template used for direct bind fallback. Must include {username} when set.  |
-| `LDAP_USERNAME_REGEX`             | `^[A-Za-z0-9@._-]+$`                         | multisite                                                                                     | 否        | PCRE regex used to validate submitted usernames.                                   |
-| `LDAP_LOGIN_PATH`                 | `/ldap/login`                                | multisite                                                                                     | 否        | Login page path exposed by the LDAP plugin.                                        |
-| `LDAP_LOGOUT_PATH`                | `/ldap/logout`                               | multisite                                                                                     | 否        | Logout path exposed by the LDAP plugin.                                            |
-| `LDAP_SESSION_TTL`                | `3600`                                       | multisite                                                                                     | 否        | LDAP session validity duration in seconds.                                         |
-| `LDAP_REALM`                      | `LDAP SSO`                                   | multisite                                                                                     | 否        | Authentication realm displayed on LDAP login form.                                 |
-| `LDAP_USER_HEADER`                | `X-User`                                     | multisite                                                                                     | 否        | Header to pass authenticated username to upstream (empty to disable).              |
-| `LDAP_REDIRECT_AFTER_LOGIN`       | `/`                                          | multisite                                                                                     | 否        | Fallback relative path after successful login when no redirect target is provided. |
-| `LDAP_REDIRECT_AFTER_LOGOUT`      | `/`                                          | multisite                                                                                     | 否        | Relative path to redirect users to after logout.                                   |
+| 参数                              | 默认值                                                                                                                  | 上下文    | 可重复 | 描述                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------- | ------ | ---------------------------------------------------------------------------------- |
+| `USE_LDAP`                        | `no`                                                                                                                    | multisite | 否     | Enable or disable LDAP SSO authentication.                                         |
+| `LDAP_HOST`                       |                                                                                                                         | multisite | 否     | LDAP server hostname or IP address.                                                |
+| `LDAP_PORT`                       | `389`                                                                                                                   | multisite | 否     | LDAP server port (389 for LDAP/STARTTLS, 636 for LDAPS).                           |
+| `LDAP_LDAPS`                      | `no`                                                                                                                    | multisite | 否     | Use LDAPS (TLS from connection start).                                             |
+| `LDAP_STARTTLS`                   | `no`                                                                                                                    | multisite | 否     | Use STARTTLS upgrade on LDAP connection.                                           |
+| `LDAP_SSL_VERIFY`                 | `yes`                                                                                                                   | multisite | 否     | Verify server TLS certificate.                                                     |
+| `LDAP_TIMEOUT`                    | `10000`                                                                                                                 | multisite | 否     | LDAP socket timeout in milliseconds.                                               |
+| `LDAP_KEEPALIVE_TIMEOUT`          | `60000`                                                                                                                 | multisite | 否     | LDAP keepalive timeout in milliseconds.                                            |
+| `LDAP_KEEPALIVE_POOL_SIZE`        | `10`                                                                                                                    | multisite | 否     | LDAP keepalive connection pool size.                                               |
+| `LDAP_KEEPALIVE_POOL_NAME`        |                                                                                                                         | multisite | 否     | Optional custom LDAP keepalive pool name.                                          |
+| `LDAP_BIND_DN`                    |                                                                                                                         | multisite | 否     | Optional service account DN used to perform LDAP user searches.                    |
+| `LDAP_BIND_PASSWORD`              |                                                                                                                         | multisite | 否     | Password for LDAP Bind DN service account.                                         |
+| `LDAP_USER_SEARCH_BASE_DN`        |                                                                                                                         | multisite | 否     | Base DN for user discovery search (enables enterprise search mode when set).       |
+| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | 否     | LDAP user search filter template. Use {username} placeholder.                      |
+| `LDAP_AUTHZ_FILTER`               |                                                                                                                         | multisite | 否     | Optional extra LDAP authorization filter (AND-ed with user search filter).         |
+| `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                                                                                               | multisite | 否     | LDAP search scope for user lookup.                                                 |
+| `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                                                                                                | multisite | 否     | LDAP alias dereferencing mode during user lookup.                                  |
+| `LDAP_USER_SEARCH_SIZE_LIMIT`     | `10`                                                                                                                    | multisite | 否     | Maximum number of LDAP entries returned by user search.                            |
+| `LDAP_USER_SEARCH_TIME_LIMIT`     | `10`                                                                                                                    | multisite | 否     | Maximum LDAP user search time in seconds.                                          |
+| `LDAP_USER_SEARCH_ATTRIBUTES`     | `dn`                                                                                                                    | multisite | 否     | Attributes requested during user search (space separated).                         |
+| `LDAP_USER_SEARCH_DN_FIELD`       | `object_name`                                                                                                           | multisite | 否     | Preferred field name in search response to extract user DN (e.g. object_name, dn). |
+| `LDAP_USER_SEARCH_REQUIRE_UNIQUE` | `yes`                                                                                                                   | multisite | 否     | Require exactly one search result before authenticating user.                      |
+| `LDAP_USER_DN_TEMPLATE`           | `uid={username},ou=people,dc=example,dc=com`                                                                            | multisite | 否     | User DN template used for direct bind fallback. Must include {username} when set.  |
+| `LDAP_USERNAME_REGEX`             | `^[A-Za-z0-9@._-]+$`                                                                                                    | multisite | 否     | PCRE regex used to validate submitted usernames.                                   |
+| `LDAP_LOGIN_PATH`                 | `/ldap/login`                                                                                                           | multisite | 否     | Login page path exposed by the LDAP plugin.                                        |
+| `LDAP_LOGOUT_PATH`                | `/ldap/logout`                                                                                                          | multisite | 否     | Logout path exposed by the LDAP plugin.                                            |
+| `LDAP_SESSION_TTL`                | `3600`                                                                                                                  | multisite | 否     | LDAP session validity duration in seconds.                                         |
+| `LDAP_REALM`                      | `LDAP SSO`                                                                                                              | multisite | 否     | Authentication realm displayed on LDAP login form.                                 |
+| `LDAP_USER_HEADER`                | `X-User`                                                                                                                | multisite | 否     | Header to pass authenticated username to upstream (empty to disable).              |
+| `LDAP_REDIRECT_AFTER_LOGIN`       | `/`                                                                                                                     | multisite | 否     | Fallback relative path after successful login when no redirect target is provided. |
+| `LDAP_REDIRECT_AFTER_LOGOUT`      | `/`                                                                                                                     | multisite | 否     | Relative path to redirect users to after logout.                                   |
 
 ## Let's Encrypt
 
@@ -3521,13 +3543,13 @@ STREAM 支持 :warning:
 | 设置                                 | 默认值   | 上下文    | 多选 | 描述                                                                                             |
 | ------------------------------------ | -------- | --------- | ---- | ------------------------------------------------------------------------------------------------ |
 | `USE_METRICS`                        | `yes`    | multisite | 否   | **启用指标：** 设置为 `yes` 以启用指标的收集和检索。                                             |
-| `METRICS_MEMORY_SIZE`                | `16m`    | global    | 否   | **内存大小：** 指标内部存储的大小（例如，`16m`、`32m`）。                                        |
+| `METRICS_MEMORY_SIZE`                | `16m`    | global    | 否   | **内存大小：** 指标内部存储的大小（例如，`8192`、`16m`、`32m`）。                                |
 | `METRICS_MAX_BLOCKED_REQUESTS`       | `1000`   | global    | 否   | **最大被阻止请求数：** 每个工作进程要存储的最大被阻止请求数。                                    |
 | `METRICS_MAX_BLOCKED_REQUESTS_REDIS` | `100000` | global    | 否   | **Redis 最大被阻止请求数：** 在 Redis 中要存储的最大被阻止请求数。                               |
 | `METRICS_SAVE_TO_REDIS`              | `yes`    | global    | 否   | **将指标保存到 Redis：** 设置为 `yes` 以将指标（计数器和表）保存到 Redis，以实现集群范围的聚合。 |
 
 !!! tip "调整内存分配大小"
-    应根据您的流量和实例数量调整 `METRICS_MEMORY_SIZE` 设置。对于高流量网站，请考虑增加此值以确保所有指标都能被捕获而不会丢失数据。
+    应根据您的流量和实例数量调整 `METRICS_MEMORY_SIZE` 设置。支持原始字节值以及 `k`/`m` 后缀。对于高流量网站，请考虑增加此值以确保所有指标都能被捕获而不会丢失数据。
 
 !!! info "Redis 集成"
     当 BunkerWeb 配置为使用[Redis](#redis)时，指标插件将自动将被阻止的请求数据同步到 Redis 服务器。这提供了跨多个 BunkerWeb 实例的安全事件的集中视图。
@@ -3671,16 +3693,16 @@ STREAM 支持 :warning:
 
     此功能使用 `ALLOWED_METHODS` 设置进行配置，其中方法用 `|` 分隔（默认值：`GET|POST|HEAD`）。如果客户端尝试使用未列出的方法，服务器将以 **405 - Method Not Allowed** 状态响应。
 
-    对于大多数网站，默认的 `GET|POST|HEAD` 就足够了。如果您的应用程序使用 RESTful API，您可能需要包含 `PUT` 和 `DELETE` 等方法。
+    对于大多数网站，默认的 `GET|POST|HEAD` 就足够了。如果您的应用程序使用 RESTful API，您可能需要包含 `PUT` 和 `DELETE` 等方法。自定义的大写方法还可以包含下划线和连字符，以兼容非标准协议（例如 `CCM_POST`、`M-SEARCH`）。
 
     !!! success "安全优势"
         - 防止利用未使用或不必要的 HTTP 方法
         - 通过禁用可能有害的方法来减少攻击面
         - 阻止攻击者使用的 HTTP 方法枚举技术
 
-    | 设置              | 默认值 | 上下文 | 多选  | 描述      |
-    | ----------------- | ------ | ------ | ----- | --------- |
-    | `ALLOWED_METHODS` | `GET   | POST   | HEAD` | multisite | no | **HTTP 方法：** 允许的 HTTP 方法列表，用竖线字符分隔。 |
+    | 设置              | 默认值            | 上下文    | 多选 | 描述                                                                                         |
+    | ----------------- | ----------------- | --------- | ---- | -------------------------------------------------------------------------------------------- |
+    | `ALLOWED_METHODS` | `GET\|POST\|HEAD` | multisite | no   | **HTTP 方法：** 允许的 HTTP 方法列表，用竖线字符分隔。自定义大写方法可以包含下划线和连字符。 |
 
     !!! abstract "CORS 和预检请求"
         如果您的应用程序支持[跨源资源共享 (CORS)](#cors)，您应该在 `ALLOWED_METHODS` 设置中包含 `OPTIONS` 方法以处理预检请求。这确保了浏览器发出跨源请求时的正常功能。
@@ -5760,23 +5782,26 @@ STREAM 支持 :x:
 
 Enable SSO authentication for the BunkerWeb web interface by reading headers set by upstream authentication proxies (Authentik, Authelia, Keycloak, Traefik Forward Auth, etc.)
 
-| 参数                          | 默认值              | 上下文 | 可重复 | 描述                                                                                             |
-| ----------------------------- | ------------------- | ------ | ------ | ------------------------------------------------------------------------------------------------ |
-| `USE_UI_SSO`                  | `no`                | global | 否     | Enable or disable UI Single Sign-On authentication for the web interface                         |
-| `UI_SSO_HEADER_USERNAME`      | `X-User`            | global | 否     | HTTP header containing the authenticated username                                                |
-| `UI_SSO_HEADER_EMAIL`         | `X-Email`           | global | 否     | HTTP header containing the user's email address                                                  |
-| `UI_SSO_HEADER_GROUPS`        | `X-Groups`          | global | 否     | HTTP header containing the user's groups (comma or space separated)                              |
-| `UI_SSO_HEADER_NAME`          | `X-Name`            | global | 否     | HTTP header containing the user's display name                                                   |
-| `UI_SSO_TRUSTED_IPS`          | `127.0.0.1,::1`     | global | 否     | Comma-separated list of trusted IP addresses or CIDR ranges that are allowed to send SSO headers |
-| `UI_SSO_AUTO_CREATE_USERS`    | `yes`               | global | 否     | Automatically create new users when they authenticate via SSO for the first time                 |
-| `UI_SSO_DEFAULT_ROLE`         | `reader`            | global | 否     | Default role assigned to new SSO users when no group mapping matches                             |
-| `UI_SSO_GROUP_ADMIN`          |                     | global | 否     | Group name that grants admin role (highest priority)                                             |
-| `UI_SSO_GROUP_WRITER`         |                     | global | 否     | Group name that grants writer role                                                               |
-| `UI_SSO_GROUP_READER`         |                     | global | 否     | Group name that grants reader role                                                               |
-| `UI_SSO_FALLBACK_TO_LOGIN`    | `yes`               | global | 否     | Allow users to fall back to normal login when SSO headers are not present                        |
-| `UI_SSO_UPDATE_USER_ON_LOGIN` | `yes`               | global | 否     | Update user information (email, role) from SSO headers on each login                             |
-| `UI_SSO_ACCOUNT_LINKING`      | `username_or_email` | global | 否     | How to match incoming SSO users to local accounts                                                |
-| `UI_SSO_LOGOUT_REDIRECT_URL`  |                     | global | 否     | URL to redirect users to after logout (e.g., SSO provider logout endpoint)                       |
+| 参数                              | 默认值              | 上下文 | 可重复 | 描述                                                                                                                                        |
+| --------------------------------- | ------------------- | ------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_UI_SSO`                      | `no`                | global | 否     | Enable or disable UI Single Sign-On authentication for the web interface                                                                    |
+| `UI_SSO_PROVIDER`                 | `custom`            | global | 否     | Select your SSO provider to auto-configure headers and group parsing. Use 'Custom' for manual header configuration.                         |
+| `UI_SSO_HEADER_USERNAME`          | `X-User`            | global | 否     | HTTP header containing the authenticated username                                                                                           |
+| `UI_SSO_HEADER_EMAIL`             | `X-Email`           | global | 否     | HTTP header containing the user's email address                                                                                             |
+| `UI_SSO_HEADER_GROUPS`            | `X-Groups`          | global | 否     | HTTP header containing the user's groups (comma or space separated)                                                                         |
+| `UI_SSO_HEADER_NAME`              | `X-Name`            | global | 否     | HTTP header containing the user's display name                                                                                              |
+| `UI_SSO_TRUSTED_IPS`              | `127.0.0.1,::1`     | global | 否     | Comma-separated list of trusted IP addresses or CIDR ranges that are allowed to send SSO headers                                            |
+| `UI_SSO_AUTO_CREATE_USERS`        | `yes`               | global | 否     | Automatically create new users when they authenticate via SSO for the first time                                                            |
+| `UI_SSO_DEFAULT_ROLE`             | `reader`            | global | 否     | Default role assigned to new SSO users when no group mapping matches                                                                        |
+| `UI_SSO_GROUP_ADMIN`              |                     | global | 否     | Group name that grants admin role (highest priority)                                                                                        |
+| `UI_SSO_GROUP_WRITER`             |                     | global | 否     | Group name that grants writer role                                                                                                          |
+| `UI_SSO_GROUP_READER`             |                     | global | 否     | Group name that grants reader role                                                                                                          |
+| `UI_SSO_FALLBACK_TO_LOGIN`        | `yes`               | global | 否     | Allow users to fall back to normal login when SSO headers are not present                                                                   |
+| `UI_SSO_UPDATE_USER_ON_LOGIN`     | `yes`               | global | 否     | Update user information (email) from SSO headers on each login                                                                              |
+| `UI_SSO_SYNC_ROLES`               | `no`                | global | 否     | Synchronize user roles from SSO group mappings on each login when the groups header is present and at least one group mapping is configured |
+| `UI_SSO_SYNC_ROLES_PROTECT_ADMIN` | `yes`               | global | 否     | Prevent SSO role sync from downgrading users who currently have the admin role                                                              |
+| `UI_SSO_ACCOUNT_LINKING`          | `username_or_email` | global | 否     | How to match incoming SSO users to local accounts                                                                                           |
+| `UI_SSO_LOGOUT_REDIRECT_URL`      |                     | global | 否     | URL to redirect users to after logout (e.g., SSO provider logout endpoint)                                                                  |
 
 ## User Manager <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
@@ -5979,3 +6004,14 @@ Whitelist、Greylist 和 Blacklist 插件提供的 `*_URLS` 设置共用同一�
 (?:^|\s)FriendlyScanner(?:\s|$)
 TrustedMonitor/\d+\.\d+
 ```
+
+## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
+
+
+STREAM 支持 :white_check_mark:
+
+Adds wildcard server_name support (*.domain) for services.
+
+| 参数           | 默认值 | 上下文    | 可重复 | 描述                                                                                              |
+| -------------- | ------ | --------- | ------ | ------------------------------------------------------------------------------------------------- |
+| `USE_WILDCARD` | `no`   | multisite | 否     | Enable wildcard server_name for this service (adds *.domain for the first domain in SERVER_NAME). |

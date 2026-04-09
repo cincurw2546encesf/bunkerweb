@@ -224,6 +224,28 @@ Passer en mode `detect` aide à identifier et corriger les faux positifs sans im
     USE_UDP: "no"
     ```
 
+=== "Désactiver les modes d'écoute"
+
+    Vous pouvez désactiver certains modes d'écoute en laissant les paramètres de port vides :
+
+    ```yaml
+    # Désactiver l'écoute HTTP (HTTPS uniquement)
+    HTTP_PORT: ""
+    HTTPS_PORT: "8443"
+
+    # Désactiver l'écoute HTTPS (HTTP uniquement)
+    HTTP_PORT: "8080"
+    HTTPS_PORT: ""
+
+    # Stream : désactiver l'écoute non SSL (SSL uniquement)
+    LISTEN_STREAM_PORT: ""
+    LISTEN_STREAM_PORT_SSL: "4242"
+
+    # Stream : désactiver l'écoute SSL (non SSL uniquement)
+    LISTEN_STREAM_PORT: "1337"
+    LISTEN_STREAM_PORT_SSL: ""
+    ```
+
 ## ACME <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
@@ -1249,12 +1271,12 @@ Comment ça marche :
 
 ### Paramètres
 
-| Paramètre                 | Défaut                     | Contexte  | Multiple | Description                                                  |
-| ------------------------- | -------------------------- | --------- | -------- | ------------------------------------------------------------ | --- |
-| `USE_CLIENT_CACHE`        | `no`                       | multisite | non      | Activer la mise en cache côté client des fichiers statiques. |
-| `CLIENT_CACHE_EXTENSIONS` | `jpg                       | jpeg      | png      | bmp                                                          | ico | svg | tif | css | js | otf | ttf | eot | woff | woff2` | global | non | Extensions mises en cache (séparées par ` | `). |
-| `CLIENT_CACHE_CONTROL`    | `public, max-age=15552000` | multisite | non      | Valeur de l’en‑tête HTTP Cache-Control.                      |
-| `CLIENT_CACHE_ETAG`       | `yes`                      | multisite | non      | Envoi d’un ETag pour les ressources statiques.               |
+| Paramètre                 | Défaut                                                                    | Contexte  | Multiple | Description                                                  |
+| ------------------------- | ------------------------------------------------------------------------- | --------- | -------- | ------------------------------------------------------------ | --- |
+| `USE_CLIENT_CACHE`        | `no`                                                                      | multisite | non      | Activer la mise en cache côté client des fichiers statiques. |
+| `CLIENT_CACHE_EXTENSIONS` | `jpg\|jpeg\|png\|bmp\|ico\|svg\|tif\|css\|js\|otf\|ttf\|eot\|woff\|woff2` | global    | non      | Extensions mises en cache (séparées par `                    | `). |
+| `CLIENT_CACHE_CONTROL`    | `public, max-age=15552000`                                                | multisite | non      | Valeur de l’en‑tête HTTP Cache-Control.                      |
+| `CLIENT_CACHE_ETAG`       | `yes`                                                                     | multisite | non      | Envoi d’un ETag pour les ressources statiques.               |
 
 !!! tip "Optimiser le cache"
     Contenu fréquemment mis à jour : durée plus courte. Contenu versionné ou peu changeant : durée plus longue. La valeur par défaut (180 jours) convient souvent.
@@ -2678,39 +2700,39 @@ Prise en charge STREAM :x:
 
 LDAP-based single sign-on plugin with session-backed authentication.
 
-| Paramètre                         | Valeur par défaut                            | Contexte                                                                                      | Multiple  | Description                                                                        |
-| --------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------- |
-| `USE_LDAP`                        | `no`                                         | multisite                                                                                     | non       | Enable or disable LDAP SSO authentication.                                         |
-| `LDAP_HOST`                       |                                              | multisite                                                                                     | non       | LDAP server hostname or IP address.                                                |
-| `LDAP_PORT`                       | `389`                                        | multisite                                                                                     | non       | LDAP server port (389 for LDAP/STARTTLS, 636 for LDAPS).                           |
-| `LDAP_LDAPS`                      | `no`                                         | multisite                                                                                     | non       | Use LDAPS (TLS from connection start).                                             |
-| `LDAP_STARTTLS`                   | `no`                                         | multisite                                                                                     | non       | Use STARTTLS upgrade on LDAP connection.                                           |
-| `LDAP_SSL_VERIFY`                 | `yes`                                        | multisite                                                                                     | non       | Verify server TLS certificate.                                                     |
-| `LDAP_TIMEOUT`                    | `10000`                                      | multisite                                                                                     | non       | LDAP socket timeout in milliseconds.                                               |
-| `LDAP_KEEPALIVE_TIMEOUT`          | `60000`                                      | multisite                                                                                     | non       | LDAP keepalive timeout in milliseconds.                                            |
-| `LDAP_KEEPALIVE_POOL_SIZE`        | `10`                                         | multisite                                                                                     | non       | LDAP keepalive connection pool size.                                               |
-| `LDAP_KEEPALIVE_POOL_NAME`        |                                              | multisite                                                                                     | non       | Optional custom LDAP keepalive pool name.                                          |
-| `LDAP_BIND_DN`                    |                                              | multisite                                                                                     | non       | Optional service account DN used to perform LDAP user searches.                    |
-| `LDAP_BIND_PASSWORD`              |                                              | multisite                                                                                     | non       | Password for LDAP Bind DN service account.                                         |
-| `LDAP_USER_SEARCH_BASE_DN`        |                                              | multisite                                                                                     | non       | Base DN for user discovery search (enables enterprise search mode when set).       |
-| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | non                                                                                | LDAP user search filter template. Use {username} placeholder. |
-| `LDAP_AUTHZ_FILTER`               |                                              | multisite                                                                                     | non       | Optional extra LDAP authorization filter (AND-ed with user search filter).         |
-| `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                    | multisite                                                                                     | non       | LDAP search scope for user lookup.                                                 |
-| `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                     | multisite                                                                                     | non       | LDAP alias dereferencing mode during user lookup.                                  |
-| `LDAP_USER_SEARCH_SIZE_LIMIT`     | `10`                                         | multisite                                                                                     | non       | Maximum number of LDAP entries returned by user search.                            |
-| `LDAP_USER_SEARCH_TIME_LIMIT`     | `10`                                         | multisite                                                                                     | non       | Maximum LDAP user search time in seconds.                                          |
-| `LDAP_USER_SEARCH_ATTRIBUTES`     | `dn`                                         | multisite                                                                                     | non       | Attributes requested during user search (space separated).                         |
-| `LDAP_USER_SEARCH_DN_FIELD`       | `object_name`                                | multisite                                                                                     | non       | Preferred field name in search response to extract user DN (e.g. object_name, dn). |
-| `LDAP_USER_SEARCH_REQUIRE_UNIQUE` | `yes`                                        | multisite                                                                                     | non       | Require exactly one search result before authenticating user.                      |
-| `LDAP_USER_DN_TEMPLATE`           | `uid={username},ou=people,dc=example,dc=com` | multisite                                                                                     | non       | User DN template used for direct bind fallback. Must include {username} when set.  |
-| `LDAP_USERNAME_REGEX`             | `^[A-Za-z0-9@._-]+$`                         | multisite                                                                                     | non       | PCRE regex used to validate submitted usernames.                                   |
-| `LDAP_LOGIN_PATH`                 | `/ldap/login`                                | multisite                                                                                     | non       | Login page path exposed by the LDAP plugin.                                        |
-| `LDAP_LOGOUT_PATH`                | `/ldap/logout`                               | multisite                                                                                     | non       | Logout path exposed by the LDAP plugin.                                            |
-| `LDAP_SESSION_TTL`                | `3600`                                       | multisite                                                                                     | non       | LDAP session validity duration in seconds.                                         |
-| `LDAP_REALM`                      | `LDAP SSO`                                   | multisite                                                                                     | non       | Authentication realm displayed on LDAP login form.                                 |
-| `LDAP_USER_HEADER`                | `X-User`                                     | multisite                                                                                     | non       | Header to pass authenticated username to upstream (empty to disable).              |
-| `LDAP_REDIRECT_AFTER_LOGIN`       | `/`                                          | multisite                                                                                     | non       | Fallback relative path after successful login when no redirect target is provided. |
-| `LDAP_REDIRECT_AFTER_LOGOUT`      | `/`                                          | multisite                                                                                     | non       | Relative path to redirect users to after logout.                                   |
+| Paramètre                         | Valeur par défaut                                                                                                       | Contexte  | Multiple | Description                                                                        |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------- | -------- | ---------------------------------------------------------------------------------- |
+| `USE_LDAP`                        | `no`                                                                                                                    | multisite | non      | Enable or disable LDAP SSO authentication.                                         |
+| `LDAP_HOST`                       |                                                                                                                         | multisite | non      | LDAP server hostname or IP address.                                                |
+| `LDAP_PORT`                       | `389`                                                                                                                   | multisite | non      | LDAP server port (389 for LDAP/STARTTLS, 636 for LDAPS).                           |
+| `LDAP_LDAPS`                      | `no`                                                                                                                    | multisite | non      | Use LDAPS (TLS from connection start).                                             |
+| `LDAP_STARTTLS`                   | `no`                                                                                                                    | multisite | non      | Use STARTTLS upgrade on LDAP connection.                                           |
+| `LDAP_SSL_VERIFY`                 | `yes`                                                                                                                   | multisite | non      | Verify server TLS certificate.                                                     |
+| `LDAP_TIMEOUT`                    | `10000`                                                                                                                 | multisite | non      | LDAP socket timeout in milliseconds.                                               |
+| `LDAP_KEEPALIVE_TIMEOUT`          | `60000`                                                                                                                 | multisite | non      | LDAP keepalive timeout in milliseconds.                                            |
+| `LDAP_KEEPALIVE_POOL_SIZE`        | `10`                                                                                                                    | multisite | non      | LDAP keepalive connection pool size.                                               |
+| `LDAP_KEEPALIVE_POOL_NAME`        |                                                                                                                         | multisite | non      | Optional custom LDAP keepalive pool name.                                          |
+| `LDAP_BIND_DN`                    |                                                                                                                         | multisite | non      | Optional service account DN used to perform LDAP user searches.                    |
+| `LDAP_BIND_PASSWORD`              |                                                                                                                         | multisite | non      | Password for LDAP Bind DN service account.                                         |
+| `LDAP_USER_SEARCH_BASE_DN`        |                                                                                                                         | multisite | non      | Base DN for user discovery search (enables enterprise search mode when set).       |
+| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | non      | LDAP user search filter template. Use {username} placeholder.                      |
+| `LDAP_AUTHZ_FILTER`               |                                                                                                                         | multisite | non      | Optional extra LDAP authorization filter (AND-ed with user search filter).         |
+| `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                                                                                               | multisite | non      | LDAP search scope for user lookup.                                                 |
+| `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                                                                                                | multisite | non      | LDAP alias dereferencing mode during user lookup.                                  |
+| `LDAP_USER_SEARCH_SIZE_LIMIT`     | `10`                                                                                                                    | multisite | non      | Maximum number of LDAP entries returned by user search.                            |
+| `LDAP_USER_SEARCH_TIME_LIMIT`     | `10`                                                                                                                    | multisite | non      | Maximum LDAP user search time in seconds.                                          |
+| `LDAP_USER_SEARCH_ATTRIBUTES`     | `dn`                                                                                                                    | multisite | non      | Attributes requested during user search (space separated).                         |
+| `LDAP_USER_SEARCH_DN_FIELD`       | `object_name`                                                                                                           | multisite | non      | Preferred field name in search response to extract user DN (e.g. object_name, dn). |
+| `LDAP_USER_SEARCH_REQUIRE_UNIQUE` | `yes`                                                                                                                   | multisite | non      | Require exactly one search result before authenticating user.                      |
+| `LDAP_USER_DN_TEMPLATE`           | `uid={username},ou=people,dc=example,dc=com`                                                                            | multisite | non      | User DN template used for direct bind fallback. Must include {username} when set.  |
+| `LDAP_USERNAME_REGEX`             | `^[A-Za-z0-9@._-]+$`                                                                                                    | multisite | non      | PCRE regex used to validate submitted usernames.                                   |
+| `LDAP_LOGIN_PATH`                 | `/ldap/login`                                                                                                           | multisite | non      | Login page path exposed by the LDAP plugin.                                        |
+| `LDAP_LOGOUT_PATH`                | `/ldap/logout`                                                                                                          | multisite | non      | Logout path exposed by the LDAP plugin.                                            |
+| `LDAP_SESSION_TTL`                | `3600`                                                                                                                  | multisite | non      | LDAP session validity duration in seconds.                                         |
+| `LDAP_REALM`                      | `LDAP SSO`                                                                                                              | multisite | non      | Authentication realm displayed on LDAP login form.                                 |
+| `LDAP_USER_HEADER`                | `X-User`                                                                                                                | multisite | non      | Header to pass authenticated username to upstream (empty to disable).              |
+| `LDAP_REDIRECT_AFTER_LOGIN`       | `/`                                                                                                                     | multisite | non      | Fallback relative path after successful login when no redirect target is provided. |
+| `LDAP_REDIRECT_AFTER_LOGOUT`      | `/`                                                                                                                     | multisite | non      | Relative path to redirect users to after logout.                                   |
 
 ## Let's Encrypt
 
@@ -3108,38 +3130,120 @@ Provides load balancing feature to group of upstreams with optional healthchecks
 
 Prise en charge STREAM :warning:
 
-Le plugin Metrics offre une collecte/visualisation des indicateurs de votre instance BunkerWeb : performances, événements de sécurité, statistiques système…
+Le plugin Metrics fournit des capacités complètes de surveillance et de collecte de données pour votre instance BunkerWeb. Cette fonctionnalité vous permet de suivre divers indicateurs de performance, événements de sécurité et statistiques système, afin d'obtenir des informations précieuses sur le comportement et l'état de santé de vos sites et services protégés.
 
-Comment ça marche :
+**Comment ça marche :**
 
-1. BunkerWeb collecte des métriques lors du traitement des requêtes/réponses.
-2. Compteurs de requêtes bloquées, mesures de perfs et stats sécurité sont enregistrés.
-3. Stockage en mémoire avec limites configurables pour contenir l’usage de ressources.
-4. En multi‑instances, Redis permet d’agréger/centraliser les données.
-5. Accès via API ou [web UI](web-ui.md).
+1. BunkerWeb collecte des métriques clés pendant le traitement des requêtes et des réponses.
+2. Ces métriques incluent des compteurs de requêtes bloquées, des mesures de performance et diverses statistiques liées à la sécurité.
+3. Les données sont stockées efficacement en mémoire, avec des limites configurables pour éviter une consommation excessive de ressources.
+4. Pour les déploiements multi-instances, Redis peut être utilisé pour centraliser et agréger les données de métriques.
+5. Les métriques collectées sont accessibles via l'API ou visualisables dans l'[interface web](web-ui.md).
+6. Ces informations vous aident à identifier les menaces de sécurité, à résoudre les problèmes et à optimiser votre configuration.
 
-### Paramètres
+### Implémentation technique
 
-| Paramètre                            | Défaut   | Contexte  | Multiple | Description                                                        |
-| ------------------------------------ | -------- | --------- | -------- | ------------------------------------------------------------------ |
-| `USE_METRICS`                        | `yes`    | multisite | non      | Activer la collecte et l’accès aux métriques.                      |
-| `METRICS_MEMORY_SIZE`                | `16m`    | global    | non      | Taille du stockage interne (ex. `16m`, `32m`).                     |
-| `METRICS_MAX_BLOCKED_REQUESTS`       | `1000`   | global    | non      | Max de requêtes bloquées conservées par worker.                    |
-| `METRICS_MAX_BLOCKED_REQUESTS_REDIS` | `100000` | global    | non      | Max de requêtes bloquées conservées dans Redis.                    |
-| `METRICS_SAVE_TO_REDIS`              | `yes`    | global    | non      | Sauvegarder compteurs/tableaux dans Redis pour agrégation cluster. |
+Le plugin Metrics fonctionne en :
 
-!!! tip "Dimensionnement mémoire"
-    Ajustez `METRICS_MEMORY_SIZE` selon le trafic et le nombre d’instances.
+- utilisant des dictionnaires partagés dans NGINX, où `metrics_datastore` est utilisé pour HTTP et `metrics_datastore_stream` pour le trafic TCP/UDP ;
+- s'appuyant sur un cache LRU pour un stockage efficace en mémoire ;
+- synchronisant périodiquement les données entre les workers à l'aide de timers ;
+- stockant des informations détaillées sur les requêtes bloquées, notamment l'adresse IP du client, le pays, l'horodatage, les détails de la requête et le motif du blocage ;
+- prenant en charge des métriques spécifiques aux plugins via une interface commune de collecte de métriques ;
+- fournissant des points d'accès API pour interroger les métriques collectées.
+
+### Utilisation
+
+Suivez ces étapes pour configurer et utiliser la fonctionnalité Metrics :
+
+1. **Activez la fonctionnalité :** la collecte de métriques est activée par défaut. Vous pouvez la contrôler avec le paramètre `USE_METRICS`.
+2. **Configurez l'allocation mémoire :** définissez la quantité de mémoire allouée au stockage des métriques avec le paramètre `METRICS_MEMORY_SIZE`.
+3. **Définissez les limites de stockage :** indiquez combien de requêtes bloquées stocker par worker et dans Redis avec les paramètres correspondants.
+4. **Accédez aux données :** consultez les métriques collectées via l'[interface web](web-ui.md) ou les points d'accès API.
+5. **Analysez les informations :** utilisez les données recueillies pour identifier des tendances, détecter des problèmes de sécurité et optimiser votre configuration.
+
+### Métriques collectées
+
+Le plugin Metrics collecte les informations suivantes :
+
+1. **Requêtes bloquées** : pour chaque requête bloquée, les données suivantes sont stockées :
+    - identifiant de requête et horodatage ;
+    - adresse IP du client et pays (si disponible) ;
+    - méthode HTTP et URL ;
+    - code d'état HTTP ;
+    - agent utilisateur ;
+    - motif du blocage et mode de sécurité ;
+    - nom du serveur ;
+    - données supplémentaires liées au motif du blocage.
+
+2. **Compteurs de plugins** : divers compteurs spécifiques aux plugins qui suivent des activités et événements.
+
+### Accès API
+
+Les données de métriques sont accessibles via les points d'accès API internes de BunkerWeb :
+
+- **Point d'accès** : `/metrics/{filter}`
+- **Méthode** : GET
+- **Description** : récupère les données de métriques selon le filtre spécifié
+- **Format de réponse** : objet JSON contenant les métriques demandées
+
+Par exemple, `/metrics/requests` renvoie des informations sur les requêtes bloquées.
+
+!!! info "Configuration de l'accès API"
+    Pour accéder aux métriques via l'API, vous devez vous assurer que :
+
+    1. la fonctionnalité API est activée avec `USE_API: "yes"` (activée par défaut) ;
+    2. votre IP cliente est incluse dans le paramètre `API_WHITELIST_IP` (par défaut `127.0.0.0/8`) ;
+    3. vous accédez à l'API sur le port configuré (par défaut `5000` via le paramètre `API_HTTP_PORT`) ;
+    4. vous utilisez la bonne valeur `API_SERVER_NAME` dans l'en-tête Host (par défaut `bwapi`) ;
+    5. si `API_TOKEN` est configuré, vous incluez `Authorization: Bearer <token>` dans les en-têtes de la requête.
+
+    Requêtes typiques :
+
+    Sans jeton (lorsque `API_TOKEN` n'est pas défini) :
+    ```bash
+    curl -H "Host: bwapi" \
+         http://votre-instance-bunkerweb:5000/metrics/requests
+    ```
+
+    Avec jeton (lorsque `API_TOKEN` est défini) :
+    ```bash
+    curl -H "Host: bwapi" \
+         -H "Authorization: Bearer $API_TOKEN" \
+         http://votre-instance-bunkerweb:5000/metrics/requests
+    ```
+
+    Si vous avez personnalisé `API_SERVER_NAME` avec une valeur différente de `bwapi`, utilisez cette valeur dans l'en-tête Host.
+
+    Pour les environnements de production sécurisés, limitez l'accès à l'API à des IP de confiance et activez `API_TOKEN`.
+
+### Paramètres de configuration
+
+| Paramètre                            | Défaut   | Contexte  | Multiple | Description                                                                                                                              |
+| ------------------------------------ | -------- | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_METRICS`                        | `yes`    | multisite | non      | **Activer les métriques :** mettez `yes` pour activer la collecte et la récupération des métriques.                                      |
+| `METRICS_MEMORY_SIZE`                | `16m`    | global    | non      | **Taille mémoire :** taille du stockage interne des métriques (par exemple `8192`, `16m`, `32m`).                                        |
+| `METRICS_MAX_BLOCKED_REQUESTS`       | `1000`   | global    | non      | **Maximum de requêtes bloquées :** nombre maximal de requêtes bloquées à stocker par worker.                                             |
+| `METRICS_MAX_BLOCKED_REQUESTS_REDIS` | `100000` | global    | non      | **Maximum Redis de requêtes bloquées :** nombre maximal de requêtes bloquées à stocker dans Redis.                                       |
+| `METRICS_SAVE_TO_REDIS`              | `yes`    | global    | non      | **Enregistrer les métriques dans Redis :** mettez `yes` pour stocker les métriques (compteurs et tableaux) dans Redis pour l'agrégation. |
+
+!!! tip "Dimensionner l'allocation mémoire"
+    Le paramètre `METRICS_MEMORY_SIZE` doit être ajusté selon votre volume de trafic et le nombre d'instances. Les valeurs brutes en octets et les suffixes `k`/`m` sont pris en charge. Pour les sites à fort trafic, envisagez d'augmenter cette valeur afin de garantir la capture de toutes les métriques sans perte de données.
 
 !!! info "Intégration Redis"
-    Avec [Redis](#redis), les requêtes bloquées sont synchronisées pour une vue centralisée multi‑nœuds.
+    Lorsque BunkerWeb est configuré pour utiliser [Redis](#redis), le plugin Metrics synchronise automatiquement les données de requêtes bloquées avec le serveur Redis. Cela fournit une vue centralisée des événements de sécurité sur plusieurs instances de BunkerWeb.
 
-!!! warning "Performance"
-    Des valeurs trop élevées augmentent l’usage mémoire. Surveillez et ajustez.
+!!! warning "Considérations de performance"
+    Définir des valeurs très élevées pour `METRICS_MAX_BLOCKED_REQUESTS` ou `METRICS_MAX_BLOCKED_REQUESTS_REDIS` peut augmenter l'utilisation de la mémoire. Surveillez les ressources système et ajustez ces valeurs selon vos besoins réels et les ressources disponibles.
 
-### Exemples
+!!! note "Stockage spécifique aux workers"
+    Chaque worker NGINX maintient ses propres métriques en mémoire. Lors de l'accès aux métriques via l'API, les données de tous les workers sont automatiquement agrégées pour fournir une vue complète.
 
-=== "Configuration par défaut"
+### Exemples de configuration
+
+=== "Configuration de base"
+
+    Configuration par défaut adaptée à la plupart des déploiements :
 
     ```yaml
     USE_METRICS: "yes"
@@ -3149,7 +3253,9 @@ Comment ça marche :
     METRICS_SAVE_TO_REDIS: "yes"
     ```
 
-=== "Ressources limitées"
+=== "Environnement à faibles ressources"
+
+    Configuration optimisée pour les environnements disposant de ressources limitées :
 
     ```yaml
     USE_METRICS: "yes"
@@ -3159,7 +3265,9 @@ Comment ça marche :
     METRICS_SAVE_TO_REDIS: "no"
     ```
 
-=== "Fort trafic"
+=== "Environnement à fort trafic"
+
+    Configuration pour des sites à fort trafic qui doivent suivre davantage d'événements de sécurité :
 
     ```yaml
     USE_METRICS: "yes"
@@ -3169,7 +3277,9 @@ Comment ça marche :
     METRICS_SAVE_TO_REDIS: "yes"
     ```
 
-=== "Désactivation"
+=== "Métriques désactivées"
+
+    Configuration avec la collecte de métriques désactivée :
 
     ```yaml
     USE_METRICS: "no"
@@ -3262,16 +3372,16 @@ Que vous ayez besoin de restreindre les méthodes HTTP, de gérer la taille des 
 
     Cette fonctionnalité est configurée avec `ALLOWED_METHODS`, où les méthodes sont listées et séparées par un `|` (défaut : `GET|POST|HEAD`). Si un client tente une méthode non listée, le serveur répondra avec un statut **405 - Method Not Allowed**.
 
-    Pour la plupart des sites web, le défaut `GET|POST|HEAD` est suffisant. Si votre application utilise des API RESTful, vous devrez peut-être inclure `PUT` et `DELETE`.
+    Pour la plupart des sites web, le défaut `GET|POST|HEAD` est suffisant. Si votre application utilise des API RESTful, vous devrez peut-être inclure `PUT` et `DELETE`. Les méthodes personnalisées en majuscules peuvent également contenir des underscores et des tirets pour la compatibilité avec des protocoles non standards (ex. `CCM_POST`, `M-SEARCH`).
 
     !!! success "Avantages en matière de sécurité"
         - Empêche l'exploitation de méthodes HTTP inutilisées ou inutiles
         - Réduit la surface d'attaque en désactivant les méthodes potentiellement dangereuses
         - Bloque les techniques d'énumération de méthodes HTTP utilisées par les attaquants
 
-    | Paramètre         | Défaut | Contexte | Multiple | Description |
-    | ----------------- | ------ | -------- | -------- | ----------- |
-    | `ALLOWED_METHODS` | `GET   | POST     | HEAD`    | multisite   | no | **Méthodes HTTP :** Liste des méthodes HTTP autorisées, séparées par des barres verticales (` | `). |
+    | Paramètre         | Défaut            | Contexte  | Multiple | Description                                                                                   |
+    | ----------------- | ----------------- | --------- | -------- | --------------------------------------------------------------------------------------------- |
+    | `ALLOWED_METHODS` | `GET\|POST\|HEAD` | multisite | no       | **Méthodes HTTP :** Liste des méthodes HTTP autorisées, séparées par des barres verticales (` | `). Les méthodes personnalisées en majuscules peuvent contenir des underscores et des tirets. |
 
     !!! abstract "CORS et requêtes pre-flight"
         Si votre application prend en charge le [Cross-Origin Resource Sharing (CORS)](#cors), vous devriez inclure la méthode `OPTIONS` dans `ALLOWED_METHODS` pour gérer les requêtes pre-flight. Cela garantit le bon fonctionnement pour les navigateurs effectuant des requêtes inter-origines.
@@ -5160,23 +5270,26 @@ Prise en charge STREAM :x:
 
 Enable SSO authentication for the BunkerWeb web interface by reading headers set by upstream authentication proxies (Authentik, Authelia, Keycloak, Traefik Forward Auth, etc.)
 
-| Paramètre                     | Valeur par défaut   | Contexte | Multiple | Description                                                                                      |
-| ----------------------------- | ------------------- | -------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `USE_UI_SSO`                  | `no`                | global   | non      | Enable or disable UI Single Sign-On authentication for the web interface                         |
-| `UI_SSO_HEADER_USERNAME`      | `X-User`            | global   | non      | HTTP header containing the authenticated username                                                |
-| `UI_SSO_HEADER_EMAIL`         | `X-Email`           | global   | non      | HTTP header containing the user's email address                                                  |
-| `UI_SSO_HEADER_GROUPS`        | `X-Groups`          | global   | non      | HTTP header containing the user's groups (comma or space separated)                              |
-| `UI_SSO_HEADER_NAME`          | `X-Name`            | global   | non      | HTTP header containing the user's display name                                                   |
-| `UI_SSO_TRUSTED_IPS`          | `127.0.0.1,::1`     | global   | non      | Comma-separated list of trusted IP addresses or CIDR ranges that are allowed to send SSO headers |
-| `UI_SSO_AUTO_CREATE_USERS`    | `yes`               | global   | non      | Automatically create new users when they authenticate via SSO for the first time                 |
-| `UI_SSO_DEFAULT_ROLE`         | `reader`            | global   | non      | Default role assigned to new SSO users when no group mapping matches                             |
-| `UI_SSO_GROUP_ADMIN`          |                     | global   | non      | Group name that grants admin role (highest priority)                                             |
-| `UI_SSO_GROUP_WRITER`         |                     | global   | non      | Group name that grants writer role                                                               |
-| `UI_SSO_GROUP_READER`         |                     | global   | non      | Group name that grants reader role                                                               |
-| `UI_SSO_FALLBACK_TO_LOGIN`    | `yes`               | global   | non      | Allow users to fall back to normal login when SSO headers are not present                        |
-| `UI_SSO_UPDATE_USER_ON_LOGIN` | `yes`               | global   | non      | Update user information (email, role) from SSO headers on each login                             |
-| `UI_SSO_ACCOUNT_LINKING`      | `username_or_email` | global   | non      | How to match incoming SSO users to local accounts                                                |
-| `UI_SSO_LOGOUT_REDIRECT_URL`  |                     | global   | non      | URL to redirect users to after logout (e.g., SSO provider logout endpoint)                       |
+| Paramètre                         | Valeur par défaut   | Contexte | Multiple | Description                                                                                                                                 |
+| --------------------------------- | ------------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_UI_SSO`                      | `no`                | global   | non      | Enable or disable UI Single Sign-On authentication for the web interface                                                                    |
+| `UI_SSO_PROVIDER`                 | `custom`            | global   | non      | Select your SSO provider to auto-configure headers and group parsing. Use 'Custom' for manual header configuration.                         |
+| `UI_SSO_HEADER_USERNAME`          | `X-User`            | global   | non      | HTTP header containing the authenticated username                                                                                           |
+| `UI_SSO_HEADER_EMAIL`             | `X-Email`           | global   | non      | HTTP header containing the user's email address                                                                                             |
+| `UI_SSO_HEADER_GROUPS`            | `X-Groups`          | global   | non      | HTTP header containing the user's groups (comma or space separated)                                                                         |
+| `UI_SSO_HEADER_NAME`              | `X-Name`            | global   | non      | HTTP header containing the user's display name                                                                                              |
+| `UI_SSO_TRUSTED_IPS`              | `127.0.0.1,::1`     | global   | non      | Comma-separated list of trusted IP addresses or CIDR ranges that are allowed to send SSO headers                                            |
+| `UI_SSO_AUTO_CREATE_USERS`        | `yes`               | global   | non      | Automatically create new users when they authenticate via SSO for the first time                                                            |
+| `UI_SSO_DEFAULT_ROLE`             | `reader`            | global   | non      | Default role assigned to new SSO users when no group mapping matches                                                                        |
+| `UI_SSO_GROUP_ADMIN`              |                     | global   | non      | Group name that grants admin role (highest priority)                                                                                        |
+| `UI_SSO_GROUP_WRITER`             |                     | global   | non      | Group name that grants writer role                                                                                                          |
+| `UI_SSO_GROUP_READER`             |                     | global   | non      | Group name that grants reader role                                                                                                          |
+| `UI_SSO_FALLBACK_TO_LOGIN`        | `yes`               | global   | non      | Allow users to fall back to normal login when SSO headers are not present                                                                   |
+| `UI_SSO_UPDATE_USER_ON_LOGIN`     | `yes`               | global   | non      | Update user information (email) from SSO headers on each login                                                                              |
+| `UI_SSO_SYNC_ROLES`               | `no`                | global   | non      | Synchronize user roles from SSO group mappings on each login when the groups header is present and at least one group mapping is configured |
+| `UI_SSO_SYNC_ROLES_PROTECT_ADMIN` | `yes`               | global   | non      | Prevent SSO role sync from downgrading users who currently have the admin role                                                              |
+| `UI_SSO_ACCOUNT_LINKING`          | `username_or_email` | global   | non      | How to match incoming SSO users to local accounts                                                                                           |
+| `UI_SSO_LOGOUT_REDIRECT_URL`      |                     | global   | non      | URL to redirect users to after logout (e.g., SSO provider logout endpoint)                                                                  |
 
 ## User Manager <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
@@ -5285,3 +5398,14 @@ Exemples de fichiers conformes :
 (?:^|\s)FriendlyScanner(?:\s|$)
 TrustedMonitor/\d+\.\d+
 ```
+
+## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
+
+
+Prise en charge STREAM :white_check_mark:
+
+Adds wildcard server_name support (*.domain) for services.
+
+| Paramètre      | Valeur par défaut | Contexte  | Multiple | Description                                                                                       |
+| -------------- | ----------------- | --------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `USE_WILDCARD` | `no`              | multisite | non      | Enable wildcard server_name for this service (adds *.domain for the first domain in SERVER_NAME). |

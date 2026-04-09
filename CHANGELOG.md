@@ -18,6 +18,7 @@
 - [ALL-IN-ONE] Update CrowdSec version to 1.7.7
 - [UI] Add missing `DEFAULT_SERVER_STREAM` custom config type to the Web UI, allowing creation and management of stream-level default server configurations.
 - [MISC] Update default value for Permissions-Policy header to include additional features (`local-network`, `local-network-access` and `loopback-network`).
+- [MISC] Allow custom uppercase HTTP methods containing underscores and dashes in `ALLOWED_METHODS` (e.g. `CCM_POST`, `M-SEARCH`) for compatibility with non-standard protocols.
 
 ## v1.6.10~rc2 - 2026/03/28
 
