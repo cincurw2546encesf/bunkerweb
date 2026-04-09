@@ -25,7 +25,6 @@ from certbot_concurrency import (
     select_account_id,
 )
 
-
 for deps_path in [join(sep, "usr", "share", "bunkerweb", *paths) for paths in (("deps", "python"), ("utils",), ("db",))]:
     if deps_path not in sys_path:
         sys_path.append(deps_path)
@@ -1142,7 +1141,17 @@ try:
         save_zerossl_api_key_hashes(updated_zerossl_api_key_hashes)
 
         # * Save data to db cache
-        if DATA_PATH.is_dir() and list(DATA_PATH.iterdir()):
+        # Guards: only re-cache if the initial restore succeeded AND we actually have
+        # live certs on disk. Without these guards, a failed restore leaves DATA_PATH
+        # empty (rmtree runs before extraction in Job.restore_cache) and a blind
+        # cache_dir() call would overwrite the good DB row with empty state, losing
+        # the certs from both disk and DB.
+        if not JOB.restore_ok:
+            LOGGER.error("Skipping db cache update: initial cache restore failed, refusing to overwrite good DB state with current disk state.")
+            status = 2
+        elif not DATA_PATH.is_dir() or not any(DATA_PATH.glob("live/*/fullchain.pem")):
+            LOGGER.warning("Skipping db cache update: no live certificates found under DATA_PATH/live/*/fullchain.pem.")
+        else:
             cached, err = JOB.cache_dir(DATA_PATH)
             if not cached:
                 LOGGER.error(f"Error while saving data to db cache : {err}")

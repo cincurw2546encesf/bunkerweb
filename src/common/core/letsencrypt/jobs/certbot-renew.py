@@ -101,8 +101,18 @@ try:
         status = 2
         LOGGER.error("Certificates renewal failed")
 
-    # Save Let's Encrypt data to db cache
-    if DATA_PATH.is_dir() and list(DATA_PATH.iterdir()):
+    # Save Let's Encrypt data to db cache.
+    # Guards: only re-cache if the initial restore succeeded AND we actually have live
+    # certs on disk. Without these guards, a failed restore leaves DATA_PATH empty
+    # (rmtree runs before extraction in Job.restore_cache) and a blind cache_dir() call
+    # would overwrite the good DB row with the empty post-rmtree state, losing the certs
+    # from both disk and DB.
+    if not JOB.restore_ok:
+        LOGGER.error("Skipping db cache update: initial cache restore failed, refusing to overwrite good DB state with current disk state.")
+        status = 2
+    elif not DATA_PATH.is_dir() or not any(DATA_PATH.glob("live/*/fullchain.pem")):
+        LOGGER.warning("Skipping db cache update: no live certificates found under DATA_PATH/live/*/fullchain.pem.")
+    else:
         cached, err = JOB.cache_dir(DATA_PATH)
         if not cached:
             LOGGER.error(f"Error while saving Let's Encrypt data to db cache : {err}")
