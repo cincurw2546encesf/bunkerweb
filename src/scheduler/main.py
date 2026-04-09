@@ -21,7 +21,7 @@ from tarfile import TarFile, open as tar_open
 from threading import Event, Lock
 from time import sleep
 from traceback import format_exc
-from typing import Any, Dict, List, Literal, Optional, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Set, Union, cast
 
 BUNKERWEB_PATH = Path(sep, "usr", "share", "bunkerweb")
 
@@ -280,6 +280,18 @@ def generate_custom_configs(configs: Optional[List[Dict[str, Any]]] = None, *, o
             try:
                 if custom_config.get("is_draft"):
                     continue
+                if SCHEDULER:
+                    compatibility_error = SCHEDULER.db.get_custom_config_compatibility_error(
+                        custom_config["type"],
+                        service_id=custom_config.get("service_id"),
+                        with_drafts=True,
+                    )
+                    if compatibility_error:
+                        LOGGER.warning(
+                            f"Ignoring incompatible custom config \"{custom_config['name']}\""
+                            f"{' for service ' + custom_config['service_id'] if custom_config['service_id'] else ''}: {compatibility_error}"
+                        )
+                        continue
                 if custom_config["data"]:
                     tmp_path = original_path.joinpath(
                         custom_config["type"].replace("_", "-"),
@@ -380,18 +392,26 @@ def generate_external_plugins(original_path: Union[Path, str] = EXTERNAL_PLUGINS
         send_file_to_bunkerweb(original_path, "/pro_plugins" if original_path.as_posix().endswith("/pro/plugins") else "/plugins")
 
 
-def generate_caches():
+def generate_caches() -> Set[str]:
+    """Restore all ``bw_jobs_cache`` rows to disk.
+
+    Returns a set of ``plugin_id/job_name`` identifiers for any cache files whose
+    extraction or write failed. Callers can use this to avoid downstream actions
+    (e.g. re-caching empty state) for affected plugins.
+    """
     assert SCHEDULER is not None
 
     # Fetch metadata only (no binary data) to avoid loading GBs into memory
     job_cache_files = SCHEDULER.db.get_jobs_cache_files(with_data=False)
     plugin_cache_files = set()
     ignored_dirs = set()
+    failed_restores: Set[str] = set()
 
     for job_cache_file in job_cache_files:
         job_path = Path(sep, "var", "cache", "bunkerweb", job_cache_file["plugin_id"])
         cache_path = job_path.joinpath(job_cache_file["service_id"] or "", job_cache_file["file_name"])
         plugin_cache_files.add(cache_path)
+        failure_id = f"{job_cache_file['plugin_id']}/{job_cache_file['job_name']}"
 
         try:
             # Fetch binary data for this single file to keep memory usage bounded
@@ -405,14 +425,44 @@ def generate_caches():
                 if job_cache_file["file_name"].startswith("folder:"):
                     extract_path = Path(job_cache_file["file_name"].split("folder:", 1)[1].rsplit(".tgz", 1)[0])
                 ignored_dirs.add(extract_path.as_posix())
+                # Stage extraction in a sibling directory so a failed extract does not
+                # leave an empty target on disk (which would then be re-cached as empty
+                # state by downstream jobs — the root of the Let's Encrypt data-loss
+                # cascade). On success we swap atomically via rename; on failure we
+                # drop the staging dir and leave the previous cache untouched.
+                staging_path = extract_path.with_name(f".{extract_path.name}.staging")
+                # Reject symlinks at the staging path: rmtree refuses to follow them,
+                # but a subsequent mkdir(exist_ok=True) + extractall() would happily
+                # write into the symlink target. Unlink the symlink so the fresh mkdir
+                # creates a real directory under scheduler control.
+                if staging_path.is_symlink():
+                    staging_path.unlink()
+                rmtree(staging_path, ignore_errors=True)
+                staging_path.mkdir(parents=True, exist_ok=True)
+                try:
+                    with tar_open(fileobj=BytesIO(data), mode="r:gz") as tar:
+                        assert isinstance(tar, TarFile)
+                        # tar_filter="auto" preserves symlinks when the archive contains
+                        # them (e.g. Let's Encrypt live/* → archive/*) while still
+                        # applying the stricter "data" filter to link-free archives.
+                        safe_tar_extractall(tar, staging_path, tar_filter="auto")
+                except Exception as e:
+                    LOGGER.error(
+                        f"Error extracting tar file for job '{job_cache_file['job_name']}' "
+                        f"(plugin '{job_cache_file['plugin_id']}', file '{job_cache_file['file_name']}'): {e}"
+                    )
+                    rmtree(staging_path, ignore_errors=True)
+                    failed_restores.add(failure_id)
+                    continue
+
                 rmtree(extract_path, ignore_errors=True)
-                extract_path.mkdir(parents=True, exist_ok=True)
-                with tar_open(fileobj=BytesIO(data), mode="r:gz") as tar:
-                    assert isinstance(tar, TarFile)
-                    try:
-                        safe_tar_extractall(tar, extract_path)
-                    except Exception as e:
-                        LOGGER.error(f"Error extracting tar file: {e}")
+                try:
+                    staging_path.rename(extract_path)
+                except OSError as e:
+                    LOGGER.error(f"Error swapping staged cache into place for job '{job_cache_file['job_name']}' (plugin '{job_cache_file['plugin_id']}'): {e}")
+                    rmtree(staging_path, ignore_errors=True)
+                    failed_restores.add(failure_id)
+                    continue
                 LOGGER.debug(f"Restored cache directory {extract_path}")
                 continue
             _write_atomic(cache_path, data)
@@ -421,9 +471,13 @@ def generate_caches():
                 cache_path.chmod(desired_perms)
             LOGGER.debug(f"Restored cache file {job_cache_file['file_name']}")
         except BaseException as e:
-            LOGGER.error(f"Exception while restoring cache file {job_cache_file['file_name']} :\n{e}")
+            LOGGER.error(
+                f"Exception while restoring cache file '{job_cache_file['file_name']}' "
+                f"for job '{job_cache_file['job_name']}' (plugin '{job_cache_file['plugin_id']}') :\n{e}"
+            )
+            failed_restores.add(failure_id)
 
-    if job_path.is_dir():
+    if job_cache_files and job_path.is_dir():
         for resource_path in list(job_path.rglob("*")):
             if resource_path.as_posix().startswith(tuple(ignored_dirs)):
                 continue
@@ -446,6 +500,8 @@ def generate_caches():
             desired_perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IXUSR | S_IXGRP  # 0o750
             if resource_path.stat().st_mode & 0o777 != desired_perms:
                 resource_path.chmod(desired_perms)
+
+    return failed_restores
 
 
 def generate_configs(logger: Logger = LOGGER) -> bool:
@@ -944,7 +1000,12 @@ if __name__ == "__main__":
                     env["TZ"] = tz
 
         LOGGER.info("Running plugins download jobs ...")
-        SCHEDULER.run_once(["misc", "pro"])
+        if not SCHEDULER.run_once(["misc", "pro"]):
+            failed = SCHEDULER.failed_jobs
+            if failed:
+                LOGGER.error(f"Plugin download jobs failed: {', '.join(failed)}")
+            else:
+                LOGGER.error("At least one plugin download job failed (no failed-job names captured)")
 
         db_metadata = SCHEDULER.db.get_metadata()
         if db_metadata["pro_plugins_changed"] or db_metadata["external_plugins_changed"]:
@@ -1020,11 +1081,20 @@ if __name__ == "__main__":
                     changed_plugins=changed_plugins,
                     ignore_plugins=["misc", "pro"] if FIRST_START else None,
                 ):
-                    LOGGER.error("At least one job in run_once() failed")
+                    failed = SCHEDULER.failed_jobs
+                    if failed:
+                        LOGGER.error(f"Jobs failed in run_once(): {', '.join(failed)}")
+                    else:
+                        LOGGER.error("At least one job in run_once() failed (no failed-job names captured)")
                 else:
                     LOGGER.info("All jobs in run_once() were successful")
                     if SCHEDULER.db.readonly:
-                        generate_caches()
+                        failed_restores = generate_caches()
+                        if failed_restores:
+                            LOGGER.error(
+                                f"generate_caches() failed to restore: {', '.join(sorted(failed_restores))}. "
+                                "Affected plugins will run with stale or empty on-disk cache."
+                            )
                 healthcheck_job_run = False
                 # Jobs may have created files needed by config templates (e.g. api-server-cert.pem)
                 if FIRST_START:
