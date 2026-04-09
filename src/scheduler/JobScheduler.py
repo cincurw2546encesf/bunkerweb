@@ -47,6 +47,10 @@ class JobScheduler(ApiCaller):
         self.__lock = lock
         self.__thread_lock = Lock()
         self.__job_success = True
+        # Names of jobs that failed in the most recent run_once/run_pending batch. Exposed
+        # via the ``failed_jobs`` property so callers can log which specific jobs failed
+        # instead of only knowing that "at least one" did.
+        self.__failed_jobs: List[str] = []
         self.__job_reload = False
         self.__executor = ThreadPoolExecutor(max_workers=min(8, effective_cpu_count() * 4))
         self.__compiled_regexes = self.__compile_regexes()
@@ -225,6 +229,7 @@ class JobScheduler(ApiCaller):
             self.__logger.error(f"Exception while executing job '{name}' from plugin '{plugin}': {e}")
             with self.__thread_lock:
                 self.__job_success = False
+                self.__failed_jobs.append(f"{plugin}/{name}")
         end_date = datetime.now().astimezone()
 
         if ret == 1:
@@ -236,6 +241,7 @@ class JobScheduler(ApiCaller):
             self.__logger.error(f"Error while executing job '{name}' from plugin '{plugin}'")
             with self.__thread_lock:
                 self.__job_success = False
+                self.__failed_jobs.append(f"{plugin}/{name}")
 
         # Use the executor to manage threads
         self.__executor.submit(self.__add_job_run, name, success, start_date, end_date)
@@ -298,7 +304,9 @@ class JobScheduler(ApiCaller):
             self.__logger.error("Database is in read-only mode, pending jobs will not be executed")
             return True
 
-        self.__job_success = True
+        with self.__thread_lock:
+            self.__job_success = True
+            self.__failed_jobs = []
         self.__job_reload = False
 
         try:
@@ -350,12 +358,20 @@ class JobScheduler(ApiCaller):
 
             self.__update_cache_permissions()
 
+    @property
+    def failed_jobs(self) -> List[str]:
+        """Names of jobs (``plugin/name``) that failed in the most recent run batch."""
+        with self.__thread_lock:
+            return self.__failed_jobs.copy()
+
     def run_once(self, plugins: Optional[List[str]] = None, ignore_plugins: Optional[List[str]] = None) -> bool:
         if self.try_database_readonly():
             self.__logger.error("Database is in read-only mode, jobs will not be executed")
             return True
 
-        self.__job_success = True
+        with self.__thread_lock:
+            self.__job_success = True
+            self.__failed_jobs = []
         self.__job_reload = False
 
         plugins = plugins or []
