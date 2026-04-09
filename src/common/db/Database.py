@@ -122,6 +122,10 @@ class Database:
     )
     RESTRICTED_TEMPLATE_SETTINGS = ("USE_TEMPLATE", "IS_DRAFT")
     MULTISITE_CUSTOM_CONFIG_TYPES = ("server_http", "modsec_crs", "modsec", "server_stream", "crs_plugins_before", "crs_plugins_after")
+    GLOBAL_CRS_SERVICE_SCOPED_MODSEC_CRS_ERROR = (
+        "Service-scoped modsec-crs configs are not supported when USE_MODSECURITY_GLOBAL_CRS is enabled. "
+        "Create a global modsec-crs config and scope it with a Host rule instead."
+    )
     SUFFIX_RX = re_compile(r"(?P<setting>.+)_(?P<suffix>\d+)$")
 
     def __init__(
@@ -1673,7 +1677,9 @@ class Database:
             self.logger.debug(f"Cleaning up {method} old global settings")
             # Collect global settings to delete
             global_settings_to_delete = []
+            global_method_total = 0
             for db_global_config in session.query(Global_values).filter_by(method=method).all():
+                global_method_total += 1
                 key = db_global_config.setting_id
                 if db_global_config.suffix:
                     key = f"{key}_{db_global_config.suffix}"
@@ -1698,10 +1704,26 @@ class Database:
                     self.logger.warning(f"Error processing global config {db_global_config.setting_id}: {e}")
                     continue
 
+            # Data-loss guard (mirror of the SERVER_NAME guard below): refuse the cleanup pass
+            # when it would wipe every single existing global value for this method. A 100% wipe
+            # is almost always a transient state issue — an empty or partially-loaded variables.env
+            # at scheduler startup, a race with the plugin download jobs, or a caller that forgot
+            # to include the current config in its payload — rather than a legitimate intent to
+            # purge everything. Callers that really want to clear all scheduler-method globals
+            # can do so explicitly by deleting individual rows or using the admin API.
+            if method == "scheduler" and global_method_total > 0 and len(global_settings_to_delete) == global_method_total:
+                self.logger.warning(
+                    f"Refusing to delete all {global_method_total} scheduler-method global setting(s) via "
+                    f"save_config — the incoming config would wipe every existing row for method {method!r}. "
+                    f"This almost always indicates a transient variables.env or environment race at scheduler "
+                    f"startup. Aborting save_config to prevent data loss."
+                )
+                return changed_plugins
+
             self.logger.debug(f"Cleaning up {method} old services settings")
             # Collect service settings to delete (skip entirely when global_only to avoid deleting service settings)
             service_settings_to_delete = []
-            for db_service_config in ([] if global_only else session.query(Services_settings).filter_by(method=method).all()):
+            for db_service_config in [] if global_only else session.query(Services_settings).filter_by(method=method).all():
                 key = f"{db_service_config.service_id}_{db_service_config.setting_id}"
                 if db_service_config.suffix:
                     key = f"{key}_{db_service_config.suffix}"
@@ -2848,6 +2870,20 @@ class Database:
 
         return custom_config
 
+    def get_custom_config_compatibility_error(self, config_type: str, *, service_id: Optional[str] = None, with_drafts: bool = True) -> str:
+        """Return a validation error when a custom config is incompatible with current global settings."""
+        normalized_type = config_type.strip().replace("-", "_").lower()
+        if normalized_type != "modsec_crs" or service_id in (None, "", "global"):
+            return ""
+
+        use_global_crs = self.get_config(global_only=True, methods=False, with_drafts=with_drafts, filtered_settings=("USE_MODSECURITY_GLOBAL_CRS",)).get(
+            "USE_MODSECURITY_GLOBAL_CRS", "no"
+        )
+        if isinstance(use_global_crs, dict):
+            use_global_crs = use_global_crs.get("value", "no")
+
+        return self.GLOBAL_CRS_SERVICE_SCOPED_MODSEC_CRS_ERROR if use_global_crs == "yes" else ""
+
     def upsert_custom_config(self, config_type: str, name: str, config: Dict[str, Any], *, service_id: Optional[str] = None, new: bool = False) -> str:
         """Update or insert a custom config in the database"""
         with self._db_session() as session:
@@ -3192,6 +3228,25 @@ class Database:
                 missing_ids = [plugin for plugin in db_ids if plugin not in ids]
 
                 if missing_ids:
+                    # Data-loss guard: refuse the destructive plugin-wide cascade (Settings +
+                    # Global_values + Services_settings + Jobs + Templates + Plugin_pages) when
+                    # the incoming plugins list is entirely empty. An empty list almost always
+                    # signals a transient failure at the caller — a filesystem glob race during
+                    # `check_plugin_changes`, a read-only database window that returned no data,
+                    # a download job that failed after a `clean_pro_plugins` call — rather than a
+                    # legitimate mass-uninstall. Callers that genuinely want to wipe everything
+                    # should use `only_clear_metadata=True`, which is the explicit clean-up path
+                    # and is not affected by this guard.
+                    if not only_clear_metadata and not ids:
+                        self.logger.warning(
+                            f"Refusing to cascade-delete {len(missing_ids)} {_type} plugin(s) via "
+                            f"delete_missing=True because the incoming plugins list is empty. "
+                            f"Aborting update_external_plugins to prevent catastrophic data loss. "
+                            f"Use only_clear_metadata=True for explicit wipe operations. "
+                            f"missing_ids={sorted(missing_ids)}"
+                        )
+                        return ""
+
                     changes = True
                     # Remove plugins that are no longer in the list
                     if not only_clear_metadata:
@@ -3295,14 +3350,37 @@ class Database:
                     missing_ids = [setting for setting in db_ids if setting not in setting_ids]
 
                     if missing_ids:
-                        changes = True
-                        # Remove settings that are no longer in the list
-                        session.query(Settings).filter(Settings.id.in_(missing_ids)).delete()
-                        session.query(Selects).filter(Selects.setting_id.in_(missing_ids)).delete()
-                        session.query(Multiselects).filter(Multiselects.setting_id.in_(missing_ids)).delete()
-                        session.query(Services_settings).filter(Services_settings.setting_id.in_(missing_ids)).delete()
-                        session.query(Global_values).filter(Global_values.setting_id.in_(missing_ids)).delete()
-                        session.query(Template_settings).filter(Template_settings.setting_id.in_(missing_ids)).delete()
+                        # Data-loss guard: same-content reinstalls must never wipe user-set values.
+                        # We detect them by comparing the freshly-computed plugin checksum against
+                        # the one currently stored in the database. Identical checksums mean the
+                        # plugin archive is byte-for-byte the same as what we already have — i.e. a
+                        # spurious re-ingest (non-deterministic tar false positive, idempotent
+                        # re-upload, download-plugins re-run, etc.). A genuine plugin update always
+                        # changes the archive bytes, which flips the checksum and lets the cleanup
+                        # proceed to prune settings that have been truly removed from plugin.json.
+                        # The check is method-agnostic on purpose: checksum equality is a stronger
+                        # signal than any caller-supplied method/version string.
+                        incoming_checksum = plugin.get("checksum")
+                        db_checksum = db_plugin.checksum
+                        preserve_missing = bool(incoming_checksum) and bool(db_checksum) and incoming_checksum == db_checksum
+
+                        if preserve_missing:
+                            missing_preview = sorted(missing_ids)[:10]
+                            overflow = f" ... (+{len(missing_ids) - 10} more)" if len(missing_ids) > 10 else ""
+                            self.logger.info(
+                                f"Plugin {plugin['id']!r} re-ingested with an identical checksum; "
+                                f"preserving {len(missing_ids)} existing setting(s) to avoid data loss "
+                                f"(missing from plugin.json: {missing_preview}{overflow})"
+                            )
+                        else:
+                            changes = True
+                            # Remove settings that are no longer in the list
+                            session.query(Settings).filter(Settings.id.in_(missing_ids)).delete()
+                            session.query(Selects).filter(Selects.setting_id.in_(missing_ids)).delete()
+                            session.query(Multiselects).filter(Multiselects.setting_id.in_(missing_ids)).delete()
+                            session.query(Services_settings).filter(Services_settings.setting_id.in_(missing_ids)).delete()
+                            session.query(Global_values).filter(Global_values.setting_id.in_(missing_ids)).delete()
+                            session.query(Template_settings).filter(Template_settings.setting_id.in_(missing_ids)).delete()
 
                     order = 0
                     plugin_settings = set()
