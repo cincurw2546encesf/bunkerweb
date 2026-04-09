@@ -1,19 +1,19 @@
-certbot==5.4.0
+certbot==5.5.0
 
 # Official certbot plugins
-certbot-dns-cloudflare==5.4.0
-certbot-dns-digitalocean==5.4.0
-certbot-dns-dnsimple==5.4.0
-certbot-dns-dnsmadeeasy==5.4.0
-certbot-dns-gehirn==5.4.0
-certbot-dns-google==5.4.0
-certbot-dns-linode==5.4.0
-certbot-dns-luadns==5.4.0
-certbot-dns-nsone==5.4.0
-certbot-dns-ovh==5.4.0
-certbot-dns-rfc2136==5.4.0
-certbot-dns-route53==5.4.0
-certbot-dns-sakuracloud==5.4.0
+certbot-dns-cloudflare==5.5.0
+certbot-dns-digitalocean==5.5.0
+certbot-dns-dnsimple==5.5.0
+certbot-dns-dnsmadeeasy==5.5.0
+certbot-dns-gehirn==5.5.0
+certbot-dns-google==5.5.0
+certbot-dns-linode==5.5.0
+certbot-dns-luadns==5.5.0
+certbot-dns-nsone==5.5.0
+certbot-dns-ovh==5.5.0
+certbot-dns-rfc2136==5.5.0
+certbot-dns-route53==5.5.0
+certbot-dns-sakuracloud==5.5.0
 
 # Third-party certbot plugins
 certbot-dns-bunny==3.0.0
@@ -34,12 +34,12 @@ certbot-dns-scaleway==0.0.7
 https://github.com/TheophileDiot/certbot-dns-transip/archive/7b4f24d12f6fb21b2145912a8de75ad356cb584f.zip#egg=certbot-dns-transip # 0.5.2
 
 cffi==2.0.0
-cryptography==46.0.6
+cryptography==46.0.7
 importlib-metadata==9.0.0
 maxminddb==3.1.1
 pydantic==2.12.5
 python-magic==0.4.27
-requests==2.33.0
+requests==2.33.1
 schedule==1.2.2
 
 setuptools<81
