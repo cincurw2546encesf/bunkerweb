@@ -318,11 +318,17 @@ def safe_tar_extractall(tar, path, *, tar_filter="data", **kwargs):
     as additional defense-in-depth.
 
     Use tar_filter="tar" instead of "data" when symlinks must be preserved
-    (e.g. Let's Encrypt certs).
+    (e.g. Let's Encrypt certs). Use tar_filter="auto" to let the helper pick
+    "tar" only when the archive actually contains symlink/hardlink members,
+    and fall back to the stricter "data" filter otherwise — useful for
+    restoring trusted cache archives that may or may not contain links
+    depending on the plugin.
     """
     members_to_check = kwargs.get("members")
     if members_to_check is None:
         members_to_check = tar.getmembers()
+    if tar_filter == "auto":
+        tar_filter = "tar" if any(m.issym() or m.islnk() for m in members_to_check) else "data"
     _validate_tar_members(members_to_check, allow_symlinks=(tar_filter != "data"))
     try:
         tar.extractall(path, filter=tar_filter, **kwargs)
