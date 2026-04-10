@@ -77,6 +77,8 @@ reviews:
 
   path_filters:
     - "**"
+    # Override CodeRabbit's default !**/gen/** block — src/common/gen/ is BunkerWeb's settings engine
+    - "**/gen/**"
     - "!src/deps/**"
     # Vendored OWASP Core Rule Set — upstream files, leave crs-setup-v*.conf reviewable
     - "!src/common/core/modsecurity/files/coreruleset-v*/**"
