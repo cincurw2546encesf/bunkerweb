@@ -51,6 +51,8 @@ reviews:
       - "[WIP]"
       - "RFC"
       - "DO NOT REVIEW"
+    ignore_usernames:
+      - "dependabot[bot]"
 
   slop_detection:
     enabled: true
