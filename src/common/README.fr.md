@@ -214,3 +214,25 @@ Passer en mode `detect` aide à identifier et corriger les faux positifs sans im
     USE_TCP: "yes"
     USE_UDP: "no"
     ```
+
+=== "Désactiver les modes d'écoute"
+
+    Vous pouvez désactiver certains modes d'écoute en laissant les paramètres de port vides :
+
+    ```yaml
+    # Désactiver l'écoute HTTP (HTTPS uniquement)
+    HTTP_PORT: ""
+    HTTPS_PORT: "8443"
+
+    # Désactiver l'écoute HTTPS (HTTP uniquement)
+    HTTP_PORT: "8080"
+    HTTPS_PORT: ""
+
+    # Stream : désactiver l'écoute non SSL (SSL uniquement)
+    LISTEN_STREAM_PORT: ""
+    LISTEN_STREAM_PORT_SSL: "4242"
+
+    # Stream : désactiver l'écoute SSL (non SSL uniquement)
+    LISTEN_STREAM_PORT: "1337"
+    LISTEN_STREAM_PORT_SSL: ""
+    ```

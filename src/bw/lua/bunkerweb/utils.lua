@@ -586,7 +586,7 @@ utils.get_rdns = function(ip, ctx, pool)
 	-- Do rDNS query
 	local answers, err = rdns:reverse_query(ip)
 	if not answers then
-		logger:log(ERR, "error while doing reverse DNS query for " .. ip .. " : " .. err)
+		logger:log(WARN, "error while doing reverse DNS query for " .. ip .. " : " .. err)
 		ret_err = err
 	else
 		if answers.errcode then
@@ -1169,6 +1169,11 @@ utils.is_cosocket_available = function()
 		end
 	end
 	return false
+end
+
+utils.is_connection_error = function(err)
+	return err
+		and (err:find("closed", 1, true) or err:find("broken pipe", 1, true) or err:find("connection reset", 1, true))
 end
 
 utils.kill_all_threads = function(threads)

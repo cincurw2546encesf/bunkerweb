@@ -266,7 +266,6 @@ class SwarmController(Controller):
                     self.__pending_apply = False
 
                     try:
-                        to_apply = False
                         while not applied:
                             waiting = self.have_to_wait()
                             self._update_settings()
@@ -274,14 +273,13 @@ class SwarmController(Controller):
                             self._services = self.get_services()
                             self._configs = self.get_configs()
 
-                            if not to_apply and not self.update_needed(self._instances, self._services, configs=self._configs):
+                            if not self.update_needed(self._instances, self._services, configs=self._configs):
                                 if locked:
                                     self.__internal_lock.release()
                                     locked = False
                                 applied = True
                                 continue
 
-                            to_apply = True
                             if waiting:
                                 sleep(1)
                                 continue
