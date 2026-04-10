@@ -2881,6 +2881,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#wildcard-pro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wildcard (PRO)
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3633,7 +3642,7 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 </div>
 </div>
 <h3 id="beispielkonfigurationen">Beispielkonfigurationen</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:4"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><input id="__tabbed_2_4" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Grundlegendes Produktions-Setup</label><label for="__tabbed_2_2">Entwicklungsmodus</label><label for="__tabbed_2_3">Multisite-Konfiguration</label><label for="__tabbed_2_4">Stream-Server-Konfiguration</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:5"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><input id="__tabbed_2_4" name="__tabbed_2" type="radio" /><input id="__tabbed_2_5" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Grundlegendes Produktions-Setup</label><label for="__tabbed_2_2">Entwicklungsmodus</label><label for="__tabbed_2_3">Multisite-Konfiguration</label><label for="__tabbed_2_4">Stream-Server-Konfiguration</label><label for="__tabbed_2_5">Listening-Modi deaktivieren</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Eine Standardkonfiguration für eine Produktionswebsite mit strenger Sicherheit:</p>
@@ -3670,6 +3679,25 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 <span class="nt">LISTEN_STREAM_PORT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1337&quot;</span>
 <span class="nt">USE_TCP</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
 <span class="nt">USE_UDP</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;no&quot;</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Sie können bestimmte Listening-Modi deaktivieren, indem Sie die Porteinstellungen leer lassen:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># HTTP-Listening deaktivieren (nur HTTPS)</span>
+<span class="nt">HTTP_PORT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<span class="nt">HTTPS_PORT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;8443&quot;</span>
+
+<span class="c1"># HTTPS-Listening deaktivieren (nur HTTP)</span>
+<span class="nt">HTTP_PORT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;8080&quot;</span>
+<span class="nt">HTTPS_PORT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+
+<span class="c1"># Stream: Nicht-SSL-Listening deaktivieren (nur SSL)</span>
+<span class="nt">LISTEN_STREAM_PORT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<span class="nt">LISTEN_STREAM_PORT_SSL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;4242&quot;</span>
+
+<span class="c1"># Stream: SSL-Listening deaktivieren (nur Nicht-SSL)</span>
+<span class="nt">LISTEN_STREAM_PORT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1337&quot;</span>
+<span class="nt">LISTEN_STREAM_PORT_SSL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
 </code></pre></div>
 </div>
 </div>
@@ -5820,12 +5848,12 @@ TrustedMonitor/\d+\.\d+
 <li><strong>Lassen Sie BunkerWeb den Rest erledigen:</strong> Nach der Konfiguration werden Caching-Header automatisch auf berechtigte Antworten angewendet.</li>
 </ol>
 <h3 id="konfigurationseinstellungen_5">Konfigurationseinstellungen</h3>
-<p>| Einstellung               | Standard                   | Kontext   | Mehrfach | Beschreibung                                                                                                      |
-| ------------------------- | -------------------------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------- | --- |
-| <code>USE_CLIENT_CACHE</code>        | <code>no</code>                       | multisite | nein     | <strong>Client-Cache aktivieren:</strong> Auf <code>yes</code> setzen, um das clientseitige Caching von statischen Dateien zu aktivieren. |
-| <code>CLIENT_CACHE_EXTENSIONS</code> | <code>jpg                       | jpeg      | png      | bmp                                                                                                               | ico | svg | tif | css | js | otf | ttf | eot | woff | woff2</code> | global | nein | <strong>Cache-fähige Erweiterungen:</strong> Liste der Dateierweiterungen (getrennt durch <code>|</code>), die vom Client zwischengespeichert werden sollen. |
-| <code>CLIENT_CACHE_CONTROL</code>    | <code>public, max-age=15552000</code> | multisite | nein     | <strong>Cache-Control-Header:</strong> Wert für den Cache-Control-HTTP-Header zur Steuerung des Caching-Verhaltens.            |
-| <code>CLIENT_CACHE_ETAG</code>       | <code>yes</code>                      | multisite | nein     | <strong>ETags aktivieren:</strong> Auf <code>yes</code> setzen, um den HTTP-ETag-Header für statische Ressourcen zu senden.               |</p>
+<p>| Einstellung               | Standard                                                                  | Kontext   | Mehrfach | Beschreibung                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| <code>USE_CLIENT_CACHE</code>        | <code>no</code>                                                                      | multisite | nein     | <strong>Client-Cache aktivieren:</strong> Auf <code>yes</code> setzen, um das clientseitige Caching von statischen Dateien zu aktivieren. |
+| <code>CLIENT_CACHE_EXTENSIONS</code> | <code>jpg\|jpeg\|png\|bmp\|ico\|svg\|tif\|css\|js\|otf\|ttf\|eot\|woff\|woff2</code> | global    | nein     | <strong>Cache-fähige Erweiterungen:</strong> Liste der Dateierweiterungen (getrennt durch <code>|</code>), die vom Client zwischengespeichert werden sollen. |
+| <code>CLIENT_CACHE_CONTROL</code>    | <code>public, max-age=15552000</code>                                                | multisite | nein     | <strong>Cache-Control-Header:</strong> Wert für den Cache-Control-HTTP-Header zur Steuerung des Caching-Verhaltens.            |
+| <code>CLIENT_CACHE_ETAG</code>       | <code>yes</code>                                                                     | multisite | nein     | <strong>ETags aktivieren:</strong> Auf <code>yes</code> setzen, um den HTTP-ETag-Header für statische Ressourcen zu senden.               |</p>
 <div class="admonition tip">
 <p class="admonition-title">Optimierung der Cache-Einstellungen</p>
 <p>Für häufig aktualisierte Inhalte sollten Sie kürzere <code>max-age</code>-Werte verwenden. Für Inhalte, die sich selten ändern (wie versionierte JavaScript-Bibliotheken oder Logos), verwenden Sie längere Cache-Zeiten. Der Standardwert von 15552000 Sekunden (180 Tage) ist für die meisten statischen Assets angemessen.</p>
@@ -6291,7 +6319,7 @@ log {
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-db</span>
 
 <span class="w">  </span><span class="nt">crowdsec</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">crowdsecurity/crowdsec:v1.7.6</span><span class="w"> </span><span class="c1"># Verwenden Sie die neueste Version, aber pinnen Sie immer die Version für bessere Stabilität/Sicherheit</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">crowdsecurity/crowdsec:v1.7.7</span><span class="w"> </span><span class="c1"># Verwenden Sie die neueste Version, aber pinnen Sie immer die Version für bessere Stabilität/Sicherheit</span>
 <span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cs-data:/var/lib/crowdsec/data</span><span class="w"> </span><span class="c1"># Zum Persistieren der CrowdSec-Daten</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-logs:/var/log:ro</span><span class="w"> </span><span class="c1"># Die BunkerWeb-Protokolle, die von CrowdSec analysiert werden sollen</span>
@@ -9340,7 +9368,7 @@ TrustedMonitor/\d+\.\d+
 <td><code>16m</code></td>
 <td>global</td>
 <td>nein</td>
-<td><strong>Speichergröße:</strong> Größe des internen Speichers für Metriken (z. B. <code>16m</code>, <code>32m</code>).</td>
+<td><strong>Speichergröße:</strong> Größe des internen Speichers für Metriken (z. B. <code>8192</code>, <code>16m</code>, <code>32m</code>).</td>
 </tr>
 <tr>
 <td><code>METRICS_MAX_BLOCKED_REQUESTS</code></td>
@@ -9367,7 +9395,7 @@ TrustedMonitor/\d+\.\d+
 </table>
 <div class="admonition tip">
 <p class="admonition-title">Dimensionierung der Speicherzuweisung</p>
-<p>Die Einstellung <code>METRICS_MEMORY_SIZE</code> sollte basierend auf Ihrem Verkehrsaufkommen und der Anzahl der Instanzen angepasst werden. Bei stark frequentierten Websites sollten Sie diesen Wert erhöhen, um sicherzustellen, dass alle Metriken ohne Datenverlust erfasst werden.</p>
+<p>Die Einstellung <code>METRICS_MEMORY_SIZE</code> sollte basierend auf Ihrem Verkehrsaufkommen und der Anzahl der Instanzen angepasst werden. Rohwerte in Byte sowie die Suffixe <code>k</code>/<code>m</code> werden unterstützt. Bei stark frequentierten Websites sollten Sie diesen Wert erhöhen, um sicherzustellen, dass alle Metriken ohne Datenverlust erfasst werden.</p>
 </div>
 <div class="admonition info">
 <p class="admonition-title">Redis-Integration</p>
@@ -9567,7 +9595,7 @@ TrustedMonitor/\d+\.\d+
 <p><strong>Steuerung der HTTP-Methoden</strong></p>
 <p>Die Beschränkung der HTTP-Methoden auf nur diejenigen, die von Ihrer Anwendung benötigt werden, ist eine grundlegende Sicherheitsmaßnahme, die dem Prinzip der geringsten Rechte folgt. Indem Sie explizit zulässige HTTP-Methoden definieren, können Sie das Risiko der Ausnutzung durch ungenutzte oder gefährliche Methoden minimieren.</p>
 <p>Diese Funktion wird mit der Einstellung <code>ALLOWED_METHODS</code> konfiguriert, wobei die Methoden aufgelistet und durch ein <code>|</code> getrennt sind (Standard: <code>GET|POST|HEAD</code>). Wenn ein Client versucht, eine nicht aufgelistete Methode zu verwenden, antwortet der Server mit einem <strong>405 - Method Not Allowed</strong>-Status.</p>
-<p>Für die meisten Websites ist der Standardwert <code>GET|POST|HEAD</code> ausreichend. Wenn Ihre Anwendung RESTful-APIs verwendet, müssen Sie möglicherweise Methoden wie <code>PUT</code> und <code>DELETE</code> hinzufügen.</p>
+<p>Für die meisten Websites ist der Standardwert <code>GET|POST|HEAD</code> ausreichend. Wenn Ihre Anwendung RESTful-APIs verwendet, müssen Sie möglicherweise Methoden wie <code>PUT</code> und <code>DELETE</code> hinzufügen. Benutzerdefinierte Großbuchstaben-Methoden dürfen zudem Unterstriche und Bindestriche enthalten, um mit nicht standardisierten Protokollen kompatibel zu sein (z. B. <code>CCM_POST</code>, <code>M-SEARCH</code>).</p>
 <div class="admonition success">
 <p class="admonition-title">Sicherheitsvorteile</p>
 <ul>
@@ -9589,10 +9617,10 @@ TrustedMonitor/\d+\.\d+
 <tbody>
 <tr>
 <td><code>ALLOWED_METHODS</code></td>
-<td><code>GET     | POST    | HEAD</code></td>
+<td><code>GET\|POST\|HEAD</code></td>
 <td>multisite</td>
 <td>nein</td>
-<td><strong>HTTP-Methoden:</strong> Liste der erlaubten HTTP-Methoden, getrennt durch Pipe-Zeichen (<code>|</code>).</td>
+<td><strong>HTTP-Methoden:</strong> Liste der erlaubten HTTP-Methoden, getrennt durch Pipe-Zeichen (<code>|</code>). Benutzerdefinierte Großbuchstaben-Methoden dürfen Unterstriche und Bindestriche enthalten.</td>
 </tr>
 </tbody>
 </table>
@@ -10047,8 +10075,8 @@ TrustedMonitor/\d+\.\d+
 <h3 id="verfugbare-crs-versionen">Verfügbare CRS-Versionen</h3>
 <p>Wählen Sie eine CRS-Version, die Ihren Sicherheitsanforderungen am besten entspricht:</p>
 <ul>
-<li><strong><code>3</code></strong>: Stabile <a href="https://github.com/coreruleset/coreruleset/releases/tag/v3.3.8">v3.3.8</a>.</li>
-<li><strong><code>4</code></strong>: Stabile <a href="https://github.com/coreruleset/coreruleset/releases/tag/v4.24.1">v4.24.1</a> (<strong>Standard</strong>).</li>
+<li><strong><code>3</code></strong>: Stabile <a href="https://github.com/coreruleset/coreruleset/releases/tag/v3.3.9">v3.3.9</a>.</li>
+<li><strong><code>4</code></strong>: Stabile <a href="https://github.com/coreruleset/coreruleset/releases/tag/v4.25.0">v4.25.0</a> (<strong>Standard</strong>).</li>
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Nightly-Build veraltet</p>
@@ -13016,6 +13044,13 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <td>Enable or disable UI Single Sign-On authentication for the web interface</td>
 </tr>
 <tr>
+<td><code>UI_SSO_PROVIDER</code></td>
+<td><code>custom</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Select your SSO provider to auto-configure headers and group parsing. Use 'Custom' for manual header configuration.</td>
+</tr>
+<tr>
 <td><code>UI_SSO_HEADER_USERNAME</code></td>
 <td><code>X-User</code></td>
 <td>global</td>
@@ -13097,7 +13132,21 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <td><code>yes</code></td>
 <td>global</td>
 <td>nein</td>
-<td>Update user information (email, role) from SSO headers on each login</td>
+<td>Update user information (email) from SSO headers on each login</td>
+</tr>
+<tr>
+<td><code>UI_SSO_SYNC_ROLES</code></td>
+<td><code>no</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Synchronize user roles from SSO group mappings on each login when the groups header is present and at least one group mapping is configured</td>
+</tr>
+<tr>
+<td><code>UI_SSO_SYNC_ROLES_PROTECT_ADMIN</code></td>
+<td><code>yes</code></td>
+<td>global</td>
+<td>nein</td>
+<td>Prevent SSO role sync from downgrading users who currently have the admin role</td>
 </tr>
 <tr>
 <td><code>UI_SSO_ACCOUNT_LINKING</code></td>
@@ -13505,6 +13554,29 @@ Um stattdessen unerwünschte Clients zu blockieren, lesen Sie das <a href="#blac
 (?:^|\s)FriendlyScanner(?:\s|$)
 TrustedMonitor/\d+\.\d+
 </code></pre></div>
+<h2 id="wildcard-pro">Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)</h2>
+<p>STREAM-Unterstützung <img alt="✅" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/2705.svg" title=":white_check_mark:" /></p>
+<p>Adds wildcard server_name support (*.domain) for services.</p>
+<table>
+<thead>
+<tr>
+<th>Einstellung</th>
+<th>Standardwert</th>
+<th>Kontext</th>
+<th>Mehrfach</th>
+<th>Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_WILDCARD</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Enable wildcard server_name for this service (adds *.domain for the first domain in SERVER_NAME).</td>
+</tr>
+</tbody>
+</table>
 
 
 
