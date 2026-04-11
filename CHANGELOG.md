@@ -3,11 +3,13 @@
 ## v1.6.10~rc3 - 2026/03/??
 
 - [API/SECURITY] Fix `PATCH /global_config` accidentally deleting all services, custom configs, and jobs cache.
+- [API/SECURITY] Add data-loss guards in `Database.save_config` and `Database.update_external_plugins`: refuse to delete every global setting for a method when the incoming config would wipe every existing row, refuse to cascade-delete plugins when the incoming plugins list is empty, and skip setting/selects/multiselects pruning on same-content plugin reinstalls (detected via checksum comparison) to prevent user-set values from being wiped.
 - [SECURITY] Updated coreruleset-v3 version to v3.3.9 (fixes CVE-2026-33691)
 - [SECURITY] Updated coreruleset-v4 version to v4.25.0 (fixes CVE-2026-33691)
 - [SECURITY] Harden all tar/zip extraction with centralized `safe_tar_extractall`/`safe_zip_extractall` helpers, pre-extraction member validation, and `Path.is_relative_to()` containment checks (mitigates CVE-2025-4517 on Python < 3.13.4).
-- [BUGFIX] Fix scheduler memory leak from unbounded job module cache, broken `sys.modules` cleanup, bulk cache loading, and infrequent garbage collection.
+- [BUGFIX] `Configurator` now supplements its internal server list from the database `Services` table in multisite mode so that autoconf-managed services are recognized even when `SERVER_NAME` hasn't been updated in the variables yet at startup.
 - [BUGFIX] Fix `bw_plugin_pages` and `bw_jobs_cache` PostgreSQL table bloat caused by non-deterministic tar archives and unconditional UPDATEs triggering massive TOAST dead tuple accumulation on every scheduler restart.
+- [BUGFIX] Fix scheduler memory leak from unbounded job module cache, broken `sys.modules` cleanup, bulk cache loading, and infrequent garbage collection.
 - [BUGFIX] Fix `cachestore:set()` silently dropping cache writes in non-cosocket phases due to an incorrect guard.
 - [BUGFIX] Fix `cachestore:del_redis()` calling non-existent `clusterstore:del()` method.
 - [BUGFIX] Fix metrics Redis sync cascading failures after a mid-cycle connection drop by adding auto-reconnect with circuit-breaker.
@@ -16,8 +18,12 @@
 - [AUTOCONF] Fix multiple Kubernetes Ingress/Route resources for the same hostname overwriting each other instead of merging their paths into a single service configuration.
 - [AUTOCONF] Fix Docker autoconf feedback loop where healthcheck exec events caused endless config regeneration and NGINX reloads by filtering events to container lifecycle actions only.
 - [ALL-IN-ONE] Update CrowdSec version to 1.7.7
+- [UI] Fix multiselect dropdown being clipped in template wizard steps. (Fixes #3401)
+- [UI] Fix Reports page IP hit counts decreasing when clicking through to filter by IP: the precomputed Redis facet counts (unfiltered view) included all stored requests, but the streaming path dropped 5xx/3xx requests via an extra `400 <= status < 500 or security_mode == "detect"` filter. (Fixes #3407)
 - [UI] Add missing `DEFAULT_SERVER_STREAM` custom config type to the Web UI, allowing creation and management of stream-level default server configurations.
+- [API] Fix `update_config_upload` resetting a custom config's service scope to global when the caller did not explicitly request a service move.
 - [MISC] Update default value for Permissions-Policy header to include additional features (`local-network`, `local-network-access` and `loopback-network`).
+- [MISC] Accept `g`/`G` suffix on memory size settings (`WORKERLOCK_MEMORY_SIZE`, `DATASTORE_MEMORY_SIZE`, `CACHESTORE_MEMORY_SIZE`, `CACHESTORE_IPC_MEMORY_SIZE`, `CACHESTORE_MISS_MEMORY_SIZE`, `CACHESTORE_LOCKS_MEMORY_SIZE`, `INTERNALSTORE_MEMORY_SIZE`): values are automatically normalized to megabytes at template rendering time since NGINX's `ngx_parse_size()` only supports `k`/`m` for `lua_shared_dict`.
 - [MISC] Allow custom uppercase HTTP methods containing underscores and dashes in `ALLOWED_METHODS` (e.g. `CCM_POST`, `M-SEARCH`) for compatibility with non-standard protocols.
 - [MISC] `JobScheduler` tracks per-job failures better
 
