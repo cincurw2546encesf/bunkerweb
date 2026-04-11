@@ -4791,6 +4791,14 @@ BunkerWeb 的核心 Let's Encrypt 插件包含一个 NGINX location 块和一个
 
 此设置**仅在 HTTP-01 时需要**。DNS-01 和 TLS-ALPN-01 挑战不受影响。
 
+#### 上游 ACME 透传（`ACME_PASSTHROUGH`）
+
+如果 BunkerWeb 背后的上游服务器已经运行自己的 ACME 客户端，并应由其自行处理 HTTP-01 验证，请在该服务上设置 `ACME_PASSTHROUGH=yes`。此时 ACME PRO 将不再渲染 `/.well-known/acme-challenge/` location 块，也不会在 `access` 阶段将挑战路径加入白名单，从而让上游提供的验证文件原样到达 CA。
+
+当您希望 ACME PRO 自行签发和续期证书时，请将 `ACME_PASSTHROUGH` 保持为 `no`（默认值）。ACME PRO 管理服务的标准 HTTP-01 组合是：`LETS_ENCRYPT_PASSTHROUGH=yes`（让 OSS 核心 Let's Encrypt 插件让出其挑战 location 块），再配合 `ACME_PASSTHROUGH=no`。仅当上游完全拥有证书生命周期时才将 `ACME_PASSTHROUGH` 设为 `yes` —— 在该模式下 BunkerWeb 不会尝试为该服务签发证书。
+
+此设置与 OSS 核心的 `LETS_ENCRYPT_PASSTHROUGH` 行为一致，并且仅影响 HTTP-01；DNS-01 和 TLS-ALPN-01 挑战不受影响。
+
 #### 插件执行顺序
 
 ACME 插件会自动将自身重新排序，以在 `ssl_certificate` NGINX 阶段最先执行，确保 TLS-ALPN-01 挑战证书在其他证书提供插件（selfsigned、letsencrypt、customcert）短路循环之前被提供。
@@ -4814,6 +4822,7 @@ PLUGINS_ORDER_INIT=sessions whitelist blacklist greylist bunkernet limit authbas
 | 设置                   | 默认    | 上下文    | 多个 | 描述                                                           |
 | ---------------------- | ------- | --------- | ---- | -------------------------------------------------------------- |
 | `USE_ACME`             | `no`    | multisite | 否   | 为此服务启用 ACME 证书管理。                                   |
+| `ACME_PASSTHROUGH`     | `no`    | multisite | 否   | 将 HTTP-01 挑战请求透传给上游服务器（上游自行运行 ACME 客户端）。           |
 | `ACME_DIRECTORY_URL`   |         | multisite | 否   | 证书颁发机构的 ACME 目录 URL。                                 |
 | `ACME_EMAIL`           |         | multisite | 否   | 用于 ACME 帐户注册和通知的邮箱地址。                           |
 | `ACME_CHALLENGE`       | `http`  | multisite | 否   | ACME 挑战类型：`http`、`dns` 或 `alpn`。                       |

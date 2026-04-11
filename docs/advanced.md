@@ -4782,6 +4782,14 @@ BunkerWeb's core Let's Encrypt plugin includes both an NGINX location block and 
 
 This is **only needed for HTTP-01**. DNS-01 and TLS-ALPN-01 challenges are not affected.
 
+#### Upstream ACME passthrough (`ACME_PASSTHROUGH`)
+
+If the upstream server behind BunkerWeb already runs its own ACME client and should handle HTTP-01 validation itself, set `ACME_PASSTHROUGH=yes` on the service. ACME PRO will then skip rendering its `/.well-known/acme-challenge/` location block and will not whitelist challenge paths in the `access` phase, so upstream-served validation files reach the CA untouched.
+
+Leave `ACME_PASSTHROUGH=no` (the default) whenever you want ACME PRO to obtain and renew certificates itself. The standard HTTP-01 combo for ACME PRO-managed services is `LETS_ENCRYPT_PASSTHROUGH=yes` (so the OSS core Let's Encrypt plugin yields its challenge location) together with `ACME_PASSTHROUGH=no`. Flip `ACME_PASSTHROUGH=yes` only when the upstream owns the certificate lifecycle — BunkerWeb will not attempt to issue a certificate for that service in this mode.
+
+This setting mirrors the behavior of the OSS core `LETS_ENCRYPT_PASSTHROUGH` and only affects HTTP-01; DNS-01 and TLS-ALPN-01 are unaffected.
+
 #### Plugin execution order
 
 The ACME plugin automatically reorders itself to execute first in the `ssl_certificate` NGINX phase, ensuring TLS-ALPN-01 challenge certificates are served before other certificate-providing plugins (selfsigned, letsencrypt, customcert) can short-circuit the loop.
@@ -4805,6 +4813,7 @@ External/PRO plugins not listed in `PLUGINS_ORDER_*` settings are appended alpha
 | Setting                | Default | Context   | Multiple | Description                                                                      |
 | ---------------------- | ------- | --------- | -------- | -------------------------------------------------------------------------------- |
 | `USE_ACME`             | `no`    | multisite | no       | Enable ACME certificate management for this service.                             |
+| `ACME_PASSTHROUGH`     | `no`    | multisite | no       | Pass through HTTP-01 challenge requests to the upstream server (upstream runs its own ACME client). |
 | `ACME_DIRECTORY_URL`   |         | multisite | no       | ACME directory URL of the Certificate Authority.                                 |
 | `ACME_EMAIL`           |         | multisite | no       | Email address for ACME account registration and notifications.                   |
 | `ACME_CHALLENGE`       | `http`  | multisite | no       | ACME challenge type: `http`, `dns`, or `alpn`.                                   |

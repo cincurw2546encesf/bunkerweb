@@ -258,6 +258,7 @@ Advanced ACME certificate management with custom CA support, certificate monitor
 | 参数                                | 默认值      | 上下文    | 可重复 | 描述                                                                                                                                                                     |
 | ----------------------------------- | ----------- | --------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `USE_ACME`                          | `no`        | multisite | 否     | Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.                                                                |
+| `ACME_PASSTHROUGH`                  | `no`        | multisite | 否     | Pass through ACME HTTP-01 challenge requests to the upstream server.                                                                                                     |
 | `ACME_DIRECTORY_URL`                |             | multisite | 否     | ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI). |
 | `ACME_EMAIL`                        |             | multisite | 否     | Email address for ACME account registration and notifications.                                                                                                           |
 | `ACME_EAB_KID`                      |             | multisite | 否     | External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).                                                                              |
@@ -6008,7 +6009,7 @@ TrustedMonitor/\d+\.\d+
 ## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
-STREAM 支持 :white_check_mark:
+STREAM 支持 :x:
 
 Adds wildcard server_name support (*.domain) for services.
 

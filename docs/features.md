@@ -256,6 +256,7 @@ Advanced ACME certificate management with custom CA support, certificate monitor
 | Setting                             | Default     | Context   | Multiple | Description                                                                                                                                                              |
 | ----------------------------------- | ----------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `USE_ACME`                          | `no`        | multisite | no       | Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.                                                                |
+| `ACME_PASSTHROUGH`                  | `no`        | multisite | no       | Pass through ACME HTTP-01 challenge requests to the upstream server.                                                                                                     |
 | `ACME_DIRECTORY_URL`                |             | multisite | no       | ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI). |
 | `ACME_EMAIL`                        |             | multisite | no       | Email address for ACME account registration and notifications.                                                                                                           |
 | `ACME_EAB_KID`                      |             | multisite | no       | External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).                                                                              |
@@ -6045,7 +6046,7 @@ TrustedMonitor/\d+\.\d+
 ## Wildcard <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
-STREAM support :white_check_mark:
+STREAM support :x:
 
 Adds wildcard server_name support (*.domain) for services.
 

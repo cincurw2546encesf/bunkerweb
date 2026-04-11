@@ -4793,6 +4793,14 @@ Le plugin Let's Encrypt intégré de BunkerWeb inclut à la fois un bloc locatio
 
 Cela n'est **nécessaire que pour HTTP-01**. Les challenges DNS-01 et TLS-ALPN-01 ne sont pas concernés.
 
+#### Passthrough ACME vers l'amont (`ACME_PASSTHROUGH`)
+
+Si le serveur amont derrière BunkerWeb exécute déjà son propre client ACME et doit gérer lui-même la validation HTTP-01, définissez `ACME_PASSTHROUGH=yes` sur le service. Le plugin ACME PRO cessera alors de rendre son bloc location `/.well-known/acme-challenge/` et n'ajoutera plus les chemins de challenge à la liste blanche en phase `access`, afin que les fichiers de validation servis par l'amont parviennent à la CA sans être interceptés.
+
+Laissez `ACME_PASSTHROUGH=no` (la valeur par défaut) lorsque vous voulez que le plugin ACME PRO obtienne et renouvelle lui-même les certificats. La combinaison standard HTTP-01 pour les services gérés par ACME PRO est `LETS_ENCRYPT_PASSTHROUGH=yes` (pour que le plugin OSS Let's Encrypt cède son bloc location de challenge) associé à `ACME_PASSTHROUGH=no`. Ne passez `ACME_PASSTHROUGH` à `yes` que lorsque l'amont possède le cycle de vie complet du certificat — dans ce mode, BunkerWeb n'essaiera pas d'émettre de certificat pour ce service.
+
+Ce paramètre reproduit le comportement du `LETS_ENCRYPT_PASSTHROUGH` du cœur OSS et n'affecte que HTTP-01 ; les challenges DNS-01 et TLS-ALPN-01 ne sont pas concernés.
+
 #### Ordre d'exécution des plugins
 
 Le plugin ACME se réordonne automatiquement pour s'exécuter en premier dans la phase NGINX `ssl_certificate`, garantissant que les certificats de challenge TLS-ALPN-01 sont servis avant que d'autres plugins fournisseurs de certificats (selfsigned, letsencrypt, customcert) ne court-circuitent la boucle.
@@ -4816,6 +4824,7 @@ Les plugins externes/PRO non listés dans les paramètres `PLUGINS_ORDER_*` sont
 | Paramètre              | Défaut  | Contexte  | Multiple | Description                                                                                    |
 | ---------------------- | ------- | --------- | -------- | ---------------------------------------------------------------------------------------------- |
 | `USE_ACME`             | `no`    | multisite | non      | Activer la gestion des certificats ACME pour ce service.                                       |
+| `ACME_PASSTHROUGH`     | `no`    | multisite | non      | Laisser passer les requêtes du challenge HTTP-01 vers le serveur amont (l'amont gère son propre client ACME). |
 | `ACME_DIRECTORY_URL`   |         | multisite | non      | URL du répertoire ACME de l'autorité de certification.                                         |
 | `ACME_EMAIL`           |         | multisite | non      | Adresse e-mail pour l'enregistrement du compte ACME et les notifications.                      |
 | `ACME_CHALLENGE`       | `http`  | multisite | non      | Type de challenge ACME : `http`, `dns` ou `alpn`.                                              |
