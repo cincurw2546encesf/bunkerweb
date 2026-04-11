@@ -3518,6 +3518,18 @@ $(document).ready(() => {
     if ($toggle.length) {
       new bootstrap.Dropdown($toggle[0], {
         autoClose: "outside",
+        popperConfig: {
+          strategy: "fixed",
+          modifiers: [
+            {
+              name: "preventOverflow",
+              options: {
+                boundary: "viewport",
+                padding: { top: 80 },
+              },
+            },
+          ],
+        },
       });
     }
 

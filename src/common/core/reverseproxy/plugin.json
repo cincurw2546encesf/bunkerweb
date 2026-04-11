@@ -256,7 +256,7 @@
       "help": "Maximum size of cached metadata when caching proxied resources.",
       "id": "proxy-cache-path-zone-size",
       "label": "Reverse proxy cache zone size",
-      "regex": "^\\d+[kKmMgG]?$",
+      "regex": "^\\d+[kKmM]$",
       "type": "text"
     },
     "PROXY_CACHE_PATH_PARAMS": {

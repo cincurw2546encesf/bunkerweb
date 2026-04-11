@@ -215,3 +215,25 @@ Das Umschalten in den `detect`-Modus kann Ihnen helfen, potenzielle Falsch-Posit
     USE_TCP: "yes"
     USE_UDP: "no"
     ```
+
+=== "Listening-Modi deaktivieren"
+
+    Sie können bestimmte Listening-Modi deaktivieren, indem Sie die Porteinstellungen leer lassen:
+
+    ```yaml
+    # HTTP-Listening deaktivieren (nur HTTPS)
+    HTTP_PORT: ""
+    HTTPS_PORT: "8443"
+
+    # HTTPS-Listening deaktivieren (nur HTTP)
+    HTTP_PORT: "8080"
+    HTTPS_PORT: ""
+
+    # Stream: Nicht-SSL-Listening deaktivieren (nur SSL)
+    LISTEN_STREAM_PORT: ""
+    LISTEN_STREAM_PORT_SSL: "4242"
+
+    # Stream: SSL-Listening deaktivieren (nur Nicht-SSL)
+    LISTEN_STREAM_PORT: "1337"
+    LISTEN_STREAM_PORT_SSL: ""
+    ```

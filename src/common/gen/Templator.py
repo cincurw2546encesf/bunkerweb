@@ -80,10 +80,10 @@ def resolve_ssl_ecdh_curve(value: str, fallback: str = "X25519:prime256v1:secp38
 
     best_curve = _best_ssl_ecdh_curve()
     if best_curve:
-        logger.info(f"Resolved ssl_ecdh_curve (auto-detect): {best_curve}")
+        logger.debug(f"Resolved ssl_ecdh_curve (auto-detect): {best_curve}")
         return best_curve
 
-    logger.info(f"Resolved ssl_ecdh_curve (fallback): {fallback}")
+    logger.warning(f"Resolved ssl_ecdh_curve (fallback): {fallback}")
     return fallback
 
 
@@ -368,6 +368,7 @@ class Templator:
             "read_lines": Templator.read_lines,
             "import": import_module,
             "resolve_ssl_ecdh_curve": resolve_ssl_ecdh_curve,
+            "normalize_memory_size": Templator._normalize_memory_size,
         }
 
         self._server_env_cache: Dict[str, Environment] = {}
@@ -429,6 +430,18 @@ class Templator:
                 base = basename(template)
                 if base in self._global_templates:
                     self._template_basename_map[template] = base
+
+    @staticmethod
+    def _normalize_memory_size(value: str) -> str:
+        """Convert g/G suffix to megabytes for NGINX lua_shared_dict compatibility.
+
+        NGINX's ngx_parse_size() only supports k/m suffixes. The g/G suffix is only
+        supported by ngx_parse_offset() (used for file/body sizes, not memory allocations).
+        """
+        value = value.strip()
+        if value.endswith(("g", "G")):
+            return str(int(value[:-1]) * 1024) + "m"
+        return value
 
     def _load_jinja_env(self) -> Environment:
         """Load the Jinja2 environment with the appropriate search paths.

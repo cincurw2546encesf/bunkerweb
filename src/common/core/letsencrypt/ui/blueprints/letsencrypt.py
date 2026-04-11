@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives import hashes
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 
+from common_utils import safe_tar_extractall  # type: ignore
 from app.dependencies import DB  # type: ignore
 from app.utils import LOGGER  # type: ignore
 from app.routes.utils import cors_required  # type: ignore
@@ -90,10 +91,7 @@ def download_certificates():
         if cache_file["file_name"].endswith(".tgz") and cache_file["file_name"].startswith("folder:"):
             with tar_open(fileobj=BytesIO(cache_file["data"]), mode="r:gz") as tar:
                 members = [m for m in tar.getmembers() if _is_allowed_member(m)]
-                try:
-                    tar.extractall(DATA_PATH, members=members, filter="fully_trusted")
-                except TypeError:
-                    tar.extractall(DATA_PATH, members=members)
+                safe_tar_extractall(tar, DATA_PATH, tar_filter="tar", members=members)
 
 
 def retrieve_certificates():
