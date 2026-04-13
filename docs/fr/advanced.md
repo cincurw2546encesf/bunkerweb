@@ -4821,22 +4821,22 @@ Les plugins externes/PRO non listés dans les paramètres `PLUGINS_ORDER_*` sont
 
 **Paramètres principaux ACME**
 
-| Paramètre              | Défaut  | Contexte  | Multiple | Description                                                                                    |
-| ---------------------- | ------- | --------- | -------- | ---------------------------------------------------------------------------------------------- |
-| `USE_ACME`             | `no`    | multisite | non      | Activer la gestion des certificats ACME pour ce service.                                       |
+| Paramètre              | Défaut  | Contexte  | Multiple | Description                                                                                                   |
+| ---------------------- | ------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `USE_ACME`             | `no`    | multisite | non      | Activer la gestion des certificats ACME pour ce service.                                                      |
 | `ACME_PASSTHROUGH`     | `no`    | multisite | non      | Laisser passer les requêtes du challenge HTTP-01 vers le serveur amont (l'amont gère son propre client ACME). |
-| `ACME_DIRECTORY_URL`   |         | multisite | non      | URL du répertoire ACME de l'autorité de certification.                                         |
-| `ACME_EMAIL`           |         | multisite | non      | Adresse e-mail pour l'enregistrement du compte ACME et les notifications.                      |
-| `ACME_CHALLENGE`       | `http`  | multisite | non      | Type de challenge ACME : `http`, `dns` ou `alpn`.                                              |
-| `ACME_KEY_TYPE`        | `ecdsa` | multisite | non      | Type de clé pour le certificat : `ecdsa` ou `rsa`.                                             |
-| `ACME_KEY_SIZE`        | `256`   | multisite | non      | Taille de la clé en bits. ECDSA : `256` ou `384`. RSA : `2048` ou `4096`.                      |
-| `ACME_RENEWAL_DAYS`    | `30`    | multisite | non      | Renouveler le certificat lorsqu'il reste moins de ce nombre de jours avant l'expiration.       |
-| `ACME_SSL_VERIFY`      | `yes`   | multisite | non      | Vérifier les certificats SSL lors de la communication avec le serveur ACME.                    |
-| `ACME_WILDCARD`        | `no`    | multisite | non      | Demander un certificat wildcard (nécessite le challenge DNS-01).                               |
-| `ACME_MUST_STAPLE`     | `no`    | multisite | non      | Demander l'extension OCSP Must-Staple dans le certificat.                                      |
-| `ACME_MAX_RETRIES`     | `3`     | multisite | non      | Nombre de tentatives de génération du certificat en cas d'échec (0 désactive les tentatives).  |
-| `ACME_PREFERRED_CHAIN` |         | multisite | non      | CN de l'émetteur de la chaîne de certificats préférée lorsque la CA fournit plusieurs chaînes. |
-| `ACME_CA_CERT_PATH`    |         | multisite | non      | Chemin du fichier du certificat racine CA pour les serveurs ACME privés.                       |
+| `ACME_DIRECTORY_URL`   |         | multisite | non      | URL du répertoire ACME de l'autorité de certification.                                                        |
+| `ACME_EMAIL`           |         | multisite | non      | Adresse e-mail pour l'enregistrement du compte ACME et les notifications.                                     |
+| `ACME_CHALLENGE`       | `http`  | multisite | non      | Type de challenge ACME : `http`, `dns` ou `alpn`.                                                             |
+| `ACME_KEY_TYPE`        | `ecdsa` | multisite | non      | Type de clé pour le certificat : `ecdsa` ou `rsa`.                                                            |
+| `ACME_KEY_SIZE`        | `256`   | multisite | non      | Taille de la clé en bits. ECDSA : `256` ou `384`. RSA : `2048` ou `4096`.                                     |
+| `ACME_RENEWAL_DAYS`    | `30`    | multisite | non      | Renouveler le certificat lorsqu'il reste moins de ce nombre de jours avant l'expiration.                      |
+| `ACME_SSL_VERIFY`      | `yes`   | multisite | non      | Vérifier les certificats SSL lors de la communication avec le serveur ACME.                                   |
+| `ACME_WILDCARD`        | `no`    | multisite | non      | Demander un certificat wildcard (nécessite le challenge DNS-01).                                              |
+| `ACME_MUST_STAPLE`     | `no`    | multisite | non      | Demander l'extension OCSP Must-Staple dans le certificat.                                                     |
+| `ACME_MAX_RETRIES`     | `3`     | multisite | non      | Nombre de tentatives de génération du certificat en cas d'échec (0 désactive les tentatives).                 |
+| `ACME_PREFERRED_CHAIN` |         | multisite | non      | CN de l'émetteur de la chaîne de certificats préférée lorsque la CA fournit plusieurs chaînes.                |
+| `ACME_CA_CERT_PATH`    |         | multisite | non      | Chemin du fichier du certificat racine CA pour les serveurs ACME privés.                                      |
 
 **External Account Binding (EAB)**
 
@@ -4945,3 +4945,208 @@ app2.example.com_AUTO_LETS_ENCRYPT: "yes"
 - **Échec du challenge TLS-ALPN-01** : vérifiez que le port 443 est accessible depuis le serveur ACME et qu'aucun autre plugin ne sert de certificat avant ACME dans la phase `ssl_certificate`. Vérifiez `PLUGINS_ORDER_SSL_CERTIFICATE` en cas de doute.
 - **Échec du challenge DNS-01** : vérifiez les identifiants du fournisseur DNS dans `ACME_DNS_CREDENTIAL_ITEM` et ajustez `ACME_DNS_PROPAGATION` si votre fournisseur est lent à propager les enregistrements.
 - **Certificat non renouvelé** : vérifiez `ACME_RENEWAL_DAYS` et les logs du scheduler. Le job `acme-renew` s'exécute quotidiennement et renouvelle les certificats qui se trouvent dans le seuil configuré.
+
+## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+
+Prise en charge STREAM :x:
+
+Le plugin **Wildcard** permet à un service BunkerWeb unique de répondre à :
+
+* son nom d'hôte exact
+* tout **sous-domaine direct** de ce nom d'hôte
+
+Lorsqu'il est activé, le plugin prend la **première entrée** de `SERVER_NAME` et ajoute un `server_name` wildcard à la configuration NGINX générée.
+
+Par exemple, si la première entrée est `example.com`, le plugin ajoute :
+
+```nginx
+server_name *.example.com;
+```
+
+Le service répond alors à :
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+
+Il s'agit d'un plugin minimal, uniquement basé sur la configuration :
+
+* aucun job
+* aucun Lua
+* aucune UI
+
+---
+
+### Fonctionnement
+
+Le plugin dérive le nom d'hôte wildcard à partir de la **première valeur** de `SERVER_NAME` et injecte un nom de serveur wildcard NGINX standard lors de la génération de la configuration.
+
+Il ne modifie pas la logique de traitement des requêtes au-delà de la correspondance des noms d'hôte.
+
+!!! info "Les hôtes wildcard ne sont pas des certificats wildcard"
+    Ce plugin agit uniquement sur le **routage HTTP**. Il indique à NGINX quels noms d'hôte le service doit accepter.
+
+    Il ne provisionne **pas** de certificat TLS wildcard.
+
+    Pour servir `*.example.com` en HTTPS, vous avez toujours besoin d'un certificat wildcard correspondant, généralement avec l'une de ces options :
+
+    - `USE_LETS_ENCRYPT_WILDCARD=yes` avec le plugin Let's Encrypt intégré
+    - `ACME_WILDCARD=yes` avec le plugin [ACME PRO](#acme) en utilisant un challenge DNS-01
+
+---
+
+### Fonctionnalités
+
+* **Activation simple** : activez le routage wildcard avec `USE_WILDCARD=yes`
+* **Dérivation automatique** : l'hôte wildcard est construit à partir de la première entrée de `SERVER_NAME`
+* **Sémantique native NGINX** : la correspondance suit le comportement standard de `server_name`
+* **Compatible multisite** : chaque service peut activer ou désactiver le routage wildcard indépendamment
+
+---
+
+### Configuration
+
+| Paramètre      | Valeur par défaut | Contexte  | Multiple | Description                                                                                                       |
+| -------------- | ----------------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `USE_WILDCARD` | `no`              | multisite | non      | Active un `server_name` wildcard pour le service en ajoutant `*.domain` pour la première entrée de `SERVER_NAME`. |
+
+---
+
+### Démarrage rapide
+
+1. Placez en premier dans `SERVER_NAME` le domaine que vous souhaitez utiliser en wildcard
+2. Définissez `USE_WILDCARD=yes`
+3. Faites pointer l'enregistrement DNS wildcard vers BunkerWeb, généralement avec un enregistrement wildcard `A` ou `AAAA`
+4. Si vous avez besoin de HTTPS, provisionnez séparément un certificat wildcard
+5. Rechargez ou redémarrez BunkerWeb
+
+---
+
+### Exemples
+
+#### Single-site
+
+```yaml
+SERVER_NAME: "example.com"
+USE_WILDCARD: "yes"
+```
+
+Ce service répondra à :
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+* tout autre nom d'hôte `*.example.com` qui résout vers BunkerWeb
+
+#### Multisite
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "app.example.com docs.example.org"
+
+# Seul app.example.com obtient le routage wildcard
+app.example.com_USE_WILDCARD: "yes"
+```
+
+Dans cette configuration :
+
+* `app.example.com` et `*.app.example.com` vont vers le premier service
+* `docs.example.org` conserve uniquement la correspondance exacte
+
+---
+
+### Comportement important
+
+!!! warning "Seul le premier domaine devient wildcard"
+    Si `SERVER_NAME` vaut :
+
+    ```yaml
+    SERVER_NAME: "example.com example.org"
+    ```
+
+    seul `*.example.com` est ajouté.
+
+    Placez en premier le domaine que vous souhaitez utiliser en wildcard.
+
+!!! note "Les entrées wildcard existantes sont conservées"
+    Si le premier domaine commence déjà par `*.`, par exemple :
+
+    ```yaml
+    SERVER_NAME: "*.example.com"
+    ```
+
+    le plugin n'émet rien.
+
+!!! note "La correspondance wildcard ne couvre qu'un seul label"
+    `*.example.com` correspond à `foo.example.com`, mais pas à `a.b.example.com`.
+
+    Pour des sous-domaines plus profonds, utilisez une entrée `SERVER_NAME` explicite ou un service séparé.
+
+!!! note "Les correspondances exactes sont prioritaires"
+    Si un autre service définit explicitement `foo.example.com`, NGINX route d'abord ce nom d'hôte vers la correspondance exacte.
+
+---
+
+### Recommandé avec les certificats wildcard Let's Encrypt
+
+Si vous utilisez ce plugin avec `USE_LETS_ENCRYPT_WILDCARD=yes`, utilisez ce modèle :
+
+```yaml
+SERVER_NAME: "<root_domain> <any_app>.<root_domain>"
+```
+
+Le **domaine racine doit venir en premier**.
+
+Exemple :
+
+```yaml
+SERVER_NAME: "example.com app.example.com"
+USE_WILDCARD: "yes"
+AUTO_LETS_ENCRYPT: "yes"
+EMAIL_LETS_ENCRYPT: "admin@example.com"
+LETS_ENCRYPT_CHALLENGE: "dns"
+LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+USE_LETS_ENCRYPT_WILDCARD: "yes"
+```
+
+!!! tip "Pourquoi ce modèle est important"
+    - **Seule la première entrée de `SERVER_NAME` devient wildcard**
+
+    Si `example.com` vient en premier, le plugin émet `*.example.com`.
+
+    Si `app.example.com` vient en premier, il émet `*.app.example.com`, ce qui correspond généralement au mauvais niveau de wildcard.
+
+    - **La deuxième entrée aide Let's Encrypt à détecter le bon domaine de base**
+      Avec seulement un domaine apex nu, la détection de certificat wildcard peut échouer sur certains domaines à suffixe public comme `example.co.uk`.
+
+    - **Le deuxième nom d'hôte n'a pas besoin de backend réel**
+      Utilisez n'importe quelle valeur stable comme `app.example.com` ou `www.example.com`.
+
+#### Multisite avec Let's Encrypt wildcard
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "example.com app.example.com"
+example.com_USE_WILDCARD: "yes"
+example.com_USE_LETS_ENCRYPT_WILDCARD: "yes"
+example.com_LETS_ENCRYPT_CHALLENGE: "dns"
+example.com_LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+example.com_LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+```
+
+---
+
+### Conseils d'utilisation
+
+* **Planifiez le TLS séparément**
+  Le routage wildcard ne suffit pas pour HTTPS. Vous avez toujours besoin d'une couverture de certificat pour les sous-domaines.
+
+* **Gardez l'ordre de `SERVER_NAME` stable**
+  Réordonner les entrées change quel domaine devient la cible du wildcard.
+
+* **Fonctionne bien avec `REVERSE_PROXY_HOST`**
+  C'est utile lorsque de nombreux sous-domaines sont routés via un upstream partagé, comme un routeur de tenants.
+
+* **Soyez prudent avec les services qui se chevauchent**
+  NGINX privilégie toujours la correspondance `server_name` la plus spécifique.

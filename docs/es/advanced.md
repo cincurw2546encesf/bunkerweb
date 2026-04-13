@@ -4822,22 +4822,22 @@ Los plugins externos/PRO no listados en las configuraciones `PLUGINS_ORDER_*` se
 
 **Ajustes principales de ACME**
 
-| Configuración          | Predeterminado | Contexto  | Múltiple | Descripción                                                                                     |
-| ---------------------- | -------------- | --------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `USE_ACME`             | `no`           | multisite | no       | Habilitar la gestión de certificados ACME para este servicio.                                   |
+| Configuración          | Predeterminado | Contexto  | Múltiple | Descripción                                                                                                  |
+| ---------------------- | -------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| `USE_ACME`             | `no`           | multisite | no       | Habilitar la gestión de certificados ACME para este servicio.                                                |
 | `ACME_PASSTHROUGH`     | `no`           | multisite | no       | Pasar las solicitudes del desafío HTTP-01 al servidor upstream (el upstream ejecuta su propio cliente ACME). |
-| `ACME_DIRECTORY_URL`   |                | multisite | no       | URL del directorio ACME de la Autoridad de Certificación.                                       |
-| `ACME_EMAIL`           |                | multisite | no       | Dirección de correo electrónico para el registro de cuenta ACME y notificaciones.               |
-| `ACME_CHALLENGE`       | `http`         | multisite | no       | Tipo de desafío ACME: `http`, `dns` o `alpn`.                                                   |
-| `ACME_KEY_TYPE`        | `ecdsa`        | multisite | no       | Tipo de clave para el certificado: `ecdsa` o `rsa`.                                             |
-| `ACME_KEY_SIZE`        | `256`          | multisite | no       | Tamaño de clave en bits. ECDSA: `256` o `384`. RSA: `2048` o `4096`.                            |
-| `ACME_RENEWAL_DAYS`    | `30`           | multisite | no       | Renovar el certificado cuando falten menos de estos días para la expiración.                    |
-| `ACME_SSL_VERIFY`      | `yes`          | multisite | no       | Verificar certificados SSL al comunicarse con el servidor ACME.                                 |
-| `ACME_WILDCARD`        | `no`           | multisite | no       | Solicitar certificado wildcard (requiere desafío DNS-01).                                       |
-| `ACME_MUST_STAPLE`     | `no`           | multisite | no       | Solicitar la extensión OCSP Must-Staple en el certificado.                                      |
-| `ACME_MAX_RETRIES`     | `3`            | multisite | no       | Número de reintentos de generación del certificado en caso de fallo (0 deshabilita reintentos). |
-| `ACME_PREFERRED_CHAIN` |                | multisite | no       | CN del emisor preferido de la cadena de certificados cuando la CA ofrece múltiples cadenas.     |
-| `ACME_CA_CERT_PATH`    |                | multisite | no       | Ruta al certificado raíz de la CA para servidores ACME privados.                                |
+| `ACME_DIRECTORY_URL`   |                | multisite | no       | URL del directorio ACME de la Autoridad de Certificación.                                                    |
+| `ACME_EMAIL`           |                | multisite | no       | Dirección de correo electrónico para el registro de cuenta ACME y notificaciones.                            |
+| `ACME_CHALLENGE`       | `http`         | multisite | no       | Tipo de desafío ACME: `http`, `dns` o `alpn`.                                                                |
+| `ACME_KEY_TYPE`        | `ecdsa`        | multisite | no       | Tipo de clave para el certificado: `ecdsa` o `rsa`.                                                          |
+| `ACME_KEY_SIZE`        | `256`          | multisite | no       | Tamaño de clave en bits. ECDSA: `256` o `384`. RSA: `2048` o `4096`.                                         |
+| `ACME_RENEWAL_DAYS`    | `30`           | multisite | no       | Renovar el certificado cuando falten menos de estos días para la expiración.                                 |
+| `ACME_SSL_VERIFY`      | `yes`          | multisite | no       | Verificar certificados SSL al comunicarse con el servidor ACME.                                              |
+| `ACME_WILDCARD`        | `no`           | multisite | no       | Solicitar certificado wildcard (requiere desafío DNS-01).                                                    |
+| `ACME_MUST_STAPLE`     | `no`           | multisite | no       | Solicitar la extensión OCSP Must-Staple en el certificado.                                                   |
+| `ACME_MAX_RETRIES`     | `3`            | multisite | no       | Número de reintentos de generación del certificado en caso de fallo (0 deshabilita reintentos).              |
+| `ACME_PREFERRED_CHAIN` |                | multisite | no       | CN del emisor preferido de la cadena de certificados cuando la CA ofrece múltiples cadenas.                  |
+| `ACME_CA_CERT_PATH`    |                | multisite | no       | Ruta al certificado raíz de la CA para servidores ACME privados.                                             |
 
 **External Account Binding (EAB)**
 
@@ -4946,3 +4946,208 @@ app2.example.com_AUTO_LETS_ENCRYPT: "yes"
 - **Fallo en el desafío TLS-ALPN-01**: asegúrese de que el puerto 443 sea accesible desde el servidor ACME y que ningún otro plugin esté sirviendo un certificado antes de ACME en la fase `ssl_certificate`. Revise `PLUGINS_ORDER_SSL_CERTIFICATE` en caso de duda.
 - **Fallo en el desafío DNS-01**: verifique las credenciales del proveedor DNS en `ACME_DNS_CREDENTIAL_ITEM` y ajuste `ACME_DNS_PROPAGATION` si su proveedor tarda en propagar los registros.
 - **El certificado no se renueva**: revise `ACME_RENEWAL_DAYS` y los logs del programador. El trabajo `acme-renew` se ejecuta diariamente y renueva los certificados que están dentro del umbral configurado.
+
+## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+
+Compatibilidad con STREAM :x:
+
+El plugin **Wildcard** permite que un único servicio de BunkerWeb responda a:
+
+* su nombre de host exacto
+* cualquier **subdominio directo** de ese nombre de host
+
+Cuando está habilitado, el plugin toma la **primera entrada** de `SERVER_NAME` y añade un `server_name` comodín a la configuración NGINX generada.
+
+Por ejemplo, si la primera entrada es `example.com`, el plugin añade:
+
+```nginx
+server_name *.example.com;
+```
+
+Esto hace que el servicio responda a:
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+
+Este es un plugin mínimo, basado solo en configuración:
+
+* sin jobs
+* sin Lua
+* sin UI
+
+---
+
+### Cómo funciona
+
+El plugin obtiene el nombre de host comodín a partir del **primer valor** de `SERVER_NAME` e inyecta un nombre de servidor comodín estándar de NGINX durante la generación de la configuración.
+
+No cambia la lógica de manejo de solicitudes más allá de la coincidencia de hostnames.
+
+!!! info "Los hosts comodín no son certificados comodín"
+    Este plugin solo afecta al **enrutamiento HTTP**. Indica a NGINX qué hostnames debe aceptar el servicio.
+
+    **No** aprovisiona un certificado TLS comodín.
+
+    Para servir `*.example.com` por HTTPS, sigue necesitando un certificado comodín compatible, normalmente con una de estas opciones:
+
+    - `USE_LETS_ENCRYPT_WILDCARD=yes` con el plugin integrado de Let's Encrypt
+    - `ACME_WILDCARD=yes` con el plugin [ACME PRO](#acme) usando un desafío DNS-01
+
+---
+
+### Funcionalidades
+
+* **Activación simple**: habilite el enrutamiento comodín con `USE_WILDCARD=yes`
+* **Derivación automática**: el host comodín se construye a partir de la primera entrada de `SERVER_NAME`
+* **Semántica nativa de NGINX**: la coincidencia sigue el comportamiento estándar de `server_name`
+* **Compatible con multisite**: cada servicio puede habilitar o deshabilitar el enrutamiento comodín de forma independiente
+
+---
+
+### Configuración
+
+| Parámetro      | Valor predeterminado | Contexto  | Múltiple | Descripción                                                                                                       |
+| -------------- | -------------------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `USE_WILDCARD` | `no`                 | multisite | no       | Habilita un `server_name` comodín para el servicio añadiendo `*.domain` para la primera entrada de `SERVER_NAME`. |
+
+---
+
+### Inicio rápido
+
+1. Coloque primero en `SERVER_NAME` el dominio que quiere convertir en comodín
+2. Establezca `USE_WILDCARD=yes`
+3. Haga que el registro DNS comodín apunte a BunkerWeb, normalmente con un registro comodín `A` o `AAAA`
+4. Si necesita HTTPS, aprovisione un certificado comodín por separado
+5. Recargue o reinicie BunkerWeb
+
+---
+
+### Ejemplos
+
+#### Single-site
+
+```yaml
+SERVER_NAME: "example.com"
+USE_WILDCARD: "yes"
+```
+
+Este servicio responderá a:
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+* cualquier otro hostname `*.example.com` que resuelva hacia BunkerWeb
+
+#### Multisite
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "app.example.com docs.example.org"
+
+# Solo app.example.com obtiene enrutamiento comodín
+app.example.com_USE_WILDCARD: "yes"
+```
+
+En esta configuración:
+
+* `app.example.com` y `*.app.example.com` van al primer servicio
+* `docs.example.org` conserva solo coincidencia exacta
+
+---
+
+### Comportamiento importante
+
+!!! warning "Solo el primer dominio se convierte en comodín"
+    Si `SERVER_NAME` es:
+
+    ```yaml
+    SERVER_NAME: "example.com example.org"
+    ```
+
+    solo se añade `*.example.com`.
+
+    Coloque primero el dominio que quiera usar como comodín.
+
+!!! note "Las entradas comodín existentes se conservan"
+    Si el primer dominio ya empieza por `*.`, por ejemplo:
+
+    ```yaml
+    SERVER_NAME: "*.example.com"
+    ```
+
+    el plugin no emite nada.
+
+!!! note "La coincidencia comodín solo cubre una etiqueta"
+    `*.example.com` coincide con `foo.example.com`, pero no con `a.b.example.com`.
+
+    Para subdominios más profundos, use una entrada explícita en `SERVER_NAME` o un servicio independiente.
+
+!!! note "Las coincidencias exactas tienen prioridad"
+    Si otro servicio define explícitamente `foo.example.com`, NGINX enruta primero ese hostname a la coincidencia exacta.
+
+---
+
+### Recomendado con certificados wildcard de Let's Encrypt
+
+Si utiliza este plugin junto con `USE_LETS_ENCRYPT_WILDCARD=yes`, use este patrón:
+
+```yaml
+SERVER_NAME: "<root_domain> <any_app>.<root_domain>"
+```
+
+El **dominio raíz debe ir primero**.
+
+Ejemplo:
+
+```yaml
+SERVER_NAME: "example.com app.example.com"
+USE_WILDCARD: "yes"
+AUTO_LETS_ENCRYPT: "yes"
+EMAIL_LETS_ENCRYPT: "admin@example.com"
+LETS_ENCRYPT_CHALLENGE: "dns"
+LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+USE_LETS_ENCRYPT_WILDCARD: "yes"
+```
+
+!!! tip "Por qué importa este patrón"
+    - **Solo la primera entrada de `SERVER_NAME` se convierte en comodín**
+
+    Si `example.com` va primero, el plugin genera `*.example.com`.
+
+    Si `app.example.com` va primero, genera `*.app.example.com`, lo que normalmente corresponde al nivel de comodín equivocado.
+
+    - **La segunda entrada ayuda a Let's Encrypt a detectar el dominio base correcto**
+      Con solo un dominio apex, la detección del certificado comodín puede fallar en algunos dominios de sufijo público como `example.co.uk`.
+
+    - **El segundo hostname no necesita un backend real**
+      Use cualquier valor estable como `app.example.com` o `www.example.com`.
+
+#### Multisite con Let's Encrypt wildcard
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "example.com app.example.com"
+example.com_USE_WILDCARD: "yes"
+example.com_USE_LETS_ENCRYPT_WILDCARD: "yes"
+example.com_LETS_ENCRYPT_CHALLENGE: "dns"
+example.com_LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+example.com_LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+```
+
+---
+
+### Consejos de uso
+
+* **Planifique TLS por separado**
+  El enrutamiento comodín no basta para HTTPS. Sigue necesitando cobertura de certificados para los subdominios.
+
+* **Mantenga estable el orden de `SERVER_NAME`**
+  Reordenar las entradas cambia qué dominio se convierte en el objetivo del comodín.
+
+* **Funciona bien con `REVERSE_PROXY_HOST`**
+  Es útil cuando muchos subdominios se enrutan a través de un upstream compartido, como un router de tenants.
+
+* **Tenga cuidado con los servicios superpuestos**
+  NGINX siempre prefiere la coincidencia `server_name` más específica.

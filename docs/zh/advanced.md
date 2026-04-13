@@ -4819,22 +4819,22 @@ PLUGINS_ORDER_INIT=sessions whitelist blacklist greylist bunkernet limit authbas
 
 **核心 ACME 设置**
 
-| 设置                   | 默认    | 上下文    | 多个 | 描述                                                           |
-| ---------------------- | ------- | --------- | ---- | -------------------------------------------------------------- |
-| `USE_ACME`             | `no`    | multisite | 否   | 为此服务启用 ACME 证书管理。                                   |
-| `ACME_PASSTHROUGH`     | `no`    | multisite | 否   | 将 HTTP-01 挑战请求透传给上游服务器（上游自行运行 ACME 客户端）。           |
-| `ACME_DIRECTORY_URL`   |         | multisite | 否   | 证书颁发机构的 ACME 目录 URL。                                 |
-| `ACME_EMAIL`           |         | multisite | 否   | 用于 ACME 帐户注册和通知的邮箱地址。                           |
-| `ACME_CHALLENGE`       | `http`  | multisite | 否   | ACME 挑战类型：`http`、`dns` 或 `alpn`。                       |
-| `ACME_KEY_TYPE`        | `ecdsa` | multisite | 否   | 证书的密钥类型：`ecdsa` 或 `rsa`。                             |
-| `ACME_KEY_SIZE`        | `256`   | multisite | 否   | 密钥大小（位）。ECDSA：`256` 或 `384`。RSA：`2048` 或 `4096`。 |
-| `ACME_RENEWAL_DAYS`    | `30`    | multisite | 否   | 当证书距过期天数少于此值时进行续期。                           |
-| `ACME_SSL_VERIFY`      | `yes`   | multisite | 否   | 与 ACME 服务器通信时验证 SSL 证书。                            |
-| `ACME_WILDCARD`        | `no`    | multisite | 否   | 请求通配符证书（需要 DNS-01 挑战）。                           |
-| `ACME_MUST_STAPLE`     | `no`    | multisite | 否   | 在证书中请求 OCSP Must-Staple 扩展。                           |
-| `ACME_MAX_RETRIES`     | `3`     | multisite | 否   | 证书生成失败时的重试次数（0 禁用重试）。                       |
-| `ACME_PREFERRED_CHAIN` |         | multisite | 否   | 当 CA 提供多条证书链时，首选的证书链签发者 CN。                |
-| `ACME_CA_CERT_PATH`    |         | multisite | 否   | 私有 ACME 服务器的根 CA 证书文件路径。                         |
+| 设置                   | 默认    | 上下文    | 多个 | 描述                                                              |
+| ---------------------- | ------- | --------- | ---- | ----------------------------------------------------------------- |
+| `USE_ACME`             | `no`    | multisite | 否   | 为此服务启用 ACME 证书管理。                                      |
+| `ACME_PASSTHROUGH`     | `no`    | multisite | 否   | 将 HTTP-01 挑战请求透传给上游服务器（上游自行运行 ACME 客户端）。 |
+| `ACME_DIRECTORY_URL`   |         | multisite | 否   | 证书颁发机构的 ACME 目录 URL。                                    |
+| `ACME_EMAIL`           |         | multisite | 否   | 用于 ACME 帐户注册和通知的邮箱地址。                              |
+| `ACME_CHALLENGE`       | `http`  | multisite | 否   | ACME 挑战类型：`http`、`dns` 或 `alpn`。                          |
+| `ACME_KEY_TYPE`        | `ecdsa` | multisite | 否   | 证书的密钥类型：`ecdsa` 或 `rsa`。                                |
+| `ACME_KEY_SIZE`        | `256`   | multisite | 否   | 密钥大小（位）。ECDSA：`256` 或 `384`。RSA：`2048` 或 `4096`。    |
+| `ACME_RENEWAL_DAYS`    | `30`    | multisite | 否   | 当证书距过期天数少于此值时进行续期。                              |
+| `ACME_SSL_VERIFY`      | `yes`   | multisite | 否   | 与 ACME 服务器通信时验证 SSL 证书。                               |
+| `ACME_WILDCARD`        | `no`    | multisite | 否   | 请求通配符证书（需要 DNS-01 挑战）。                              |
+| `ACME_MUST_STAPLE`     | `no`    | multisite | 否   | 在证书中请求 OCSP Must-Staple 扩展。                              |
+| `ACME_MAX_RETRIES`     | `3`     | multisite | 否   | 证书生成失败时的重试次数（0 禁用重试）。                          |
+| `ACME_PREFERRED_CHAIN` |         | multisite | 否   | 当 CA 提供多条证书链时，首选的证书链签发者 CN。                   |
+| `ACME_CA_CERT_PATH`    |         | multisite | 否   | 私有 ACME 服务器的根 CA 证书文件路径。                            |
 
 **外部帐户绑定（EAB）**
 
@@ -4943,3 +4943,208 @@ app2.example.com_AUTO_LETS_ENCRYPT: "yes"
 - **TLS-ALPN-01 挑战失败**：确保 ACME 服务器可访问端口 443，且在 `ssl_certificate` 阶段没有其他插件在 ACME 之前提供证书。如有疑问，请检查 `PLUGINS_ORDER_SSL_CERTIFICATE`。
 - **DNS-01 挑战失败**：验证 `ACME_DNS_CREDENTIAL_ITEM` 中的 DNS 提供商凭据，如果您的提供商传播记录较慢，请调整 `ACME_DNS_PROPAGATION`。
 - **证书未续期**：检查 `ACME_RENEWAL_DAYS` 和调度器日志。`acme-renew` 作业每天运行，续期处于配置阈值内的证书。
+
+## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+
+STREAM 支持 :x:
+
+**Wildcard** 插件允许单个 BunkerWeb 服务响应：
+
+* 其精确主机名
+* 该主机名下任意**直接子域名**
+
+启用后，插件会从 `SERVER_NAME` 中取出**第一个条目**，并在生成的 NGINX 配置中添加一个通配符 `server_name`。
+
+例如，如果第一个条目是 `example.com`，插件会添加：
+
+```nginx
+server_name *.example.com;
+```
+
+这样该服务就会响应：
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+
+这是一个最小化、纯配置型插件：
+
+* 无 jobs
+* 无 Lua
+* 无 UI
+
+---
+
+### 工作原理
+
+该插件从 `SERVER_NAME` 的**第一个值**推导出通配符主机名，并在生成配置时注入标准 NGINX 通配符服务器名。
+
+除主机名匹配外，它不会改变请求处理逻辑。
+
+!!! info "通配符主机并不等于通配符证书"
+    此插件只影响 **HTTP 路由**。它告诉 NGINX 服务应接受哪些主机名。
+
+    它**不会**签发通配符 TLS 证书。
+
+    如果要通过 HTTPS 提供 `*.example.com`，您仍然需要匹配的通配符证书，通常可以使用以下其中一种方式：
+
+    - 使用内置 Let's Encrypt 插件并设置 `USE_LETS_ENCRYPT_WILDCARD=yes`
+    - 使用 [ACME PRO](#acme) 插件并设置 `ACME_WILDCARD=yes`，同时使用 DNS-01 挑战
+
+---
+
+### 功能
+
+* **启用简单**：通过 `USE_WILDCARD=yes` 启用通配符路由
+* **自动推导**：通配符主机基于 `SERVER_NAME` 的第一个条目构建
+* **原生 NGINX 语义**：匹配遵循标准 `server_name` 行为
+* **支持多站点**：每个服务都可以独立启用或禁用通配符路由
+
+---
+
+### 配置
+
+| 参数           | 默认值 | 上下文    | 可重复 | 描述                                                                             |
+| -------------- | ------ | --------- | ------ | -------------------------------------------------------------------------------- |
+| `USE_WILDCARD` | `no`   | multisite | 否     | 为服务启用通配符 `server_name`，即为 `SERVER_NAME` 的第一个条目添加 `*.domain`。 |
+
+---
+
+### 快速开始
+
+1. 将您想要使用通配符的域名放在 `SERVER_NAME` 的**第一位**
+2. 设置 `USE_WILDCARD=yes`
+3. 将通配符 DNS 记录指向 BunkerWeb，通常是通配符 `A` 或 `AAAA` 记录
+4. 如果需要 HTTPS，请单独签发通配符证书
+5. 重新加载或重启 BunkerWeb
+
+---
+
+### 示例
+
+#### Single-site
+
+```yaml
+SERVER_NAME: "example.com"
+USE_WILDCARD: "yes"
+```
+
+该服务将响应：
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+* 任何其他解析到 BunkerWeb 的 `*.example.com` 主机名
+
+#### Multisite
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "app.example.com docs.example.org"
+
+# 只有 app.example.com 会启用通配符路由
+app.example.com_USE_WILDCARD: "yes"
+```
+
+在此配置中：
+
+* `app.example.com` 和 `*.app.example.com` 会路由到第一个服务
+* `docs.example.org` 仍然只保留精确匹配
+
+---
+
+### 重要行为
+
+!!! warning "只有第一个域名会被通配"
+    如果 `SERVER_NAME` 是：
+
+    ```yaml
+    SERVER_NAME: "example.com example.org"
+    ```
+
+    则只会添加 `*.example.com`。
+
+    请将您想要使用通配符的域名放在第一位。
+
+!!! note "已有通配符条目会被保留"
+    如果第一个域名已经以 `*.` 开头，例如：
+
+    ```yaml
+    SERVER_NAME: "*.example.com"
+    ```
+
+    插件将不会输出任何内容。
+
+!!! note "通配符匹配仅支持单层标签"
+    `*.example.com` 可以匹配 `foo.example.com`，但不能匹配 `a.b.example.com`。
+
+    对于更深层的子域名，请使用显式的 `SERVER_NAME` 条目或单独的服务。
+
+!!! note "精确匹配优先"
+    如果另一个服务显式定义了 `foo.example.com`，NGINX 会优先将该主机名路由到精确匹配。
+
+---
+
+### 与 Let's Encrypt 通配符证书配合时的推荐方式
+
+如果您将此插件与 `USE_LETS_ENCRYPT_WILDCARD=yes` 一起使用，请采用以下模式：
+
+```yaml
+SERVER_NAME: "<root_domain> <any_app>.<root_domain>"
+```
+
+**根域名必须放在第一位**。
+
+示例：
+
+```yaml
+SERVER_NAME: "example.com app.example.com"
+USE_WILDCARD: "yes"
+AUTO_LETS_ENCRYPT: "yes"
+EMAIL_LETS_ENCRYPT: "admin@example.com"
+LETS_ENCRYPT_CHALLENGE: "dns"
+LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+USE_LETS_ENCRYPT_WILDCARD: "yes"
+```
+
+!!! tip "为什么这个模式很重要"
+    - **只有 `SERVER_NAME` 的第一个条目会被通配**
+
+    如果 `example.com` 放在第一位，插件会生成 `*.example.com`。
+
+    如果 `app.example.com` 放在第一位，它会生成 `*.app.example.com`，这通常不是您想要的通配层级。
+
+    - **第二个条目有助于 Let's Encrypt 检测正确的基础域名**
+      如果只有裸 apex 域名，在某些公共后缀域名（例如 `example.co.uk`）上，通配符证书检测可能会失败。
+
+    - **第二个主机名不需要真实后端**
+      使用任何稳定的值即可，例如 `app.example.com` 或 `www.example.com`。
+
+#### Multisite with Let's Encrypt wildcard
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "example.com app.example.com"
+example.com_USE_WILDCARD: "yes"
+example.com_USE_LETS_ENCRYPT_WILDCARD: "yes"
+example.com_LETS_ENCRYPT_CHALLENGE: "dns"
+example.com_LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+example.com_LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+```
+
+---
+
+### 使用提示
+
+* **请单独规划 TLS**
+  仅有通配符路由不足以支持 HTTPS。您仍然需要为子域名准备相应的证书覆盖。
+
+* **保持 `SERVER_NAME` 顺序稳定**
+  调整条目顺序会改变哪个域名成为通配目标。
+
+* **与 `REVERSE_PROXY_HOST` 配合良好**
+  当大量子域名通过共享上游（例如租户路由器）进行转发时，这会很有用。
+
+* **注意重叠服务**
+  NGINX 总是优先选择最具体的 `server_name` 匹配。
