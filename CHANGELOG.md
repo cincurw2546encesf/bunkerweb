@@ -1,6 +1,10 @@
 # Changelog
 
-## v1.6.10~rc3 - 2026/03/??
+## v1.6.10
+
+- [BUGFIX] Add multisite `SESSIONS_DOMAIN` setting (default empty) that emits a `Domain` attribute on the session cookie per server, allowing antibot/challenge state to be shared across sibling subdomains of the same registrable domain. (Fixes #3415)
+
+## v1.6.10~rc3 - 2026/03/11
 
 - [API/SECURITY] Fix `PATCH /global_config` accidentally deleting all services, custom configs, and jobs cache.
 - [API/SECURITY] Add data-loss guards in `Database.save_config` and `Database.update_external_plugins`: refuse to delete every global setting for a method when the incoming config would wipe every existing row, refuse to cascade-delete plugins when the incoming plugins list is empty, and skip setting/selects/multiselects pruning on same-content plugin reinstalls (detected via checksum comparison) to prevent user-set values from being wiped.
@@ -15,7 +19,6 @@
 - [BUGFIX] Fix metrics Redis sync cascading failures after a mid-cycle connection drop by adding auto-reconnect with circuit-breaker.
 - [BUGFIX] Fix dead Redis connections being returned to the keepalive pool by tracking connection health in `clusterstore`.
 - [BUGFIX] Move `cachestore:update()` IPC poll from `set_by_lua*` (where `ngx.sleep()` is unavailable) to `access_by_lua*`/`preread_by_lua*` phases, eliminating the `ipc.lua` "could not sleep before retry" warning on every request.
-- [BUGFIX] Add multisite `SESSIONS_DOMAIN` setting (default empty) that emits a `Domain` attribute on the session cookie per server, allowing antibot/challenge state to be shared across sibling subdomains of the same registrable domain. (Fixes #3415)
 - [AUTOCONF] Fix multiple Kubernetes Ingress/Route resources for the same hostname overwriting each other instead of merging their paths into a single service configuration.
 - [AUTOCONF] Fix Docker autoconf feedback loop where healthcheck exec events caused endless config regeneration and NGINX reloads by filtering events to container lifecycle actions only.
 - [ALL-IN-ONE] Update CrowdSec version to 1.7.7
