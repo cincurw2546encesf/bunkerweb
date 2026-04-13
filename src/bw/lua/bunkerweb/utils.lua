@@ -772,9 +772,19 @@ utils.get_session = function(ctx)
 	if ctx.bw.sessions_session then
 		return ctx.bw.sessions_session
 	end
+	-- Resolve per-server cookie domain from the multisite SESSIONS_DOMAIN setting. An empty value
+	-- must leave cookie_domain nil so lua-resty-session keeps the host-only default, and the
+	-- multisite lookup guarantees unrelated tenants never receive a cross-tenant Domain attribute.
+	local start_config
+	local sessions_domain, sessions_domain_err = utils.get_variable("SESSIONS_DOMAIN", true, ctx)
+	if sessions_domain == nil then
+		logger:log(ERR, "error while getting variable SESSIONS_DOMAIN : " .. (sessions_domain_err or ""))
+	elseif sessions_domain ~= "" then
+		start_config = { cookie_domain = sessions_domain }
+	end
 	-- Open/create and do an optional refresh
 	local err, exists, refreshed
-	session, err, exists, refreshed = session_start()
+	session, err, exists, refreshed = session_start(start_config)
 	if not session then
 		return nil, err
 	end
