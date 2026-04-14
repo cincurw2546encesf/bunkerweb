@@ -433,10 +433,14 @@ def generate_caches() -> Set[str]:
                 staging_path = extract_path.with_name(f".{extract_path.name}.staging")
                 # Reject symlinks at the staging path: rmtree refuses to follow them,
                 # but a subsequent mkdir(exist_ok=True) + extractall() would happily
-                # write into the symlink target. Unlink the symlink so the fresh mkdir
-                # creates a real directory under scheduler control.
-                if staging_path.is_symlink():
-                    staging_path.unlink()
+                # write into the symlink target. Unlink unconditionally with
+                # missing_ok=True so a check-then-act race window between is_symlink()
+                # and unlink() cannot let an attacker swap in a symlink we already
+                # decided to leave alone — if it's a symlink we drop it, if it's a
+                # regular file we drop it too, and if it doesn't exist we move on.
+                # Real directories are handled by rmtree() on the next line.
+                with suppress(IsADirectoryError, PermissionError):
+                    staging_path.unlink(missing_ok=True)
                 rmtree(staging_path, ignore_errors=True)
                 staging_path.mkdir(parents=True, exist_ok=True)
                 try:
