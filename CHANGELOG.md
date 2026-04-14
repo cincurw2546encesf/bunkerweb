@@ -2,9 +2,17 @@
 
 ## v1.6.10
 
+- [SECURITY] Harden AIO log wrapper: strip C0/C1 control chars from service output to prevent terminal injection in `docker logs`, disable pathname expansion around `HIDE_SERVICE_LOGS` word splitting, and reject `..` path-traversal segments in `LOG_FILE_PATH` validation.
 - [BUGFIX] Add multisite `SESSIONS_DOMAIN` setting (default empty) that emits a `Domain` attribute on the session cookie per server, allowing antibot/challenge state to be shared across sibling subdomains of the same registrable domain. (Fixes #3415)
+- [BUGFIX] Web UI: launch `tmp-gunicorn` with `env -u LOG_FILE_PATH` so the bootstrap UI falls back to its own `tmp-ui.log` instead of colliding with the main UI's `ui.log`.
+- [BUGFIX] All-in-one: honor `docker run -e LOG_FILE_PATH=...` overrides for Python services (previously shadowed by a hardcoded supervisor `environment=` line).
+- [BUGFIX] Let's Encrypt: cap certbot's rotating log files at 20 per job run via `prepare_logs_dir()`. Certbot's internal 1000-backup limit otherwise piled up unbounded in container deployments.
+- [BUGFIX] Linux package: fix the `bunkerweb.logrotate` letsencrypt glob (`[0-9]+` was a regex typo, never matched anything as a glob) and drop the `size 100M` + `dateformat -%Y-%m-%d` collision that clobbered same-day rotations.
+- [FEATURE] `LOG_TYPES=file` now rotates via `RotatingFileHandler` instead of growing unbounded. New env vars: `LOG_FILE_MAX_BYTES` (default 10 MiB) and `LOG_FILE_BACKUP_COUNT` (default 5). Applies to scheduler, UI, API and autoconf in every integration mode.
+- [ALL-IN-ONE] Default to `LOG_TYPES="stderr file"` so Python services write their own bounded on-disk logs. `service-log-wrapper.sh` drops the `tee` but keeps the `[SERVICE]` prefix and `HIDE_SERVICE_LOGS` suppression; gunicorn's file handlers for UI/API/tmp-UI are swapped for rotating ones in `on_starting`.
+- [UI] Hide rotated `*.log.<N>` and `*.log.<N>.gz` files from the logs-page file picker.
 
-## v1.6.10~rc3 - 2026/03/11
+## v1.6.10~rc3 - 2026/04/11
 
 - [API/SECURITY] Fix `PATCH /global_config` accidentally deleting all services, custom configs, and jobs cache.
 - [API/SECURITY] Add data-loss guards in `Database.save_config` and `Database.update_external_plugins`: refuse to delete every global setting for a method when the incoming config would wipe every existing row, refuse to cascade-delete plugins when the incoming plugins list is empty, and skip setting/selects/multiselects pruning on same-content plugin reinstalls (detected via checksum comparison) to prevent user-set values from being wiped.
@@ -24,7 +32,6 @@
 - [ALL-IN-ONE] Update CrowdSec version to 1.7.7
 - [UI] Fix multiselect dropdown being clipped in template wizard steps. (Fixes #3401)
 - [UI] Fix Reports page IP hit counts decreasing when clicking through to filter by IP: the precomputed Redis facet counts (unfiltered view) included all stored requests, but the streaming path dropped 5xx/3xx requests via an extra `400 <= status < 500 or security_mode == "detect"` filter. (Fixes #3407)
-- [UI] Add missing `DEFAULT_SERVER_STREAM` custom config type to the Web UI, allowing creation and management of stream-level default server configurations.
 - [API] Fix `update_config_upload` resetting a custom config's service scope to global when the caller did not explicitly request a service move.
 - [MISC] Update default value for Permissions-Policy header to include additional features (`local-network`, `local-network-access` and `loopback-network`).
 - [MISC] Accept `g`/`G` suffix on memory size settings (`WORKERLOCK_MEMORY_SIZE`, `DATASTORE_MEMORY_SIZE`, `CACHESTORE_MEMORY_SIZE`, `CACHESTORE_IPC_MEMORY_SIZE`, `CACHESTORE_MISS_MEMORY_SIZE`, `CACHESTORE_LOCKS_MEMORY_SIZE`, `INTERNALSTORE_MEMORY_SIZE`): values are automatically normalized to megabytes at template rendering time since NGINX's `ngx_parse_size()` only supports `k`/`m` for `lua_shared_dict`.
