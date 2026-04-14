@@ -8,7 +8,7 @@ for deps_path in [join(sep, "usr", "share", "bunkerweb", *paths) for paths in ((
         sys_path.append(deps_path)
 
 from common_utils import handle_docker_secrets  # type: ignore
-from logger import getLogger, env_log_types  # type: ignore
+from logger import getLogger, env_log_types, upgrade_file_handlers_to_rotating  # type: ignore
 
 TMP_DIR = Path(sep, "var", "tmp", "bunkerweb")
 TMP_UI_DIR = TMP_DIR.joinpath("ui")
@@ -19,7 +19,9 @@ HEALTH_FILE = TMP_DIR.joinpath("tmp-ui.healthy")
 PID_FILE = RUN_DIR.joinpath("tmp-ui.pid")
 
 LOG_LEVEL = getenv("CUSTOM_LOG_LEVEL", getenv("LOG_LEVEL", "info"))
-LISTEN_ADDR = getenv("UI_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0"))
+LISTEN_ADDR = getenv(
+    "UI_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0")
+)  # nosec B104 - 0.0.0.0 is the documented containerized default; operators override via UI_LISTEN_ADDR / LISTEN_ADDR.
 LISTEN_PORT = getenv("UI_LISTEN_PORT", getenv("LISTEN_PORT", "7000"))
 FORWARDED_ALLOW_IPS = getenv(
     "UI_FORWARDED_ALLOW_IPS",
@@ -85,6 +87,10 @@ if DEBUG:
 
 
 def on_starting(server):
+    # Swap any plain FileHandler gunicorn attached (via cfg.errorlog/accesslog) for a
+    # bounded RotatingFileHandler so file-based logging doesn't grow unbounded.
+    upgrade_file_handlers_to_rotating(server.log.error_log)
+    upgrade_file_handlers_to_rotating(server.log.access_log)
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     TMP_UI_DIR.mkdir(parents=True, exist_ok=True)
     RUN_DIR.mkdir(parents=True, exist_ok=True)

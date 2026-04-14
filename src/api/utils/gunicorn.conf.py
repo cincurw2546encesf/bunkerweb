@@ -17,7 +17,7 @@ for deps_path in [join(sep, "usr", "share", "bunkerweb", *paths) for paths in ((
 from biscuit_auth import KeyPair, PublicKey, PrivateKey
 
 from common_utils import effective_cpu_count, handle_docker_secrets  # type: ignore
-from logger import getLogger, log_types  # type: ignore
+from logger import getLogger, log_types, upgrade_file_handlers_to_rotating  # type: ignore
 
 from app.models.api_database import APIDatabase
 from app.utils import BISCUIT_PRIVATE_KEY_FILE, BISCUIT_PUBLIC_KEY_FILE, USER_PASSWORD_RX, check_password, gen_password_hash
@@ -39,7 +39,9 @@ BISCUIT_PRIVATE_KEY_HASH_FILE = BISCUIT_PRIVATE_KEY_FILE.with_suffix(".hash")  #
 
 MAX_WORKERS = int(getenv("MAX_WORKERS", max(effective_cpu_count() - 1, 1)))
 LOG_LEVEL = getenv("CUSTOM_LOG_LEVEL", getenv("LOG_LEVEL", "info"))
-LISTEN_ADDR = getenv("API_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0"))
+LISTEN_ADDR = getenv(
+    "API_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0")
+)  # nosec B104 - 0.0.0.0 is the documented containerized default; operators override via API_LISTEN_ADDR / LISTEN_ADDR.
 LISTEN_PORT = getenv("API_LISTEN_PORT", getenv("LISTEN_PORT", "8888"))
 """
 Trusted proxies / forwarded headers
@@ -139,6 +141,10 @@ if API_SSL_ENABLED and API_SSL_CERTFILE and API_SSL_KEYFILE:
 
 
 def on_starting(server):
+    # Swap any plain FileHandler gunicorn attached (via cfg.errorlog/accesslog) for a
+    # bounded RotatingFileHandler so file-based logging doesn't grow unbounded.
+    upgrade_file_handlers_to_rotating(server.log.error_log)
+    upgrade_file_handlers_to_rotating(server.log.access_log)
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     TMP_UI_DIR.mkdir(parents=True, exist_ok=True)
     RUN_DIR.mkdir(parents=True, exist_ok=True)

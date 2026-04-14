@@ -19,7 +19,7 @@ from biscuit_auth import KeyPair, PublicKey, PrivateKey
 from passlib.totp import generate_secret
 
 from common_utils import effective_cpu_count, handle_docker_secrets  # type: ignore
-from logger import getLogger, log_types  # type: ignore
+from logger import getLogger, log_types, upgrade_file_handlers_to_rotating  # type: ignore
 
 from app.models.ui_database import UIDatabase
 from app.dependencies import reload_plugins
@@ -50,7 +50,9 @@ BISCUIT_PRIVATE_KEY_HASH_FILE = BISCUIT_PRIVATE_KEY_FILE.with_suffix(".hash")  #
 
 MAX_WORKERS = int(getenv("MAX_WORKERS", max(effective_cpu_count() - 1, 1)))
 LOG_LEVEL = getenv("CUSTOM_LOG_LEVEL", getenv("LOG_LEVEL", "info"))
-LISTEN_ADDR = getenv("UI_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0"))
+LISTEN_ADDR = getenv(
+    "UI_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0")
+)  # nosec B104 - 0.0.0.0 is the documented containerized default; operators override via UI_LISTEN_ADDR / LISTEN_ADDR.
 LISTEN_PORT = getenv("UI_LISTEN_PORT", getenv("LISTEN_PORT", "7000"))
 FORWARDED_ALLOW_IPS = getenv(
     "UI_FORWARDED_ALLOW_IPS",
@@ -139,6 +141,10 @@ if UI_SSL_ENABLED and UI_SSL_CERTFILE and UI_SSL_KEYFILE:
 
 
 def on_starting(server):
+    # Swap any plain FileHandler gunicorn attached (via cfg.errorlog/accesslog) for a
+    # bounded RotatingFileHandler so file-based logging doesn't grow unbounded.
+    upgrade_file_handlers_to_rotating(server.log.error_log)
+    upgrade_file_handlers_to_rotating(server.log.access_log)
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     TMP_UI_DIR.mkdir(parents=True, exist_ok=True)
     RUN_DIR.mkdir(parents=True, exist_ok=True)

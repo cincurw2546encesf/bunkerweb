@@ -1,10 +1,10 @@
+from contextlib import suppress
 from logging import (
     CRITICAL,
     DEBUG,
     ERROR,
     INFO,
     WARNING,
-    FileHandler,
     Logger,
     StreamHandler,
     _nameToLevel,
@@ -13,7 +13,7 @@ from logging import (
     getLogger as logging_getLogger,
     setLoggerClass,
 )
-from logging.handlers import SysLogHandler
+from logging.handlers import RotatingFileHandler, SysLogHandler
 from os import getenv, sep
 from os.path import join
 from re import match
@@ -42,6 +42,15 @@ setLoggerClass(BWLogger)
 default_level = _nameToLevel.get(getenv("CUSTOM_LOG_LEVEL", getenv("LOG_LEVEL", "INFO")).upper(), INFO)
 
 env_log_types = getenv("LOG_TYPES", "stderr").split()
+# File rotation settings (only used when LOG_TYPES contains "file")
+try:
+    LOG_FILE_MAX_BYTES = max(0, int(getenv("LOG_FILE_MAX_BYTES", "10485760")))  # 10 MiB
+except ValueError:
+    LOG_FILE_MAX_BYTES = 10485760
+try:
+    LOG_FILE_BACKUP_COUNT = max(0, int(getenv("LOG_FILE_BACKUP_COUNT", "5")))
+except ValueError:
+    LOG_FILE_BACKUP_COUNT = 5
 log_types = {}
 warnings = []
 
@@ -49,9 +58,12 @@ if "file" in env_log_types:
     log_file_path = getenv(
         "LOG_FILE_PATH", join(sep, "var", "log", "bunkerweb", "scheduler.log") if getenv("SCHEDULER_LOG_TO_FILE", "no") == "yes" else ""
     ).strip()
-    if match(FILE_PATH_PATTERN, log_file_path):
+    # Reject path-traversal segments explicitly — the char-class regex below allows `..`
+    # between slashes, which would let an operator set `LOG_FILE_PATH=/var/log/bunkerweb/../etc/passwd`.
+    has_traversal = ".." in log_file_path.split("/")
+    if not has_traversal and match(FILE_PATH_PATTERN, log_file_path):
         log_types["file"] = {
-            "handler": FileHandler(log_file_path),
+            "handler": RotatingFileHandler(log_file_path, maxBytes=LOG_FILE_MAX_BYTES, backupCount=LOG_FILE_BACKUP_COUNT),
             "file_path": log_file_path,
         }
     else:
@@ -143,6 +155,61 @@ def setup_logger(title: str, level: Optional[Union[str, int]] = None) -> Logger:
     logger.setLevel(level)
 
     return logger
+
+
+def upgrade_file_handlers_to_rotating(logger: Logger) -> int:
+    """Replace any plain FileHandler on `logger` with a RotatingFileHandler in place.
+
+    Gunicorn's glogging creates a plain FileHandler when cfg.errorlog / cfg.accesslog is a file
+    path. Call this from a gunicorn on_starting hook to swap those handlers for bounded ones
+    without reimplementing gunicorn's config pipeline. Handlers that are already
+    RotatingFileHandler (or not FileHandler at all) are left alone.
+
+    Only ``formatter`` and ``level`` are carried over from the replaced handlers — ``mode``,
+    ``encoding``, ``delay`` and any filters fall back to ``RotatingFileHandler`` defaults.
+    That matches gunicorn's defaults, which is the only intended caller today.
+
+    Note: ``RotatingFileHandler`` is not multiprocess-safe. When invoked from a gunicorn
+    ``on_starting`` hook the rotating handler is opened in the master and inherited by every
+    forked worker, so multiple workers can race each other on ``doRollover``'s rename step.
+    This is a known stdlib limitation and is accepted as a tradeoff here — the alternative
+    (swapping in ``post_fork``) gives each worker its own handle and makes the race worse.
+
+    Returns the number of handlers that were replaced.
+    """
+    from logging import FileHandler  # local import to avoid module-level dependency
+
+    replaced = 0
+    new_handlers = []
+    old_to_close = []
+    for handler in logger.handlers:
+        if type(handler) is FileHandler:  # exactly FileHandler, not a subclass
+            rotating = RotatingFileHandler(
+                handler.baseFilename,
+                maxBytes=LOG_FILE_MAX_BYTES,
+                backupCount=LOG_FILE_BACKUP_COUNT,
+            )
+            rotating.setFormatter(handler.formatter)
+            rotating.setLevel(handler.level)
+            new_handlers.append(rotating)
+            old_to_close.append(handler)
+            replaced += 1
+        else:
+            new_handlers.append(handler)
+    if replaced:
+        # Reassign first so concurrent emits don't hit a handler whose stream we're about to
+        # close, then close the old handles afterwards.
+        logger.handlers = new_handlers
+        for old in old_to_close:
+            with suppress(Exception):
+                old.close()
+        logger.info(
+            "Upgraded %d file handler(s) to RotatingFileHandler (maxBytes=%d, backupCount=%d)",
+            replaced,
+            LOG_FILE_MAX_BYTES,
+            LOG_FILE_BACKUP_COUNT,
+        )
+    return replaced
 
 
 if warnings:

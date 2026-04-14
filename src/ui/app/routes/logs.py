@@ -1,4 +1,4 @@
-from contextlib import suppress
+from re import compile as re_compile
 from os import listdir
 from os.path import isabs, sep
 from pathlib import Path
@@ -11,8 +11,13 @@ from werkzeug.utils import secure_filename
 
 from app.routes.utils import error_message
 
-
 logs = Blueprint("logs", __name__)
+
+# Hide certbot-rotated artifacts (e.g. `letsencrypt.log.991`, `letsencrypt.log.2.gz`) from the
+# picker — only the live log is meant to be browsed. The Python prune in
+# src/common/core/letsencrypt/jobs/letsencrypt_utils.py caps these at 20, but they're still
+# noise in the dropdown.
+_ROTATED_LOG_RE = re_compile(r"\.log\.\d+(?:\.gz)?$")
 
 
 @logs.route("/logs", methods=["GET"])
@@ -30,21 +35,7 @@ def logs_page():
                 files["main"].append(file.name)
 
     if letsencrypt_path.is_dir() and listdir(letsencrypt_path):
-        letsencrypt_files = [file.name for file in letsencrypt_path.glob("*.log*") if file.is_file()]
-
-        # Sort letsencrypt files with proper numerical ordering
-        def sort_key(filename):
-            if filename.endswith(".log"):
-                return (0, filename)  # Files ending with .log come first
-            else:
-                # Extract number from .log.X format
-                with suppress(ValueError, IndexError):
-                    parts = filename.split(".log.")
-                    if len(parts) == 2:
-                        return (int(parts[1]), filename)
-                return (999999, filename)  # Fallback for unexpected formats
-
-        letsencrypt_files.sort(key=sort_key)
+        letsencrypt_files = sorted(file.name for file in letsencrypt_path.glob("*.log*") if file.is_file() and not _ROTATED_LOG_RE.search(file.name))
         for file in letsencrypt_files:
             files["letsencrypt"].append(f"letsencrypt_{file}")
 
