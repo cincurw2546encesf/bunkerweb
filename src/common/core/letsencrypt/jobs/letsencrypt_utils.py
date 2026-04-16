@@ -1,5 +1,3 @@
-from operator import itemgetter
-from re import compile as re_compile
 from os import W_OK, X_OK, access, environ, getenv, sep, umask
 from os.path import join
 from pathlib import Path
@@ -19,11 +17,19 @@ LETSENCRYPT_PRODUCTION_DIRECTORY = "https://acme-v02.api.letsencrypt.org/directo
 LETSENCRYPT_STAGING_DIRECTORY = "https://acme-staging-v02.api.letsencrypt.org/directory"
 ZEROSSL_DIRECTORY = "https://acme.zerossl.com/v2/DV90"
 
-# Certbot's internal RotatingFileHandler defaults to backupCount=1000 and rotates on every
-# invocation, so rotation files pile up unbounded in every integration mode (Docker, AIO, K8s,
-# Linux). We cap the rotations here so containers don't accumulate thousands of stale files.
-MAX_LETSENCRYPT_LOG_ROTATIONS = 20
-_LETSENCRYPT_LOG_ROTATION_RE = re_compile(r"^.+\.log\.(?P<num>\d+)(?:\.gz)?$")
+
+def certbot_log_backup_flags(env_vars: Optional[Mapping[str, str]] = None) -> List[str]:
+    """Return `--max-log-backups N` to cap certbot's per-invocation log rotations.
+
+    Certbot defaults to backupCount=1000, which piles up ~1000 rotation files per logs-dir.
+    Operators tune this via `LETS_ENCRYPT_MAX_LOG_BACKUPS` (default 50).
+    """
+    raw = (env_vars or environ).get("LETS_ENCRYPT_MAX_LOG_BACKUPS", "50").strip()
+    try:
+        value = max(0, int(raw))
+    except ValueError:
+        value = 50
+    return ["--max-log-backups", str(value)]
 
 
 _API_SETTINGS_WHITELIST = frozenset(
@@ -72,57 +78,6 @@ def build_certbot_env(job, deps_path: str, base_env: Optional[Dict[str, str]] = 
     return cmd_env
 
 
-def _prune_letsencrypt_log_rotations(logs_path: Path, keep: int, logger) -> None:
-    """Keep only the newest `keep` certbot rotations and sweep any compressed fossils.
-
-    Certbot uses Python's RotatingFileHandler with backupCount=1000 and rolls over on every
-    invocation, producing files like `letsencrypt.log.1` (newest rotation) through
-    `letsencrypt.log.1000` (oldest). Lower numeric suffix == newer, so we keep the lowest-
-    numbered rotations and drop the rest.
-
-    `.log.N.gz` files are orphans from a previous (broken) logrotate config — certbot never
-    compresses its own rotations, so any `.gz` present is stale and always removed.
-    """
-    try:
-        entries = list(logs_path.iterdir())
-    except BaseException as e:
-        logger.debug(f"Failed to list {logs_path} for rotation cleanup: {e}")
-        return
-
-    active: List[tuple] = []  # (num, path) — live certbot-produced rotations
-    fossils: List[Path] = []  # compressed orphans from prior logrotate runs
-    for entry in entries:
-        if not entry.is_file():
-            continue
-        match = _LETSENCRYPT_LOG_ROTATION_RE.match(entry.name)
-        if not match:
-            continue
-        if entry.name.endswith(".gz"):
-            fossils.append(entry)
-        else:
-            active.append((int(match.group("num")), entry))
-
-    to_delete: List[Path] = fossils.copy()
-    if len(active) > keep:
-        active.sort(key=itemgetter(0))
-        to_delete.extend(path for _, path in active[keep:])
-
-    if not to_delete:
-        return
-
-    deleted = 0
-    for stale in to_delete:
-        try:
-            stale.unlink(missing_ok=True)
-            deleted += 1
-        except BaseException as e:
-            logger.debug(f"Failed to remove stale Let's Encrypt log {stale}: {e}")
-
-    if deleted:
-        kept = min(len(active), keep)
-        logger.info(f"Pruned {deleted} stale Let's Encrypt log file(s), kept {kept} most recent rotation(s)")
-
-
 def prepare_logs_dir(logs_dir: Union[str, Path], logger) -> None:
     """Ensure the Let's Encrypt logs directory is writable by the running user."""
     try:
@@ -151,8 +106,6 @@ def prepare_logs_dir(logs_dir: Union[str, Path], logger) -> None:
                 log_file.unlink(missing_ok=True)
         except BaseException as e:
             logger.debug(f"Failed to adjust permissions on log file {log_file}: {e}")
-
-    _prune_letsencrypt_log_rotations(logs_path, MAX_LETSENCRYPT_LOG_ROTATIONS, logger)
 
 
 def is_zerossl_used_in_env(env_vars: Optional[Mapping[str, str]] = None) -> bool:

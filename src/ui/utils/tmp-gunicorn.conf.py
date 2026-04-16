@@ -8,7 +8,7 @@ for deps_path in [join(sep, "usr", "share", "bunkerweb", *paths) for paths in ((
         sys_path.append(deps_path)
 
 from common_utils import handle_docker_secrets  # type: ignore
-from logger import getLogger, env_log_types, upgrade_file_handlers_to_rotating  # type: ignore
+from logger import getLogger, log_types  # type: ignore
 
 TMP_DIR = Path(sep, "var", "tmp", "bunkerweb")
 TMP_UI_DIR = TMP_DIR.joinpath("ui")
@@ -31,14 +31,14 @@ PROXY_ALLOW_IPS = getenv("UI_PROXY_ALLOW_IPS", getenv("PROXY_ALLOW_IPS", FORWARD
 CAPTURE_OUTPUT = getenv("CAPTURE_OUTPUT", "no").lower() == "yes"
 DEBUG = getenv("DEBUG", False)
 
-if CAPTURE_OUTPUT or "file" in env_log_types:
+if CAPTURE_OUTPUT or "file" in log_types:
     errorlog = getenv("LOG_FILE_PATH", join(sep, "var", "log", "bunkerweb", "tmp-ui.log"))
     accesslog = f"{errorlog.rsplit('.', 1)[0]}-access.log"
 else:
     errorlog = "-"
     accesslog = "-"
 
-if "syslog" in env_log_types:
+if "syslog" in log_types:
     syslog = True
     syslog_addr = getenv("LOG_SYSLOG_ADDRESS", "").strip()
     if not syslog_addr.startswith(("/", "udp://", "tcp://")):
@@ -87,10 +87,6 @@ if DEBUG:
 
 
 def on_starting(server):
-    # Swap any plain FileHandler gunicorn attached (via cfg.errorlog/accesslog) for a
-    # bounded RotatingFileHandler so file-based logging doesn't grow unbounded.
-    upgrade_file_handlers_to_rotating(server.log.error_log)
-    upgrade_file_handlers_to_rotating(server.log.access_log)
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     TMP_UI_DIR.mkdir(parents=True, exist_ok=True)
     RUN_DIR.mkdir(parents=True, exist_ok=True)

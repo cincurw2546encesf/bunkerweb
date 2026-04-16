@@ -17,7 +17,7 @@ for deps_path in [join(sep, "usr", "share", "bunkerweb", *paths) for paths in ((
 from biscuit_auth import KeyPair, PublicKey, PrivateKey
 
 from common_utils import effective_cpu_count, handle_docker_secrets  # type: ignore
-from logger import getLogger, log_types, upgrade_file_handlers_to_rotating  # type: ignore
+from logger import getLogger, log_types  # type: ignore
 
 from app.models.api_database import APIDatabase
 from app.utils import BISCUIT_PRIVATE_KEY_FILE, BISCUIT_PUBLIC_KEY_FILE, USER_PASSWORD_RX, check_password, gen_password_hash
@@ -141,10 +141,6 @@ if API_SSL_ENABLED and API_SSL_CERTFILE and API_SSL_KEYFILE:
 
 
 def on_starting(server):
-    # Swap any plain FileHandler gunicorn attached (via cfg.errorlog/accesslog) for a
-    # bounded RotatingFileHandler so file-based logging doesn't grow unbounded.
-    upgrade_file_handlers_to_rotating(server.log.error_log)
-    upgrade_file_handlers_to_rotating(server.log.access_log)
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     TMP_UI_DIR.mkdir(parents=True, exist_ok=True)
     RUN_DIR.mkdir(parents=True, exist_ok=True)

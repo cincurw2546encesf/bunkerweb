@@ -76,6 +76,7 @@ from letsencrypt_utils import (
     LETSENCRYPT_JOBS_PATH as JOBS_PATH,
     LETSENCRYPT_LOGS_DIR as LOGS_DIR,
     LETSENCRYPT_WORK_DIR as WORK_DIR,
+    certbot_log_backup_flags,
     ZEROSSL_BOT_SCRIPT,
     build_certbot_env,
     get_expected_acme_directory,
@@ -651,6 +652,7 @@ def certbot_delete(service: str, cmd_env: Dict[str, str] = None) -> int:
         WORK_DIR,
         "--logs-dir",
         LOGS_DIR,
+        *certbot_log_backup_flags(cmd_env),
     ]
 
     if LOG_LEVEL == "DEBUG":
@@ -712,6 +714,7 @@ def certbot_new(
         paths.work_dir.as_posix(),
         "--logs-dir",
         paths.logs_dir.as_posix(),
+        *certbot_log_backup_flags(cmd_env),
         "--break-my-certs",
         "--expand",
     ]
@@ -902,6 +905,7 @@ try:
             WORK_DIR,
             "--logs-dir",
             LOGS_DIR,
+            *certbot_log_backup_flags(cmd_env),
         ],
         stdin=DEVNULL,
         stdout=PIPE,

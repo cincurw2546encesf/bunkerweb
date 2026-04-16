@@ -21,6 +21,7 @@ from letsencrypt_utils import (
     LETSENCRYPT_WORK_DIR as WORK_DIR,
     ZEROSSL_BOT_SCRIPT,
     build_certbot_env,
+    certbot_log_backup_flags,
     is_zerossl_used_in_env,
     prepare_logs_dir,
     resolve_certbot_entrypoint,
@@ -78,6 +79,7 @@ try:
             WORK_DIR,
             "--logs-dir",
             LOGS_DIR,
+            *certbot_log_backup_flags(cmd_env),
         ]
         + (["-v"] if getenv("CUSTOM_LOG_LEVEL", getenv("LOG_LEVEL", "INFO")).upper() == "DEBUG" else []),
         stdin=DEVNULL,

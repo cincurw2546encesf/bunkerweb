@@ -2581,15 +2581,18 @@ Service logs are controlled by the `LOG_TYPES` setting, which can accept multipl
 
 | Value    | Description                                                                             |
 | :------- | :-------------------------------------------------------------------------------------- |
-| `file`   | Writes logs to a file. Required for the Web UI log viewer.                              |
+| `file`   | Writes logs to a plain file. External rotation is handled by `logrotate` on Linux installs or by your container logging driver on Docker. Required for the Web UI log viewer. |
 | `stderr` | Writes logs to standard error. Standard for containerized environments (`docker logs`). |
 | `syslog` | Sends logs to a syslog server. Requires `LOG_SYSLOG_ADDRESS` to be set.                 |
+
+When using `file`, you should also configure:
+
+- `LOG_FILE_PATH`: Path where log files are written when `LOG_TYPES` contains `file`.
 
 When using `syslog`, you should also configure:
 
 - `LOG_SYSLOG_ADDRESS`: The address of the syslog server (e.g., `udp://bw-syslog:514` or `/dev/log`).
 - `LOG_SYSLOG_TAG`: A unique tag for the service (e.g., `bw-scheduler`) to distinguish its entries.
-- `LOG_FILE_PATH`: Path for file output when `LOG_TYPES` includes `file` (for example, `/var/log/bunkerweb/scheduler.log`).
 
 ### Access and Error Logs
 
@@ -2618,7 +2621,7 @@ LOG_LEVEL_1=error
 
 === "Linux"
 
-    **Default behavior**: `LOG_TYPES="file"`. Logs are written to `/var/log/bunkerweb/*.log`.
+    **Default behavior**: `LOG_TYPES="file"`. Logs are written to `/var/log/bunkerweb/*.log`. Rotation is handled by the system `logrotate` config installed at `/etc/logrotate.d/bunkerweb` (daily, 7-day retention, compressed via `copytruncate`).
 
     **Example**: Keep local files (for Web UI) and also mirror to the system syslog.
 

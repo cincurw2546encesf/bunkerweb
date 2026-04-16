@@ -2582,15 +2582,18 @@ Los registros de servicio se controlan con la configuración `LOG_TYPES`, que pu
 
 | Valor    | Descripción                                                                                                  |
 | :------- | :----------------------------------------------------------------------------------------------------------- |
-| `file`   | Escribe los registros en un archivo. Requerido para el visor de registros de la interfaz UI.                 |
+| `file`   | Escribe los registros en un archivo plano. La rotación externa la gestiona `logrotate` en instalaciones Linux o tu driver de logging del contenedor en Docker. Requerido para el visor de registros de la interfaz UI. |
 | `stderr` | Escribe los registros en la salida de error estándar. Estándar en entornos con contenedores (`docker logs`). |
 | `syslog` | Envía los registros a un servidor syslog. Requiere definir `LOG_SYSLOG_ADDRESS`.                             |
+
+Al usar `file`, también debes configurar:
+
+- `LOG_FILE_PATH`: Ruta donde se escriben los archivos de log cuando `LOG_TYPES` incluye `file`.
 
 Al usar `syslog`, también debes configurar:
 
 - `LOG_SYSLOG_ADDRESS`: La dirección del servidor syslog (por ejemplo, `udp://bw-syslog:514` o `/dev/log`).
 - `LOG_SYSLOG_TAG`: Una etiqueta única para el servicio (por ejemplo, `bw-scheduler`) para distinguir sus entradas.
-- `LOG_FILE_PATH`: Ruta para la salida de archivo cuando `LOG_TYPES` incluye `file` (por ejemplo, `/var/log/bunkerweb/scheduler.log`).
 
 ### Registros de acceso y error
 
@@ -2619,7 +2622,7 @@ LOG_LEVEL_1=error
 
 === "Linux"
 
-    **Comportamiento predeterminado**: `LOG_TYPES="file"`. Los registros se escriben en `/var/log/bunkerweb/*.log`.
+    **Comportamiento predeterminado**: `LOG_TYPES="file"`. Los registros se escriben en `/var/log/bunkerweb/*.log`. La rotación la gestiona la configuración del sistema `logrotate` instalada en `/etc/logrotate.d/bunkerweb` (diaria, retención de 7 días, comprimida con `copytruncate`).
 
     **Ejemplo**: Mantener archivos locales (para la interfaz web) y también enviar una copia al syslog del sistema.
 

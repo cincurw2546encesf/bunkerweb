@@ -2,6 +2,7 @@
 {
     su nginx nginx
     daily
+    size 100M
     rotate 7
     copytruncate
     compress
@@ -11,16 +12,4 @@
     dateext
     dateformat -%Y-%m-%d
     create 0640 nginx nginx
-}
-
-/var/log/bunkerweb/letsencrypt/*.log \
-/var/log/bunkerweb/letsencrypt/*.log.[0-9]* \
-/var/log/bunkerweb/letsencrypt/*.log.[0-9]*.gz {
-    su nginx nginx
-    daily
-    rotate 0
-    maxage 7
-    missingok
-    nocompress
-    create 0660 nginx nginx
 }

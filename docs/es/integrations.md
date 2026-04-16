@@ -1340,7 +1340,8 @@ La imagen Todo en Uno viene con varios servicios integrados, que se pueden contr
 - `AUTOCONF_MODE=no` (predeterminado) - Habilita el servicio de autoconfiguración
 - `USE_REDIS=yes` (predeterminado) - Habilita la instancia de [Redis](#redis-integration) integrada
 - `USE_CROWDSEC=no` (predeterminado) - La integración con [CrowdSec](#crowdsec-integration) está deshabilitada por defecto
-- `HIDE_SERVICE_LOGS=` (opcional) - Lista separada por comas de servicios cuyos registros se silencian en los logs del contenedor. Valores admitidos: `api`, `autoconf`, `bunkerweb`, `crowdsec`, `redis`, `scheduler`, `ui`, `nginx.access`, `nginx.error`, `modsec`. Los archivos en `/var/log/bunkerweb/<service>.log` se siguen actualizando.
+- `HIDE_SERVICE_LOGS=` (opcional) - Lista separada por comas de servicios cuyos registros se silencian en los logs del contenedor. Valores admitidos: `api`, `autoconf`, `bunkerweb`, `crowdsec`, `redis`, `scheduler`, `ui`, `nginx.access`, `nginx.error`, `modsec`.
+- **Registros**: La imagen todo en uno envía el stdout y el stderr de cada servicio a la salida del contenedor. Usa `docker logs bunkerweb-aio` (o tu controlador de logs de contenedores preferido) para ver y rotar los logs. La imagen no escribe archivos de log en disco para sus servicios Python.
 
 ### Integración de la API
 
@@ -1788,8 +1789,8 @@ El programador es el worker del plano de control que lee configuraciones, genera
 | ------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `LOG_LEVEL`, `CUSTOM_LOG_LEVEL` | Nivel base / override                                                | `debug`, `info`, `warning`, `error`, `critical`     | `info`                                                                          |
 | `LOG_TYPES`                     | Destinos                                                             | `stderr`/`file`/`syslog` separados por espacios     | `stderr`                                                                        |
-| `SCHEDULER_LOG_TO_FILE`         | Habilitar logging a archivo y ruta por defecto                       | `yes` o `no`                                        | `no`                                                                            |
-| `LOG_FILE_PATH`                 | Ruta de log personalizada (usada cuando `LOG_TYPES` incluye `file`)  | Ruta de archivo                                     | `/var/log/bunkerweb/scheduler.log` con `SCHEDULER_LOG_TO_FILE=yes`, si no unset |
+| `SCHEDULER_LOG_TO_FILE`         | Opción heredada de compatibilidad: cuando se define, `LOG_FILE_PATH` toma por defecto `/var/log/bunkerweb/scheduler.log` si `LOG_TYPES` incluye `file` y no definiste `LOG_FILE_PATH` explícitamente. | `yes` o `no`                                        | `no`                                                                            |
+| `LOG_FILE_PATH`                 | Ruta de log personalizada (usada cuando `LOG_TYPES` incluye `file`)  | Ruta de archivo                                     | `/var/log/bunkerweb/scheduler.log` cuando `LOG_TYPES` contiene `file`, si no unset |
 | `LOG_SYSLOG_ADDRESS`            | Destino syslog (`udp://host:514`, `tcp://host:514` o ruta de socket) | Host:puerto, host con prefijo de protocolo o socket | unset                                                                           |
 | `LOG_SYSLOG_TAG`                | Ident/tag de syslog                                                  | Cadena                                              | `bw-scheduler`                                                                  |
 

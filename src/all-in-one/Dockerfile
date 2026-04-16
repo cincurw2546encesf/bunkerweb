@@ -249,13 +249,6 @@ ENV AUTOCONF_MODE="no"
 ENV USE_CROWDSEC="no"
 ENV USE_REDIS="yes"
 
-# Default bounded file + stderr logging so Python services stream to Docker stdout AND
-# write a rotated on-disk file the AIO log viewer can read. Override any of these at `docker
-# run -e ...` time to change retention or disable file logging.
-ENV LOG_TYPES="stderr file" \
-    LOG_FILE_MAX_BYTES="10485760" \
-    LOG_FILE_BACKUP_COUNT="5"
-
 USER nginx:nginx
 
 ENTRYPOINT ["/usr/share/bunkerweb/all-in-one/entrypoint.sh"]

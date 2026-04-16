@@ -1294,7 +1294,8 @@ The All-In-One image comes with several built-in services, which can be controll
 - `AUTOCONF_MODE=no` (default) - Enables the autoconf service
 - `USE_REDIS=yes` (default) - Enables the built-in [Redis](#redis-integration) instance
 - `USE_CROWDSEC=no` (default) - [CrowdSec](#crowdsec-integration) integration is disabled by default
-- `HIDE_SERVICE_LOGS=` (optional) - Comma-separated list of services to silence in container logs. Accepted values: `api`, `autoconf`, `bunkerweb`, `crowdsec`, `redis`, `scheduler`, `ui`, `nginx.access`, `nginx.error`, `modsec`. Logs still reach `/var/log/bunkerweb/<service>.log`.
+- `HIDE_SERVICE_LOGS=` (optional) - Comma-separated list of services to silence in container logs. Accepted values: `api`, `autoconf`, `bunkerweb`, `crowdsec`, `redis`, `scheduler`, `ui`, `nginx.access`, `nginx.error`, `modsec`.
+- **Logging**: The all-in-one image streams every service's stdout and stderr to the container output. Use `docker logs bunkerweb-aio` (or your preferred container logging driver) to view and rotate logs — the image does not write on-disk log files for its Python services.
 
 A named volume (or bind mount) is required to persist the SQLite database, cache, and backups stored under `/data` inside the container:
 
@@ -1802,8 +1803,8 @@ The scheduler is the control-plane worker that reads settings, renders configs, 
 | ------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------- |
 | `LOG_LEVEL`, `CUSTOM_LOG_LEVEL` | Base/override log level                                            | `debug`, `info`, `warning`, `error`, `critical` | `info`                                                                          |
 | `LOG_TYPES`                     | Destinations                                                       | Space-separated `stderr`/`file`/`syslog`        | `stderr`                                                                        |
-| `SCHEDULER_LOG_TO_FILE`         | Enable file logging and default path                               | `yes` or `no`                                   | `no`                                                                            |
-| `LOG_FILE_PATH`                 | Custom log file path (used when `LOG_TYPES` includes file)         | File path                                       | `/var/log/bunkerweb/scheduler.log` when `SCHEDULER_LOG_TO_FILE=yes`, else unset |
+| `SCHEDULER_LOG_TO_FILE`         | Legacy convenience: when set, `LOG_FILE_PATH` defaults to `/var/log/bunkerweb/scheduler.log` if `LOG_TYPES` includes `file` and you didn't set `LOG_FILE_PATH` explicitly. | `yes`/`no`                                      | `no`                                                                            |
+| `LOG_FILE_PATH`                 | Custom log file path (used when `LOG_TYPES` includes `file`)       | File path                                       | `/var/log/bunkerweb/scheduler.log` when `LOG_TYPES` contains `file`, else unset |
 | `LOG_SYSLOG_ADDRESS`            | Syslog target (`udp://host:514`, `tcp://host:514`, or socket path) | Host:port, proto-prefixed host, or socket path  | unset                                                                           |
 | `LOG_SYSLOG_TAG`                | Syslog ident/tag                                                   | String                                          | `bw-scheduler`                                                                  |
 

@@ -1340,7 +1340,8 @@ volumes:
 - `AUTOCONF_MODE=no` (默认) - 启用自动配置服务
 - `USE_REDIS=yes` (默认) - 启用内置的 [Redis](#redis-integration) 实例
 - `USE_CROWDSEC=no` (默认) - [CrowdSec](#crowdsec-integration) 集成默认禁用
-- `HIDE_SERVICE_LOGS=`（可选）- 以逗号分隔的服务列表，用于在容器日志中静音这些服务。支持的值：`api`、`autoconf`、`bunkerweb`、`crowdsec`、`redis`、`scheduler`、`ui`、`nginx.access`、`nginx.error`、`modsec`。日志仍会写入 `/var/log/bunkerweb/<service>.log`。
+- `HIDE_SERVICE_LOGS=`（可选）- 以逗号分隔的服务列表，用于在容器日志中静音这些服务。支持的值：`api`、`autoconf`、`bunkerweb`、`crowdsec`、`redis`、`scheduler`、`ui`、`nginx.access`、`nginx.error`、`modsec`。
+- **日志**：一体化镜像会将每个服务的 stdout 和 stderr 输出到容器日志。请使用 `docker logs bunkerweb-aio`（或您偏好的容器日志驱动）来查看和轮转日志；该镜像不会为其 Python 服务写入磁盘日志文件。
 
 ### API 集成
 
@@ -1787,8 +1788,8 @@ volumes:
 | ------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
 | `LOG_LEVEL`, `CUSTOM_LOG_LEVEL` | 基础/覆盖日志级别                                                | `debug`, `info`, `warning`, `error`, `critical` | `info`                                                                          |
 | `LOG_TYPES`                     | 目标                                                             | 空格分隔 `stderr`/`file`/`syslog`               | `stderr`                                                                        |
-| `SCHEDULER_LOG_TO_FILE`         | 启用文件日志并设置默认路径                                       | `yes` 或 `no`                                   | `no`                                                                            |
-| `LOG_FILE_PATH`                 | 自定义日志路径（当 `LOG_TYPES` 包含 `file` 时使用）              | 文件路径                                        | `SCHEDULER_LOG_TO_FILE=yes` 时为 `/var/log/bunkerweb/scheduler.log`，否则 unset |
+| `SCHEDULER_LOG_TO_FILE`         | 兼容旧配置的便捷选项：设置后，如果 `LOG_TYPES` 包含 `file` 且您没有显式设置 `LOG_FILE_PATH`，则 `LOG_FILE_PATH` 默认使用 `/var/log/bunkerweb/scheduler.log`。 | `yes` 或 `no`                                   | `no`                                                                            |
+| `LOG_FILE_PATH`                 | 自定义日志路径（当 `LOG_TYPES` 包含 `file` 时使用）              | 文件路径                                        | 当 `LOG_TYPES` 包含 `file` 时为 `/var/log/bunkerweb/scheduler.log`，否则 unset |
 | `LOG_SYSLOG_ADDRESS`            | Syslog 目标（`udp://host:514`、`tcp://host:514` 或 socket 路径） | Host:port、带协议前缀的主机或 socket            | unset                                                                           |
 | `LOG_SYSLOG_TAG`                | Syslog 标识/tag                                                  | 字符串                                          | `bw-scheduler`                                                                  |
 

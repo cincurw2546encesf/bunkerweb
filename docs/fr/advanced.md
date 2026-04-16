@@ -2581,15 +2581,18 @@ Les journaux de service sont contrôlés par le paramètre `LOG_TYPES`, qui peut
 
 | Valeur   | Description                                                                                                |
 | :------- | :--------------------------------------------------------------------------------------------------------- |
-| `file`   | Écrit les journaux dans un fichier. Requis pour le visualiseur de journaux de l'interface Web.             |
+| `file`   | Écrit les journaux dans un fichier plat. La rotation externe est assurée par `logrotate` sur les installations Linux ou par votre pilote de journalisation de conteneur sous Docker. Requis pour le visualiseur de journaux de l'interface Web. |
 | `stderr` | Écrit les journaux vers l'erreur standard. Standard pour les environnements conteneurisés (`docker logs`). |
 | `syslog` | Envoie les journaux vers un serveur syslog. Nécessite que `LOG_SYSLOG_ADDRESS` soit défini.                |
+
+Lors de l'utilisation de `file`, vous devriez également configurer :
+
+- `LOG_FILE_PATH` : Chemin où les fichiers de logs sont écrits lorsque `LOG_TYPES` inclut `file`.
 
 Lors de l'utilisation de `syslog`, vous devriez également configurer :
 
 - `LOG_SYSLOG_ADDRESS` : L'adresse du serveur syslog (par exemple, `udp://bw-syslog:514` ou `/dev/log`).
 - `LOG_SYSLOG_TAG` : Une étiquette unique pour le service (par exemple, `bw-scheduler`) pour distinguer ses entrées.
-- `LOG_FILE_PATH` : Chemin pour la sortie fichier lorsque `LOG_TYPES` inclut `file` (par exemple, `/var/log/bunkerweb/scheduler.log`).
 
 ### Journaux d'accès et d'erreur
 
@@ -2618,7 +2621,7 @@ LOG_LEVEL_1=error
 
 === "Linux"
 
-    **Comportement par défaut** : `LOG_TYPES="file"`. Les journaux sont écrits dans `/var/log/bunkerweb/*.log`.
+    **Comportement par défaut** : `LOG_TYPES="file"`. Les journaux sont écrits dans `/var/log/bunkerweb/*.log`. La rotation est gérée par la configuration système `logrotate` installée dans `/etc/logrotate.d/bunkerweb` (quotidienne, rétention de 7 jours, compression via `copytruncate`).
 
     **Exemple** : Conserver les fichiers locaux (pour l'interface Web) et les reproduire également vers le syslog système.
 

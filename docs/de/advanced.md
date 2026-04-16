@@ -2582,15 +2582,18 @@ Service-Protokolle werden durch die Einstellung `LOG_TYPES` gesteuert, die mehre
 
 | Wert     | Beschreibung                                                                                            |
 | :------- | :------------------------------------------------------------------------------------------------------ |
-| `file`   | Schreibt Protokolle in eine Datei. Erforderlich für den Protokollanzeiger der Web-UI.                   |
+| `file`   | Schreibt Protokolle in eine einfache Datei. Die externe Rotation wird bei Linux-Installationen von `logrotate` und unter Docker von Ihrem Container-Logging-Treiber übernommen. Erforderlich für den Protokollanzeiger der Web-UI. |
 | `stderr` | Schreibt Protokolle in Standardfehlerausgabe. Standard für containerisierte Umgebungen (`docker logs`). |
 | `syslog` | Sendet Protokolle an einen Syslog-Server. Erfordert, dass `LOG_SYSLOG_ADDRESS` gesetzt ist.             |
+
+Wenn Sie `file` verwenden, sollten Sie zusätzlich konfigurieren:
+
+- `LOG_FILE_PATH`: Pfad, in den Logdateien geschrieben werden, wenn `LOG_TYPES` `file` enthält.
 
 Wenn Sie `syslog` verwenden, sollten Sie zusätzlich konfigurieren:
 
 - `LOG_SYSLOG_ADDRESS`: Adresse des Syslog-Servers (z. B. `udp://bw-syslog:514` oder `/dev/log`).
 - `LOG_SYSLOG_TAG`: Ein eindeutiger Tag für den Dienst (z. B. `bw-scheduler`), damit Einträge unterschieden werden können.
-- `LOG_FILE_PATH`: Pfad für die Dateiausgabe, wenn `LOG_TYPES` `file` enthält (z. B. `/var/log/bunkerweb/scheduler.log`).
 
 ### Zugriffs- und Fehlerprotokolle
 
@@ -2619,7 +2622,7 @@ LOG_LEVEL_1=error
 
 === "Linux"
 
-    **Standardverhalten**: `LOG_TYPES="file"`. Protokolle werden unter `/var/log/bunkerweb/*.log` geschrieben.
+    **Standardverhalten**: `LOG_TYPES="file"`. Protokolle werden unter `/var/log/bunkerweb/*.log` geschrieben. Die Rotation übernimmt die installierte System-`logrotate`-Konfiguration unter `/etc/logrotate.d/bunkerweb` (täglich, 7 Tage Aufbewahrung, Komprimierung per `copytruncate`).
 
     **Beispiel**: Lokale Dateien behalten (für die Web-UI) und zusätzlich an den System-Syslog spiegeln.
 
