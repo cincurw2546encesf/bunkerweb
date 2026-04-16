@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 
 from ..auth.guard import guard
+from ..schemas import UpdateExternalPluginsRequest
 from ..utils import get_db
 
 from common_utils import bytes_hash, create_plugin_tar_gz  # type: ignore
@@ -103,6 +104,19 @@ def _find_plugin_roots_in_zip(zipf: ZipFile) -> List[str]:
             parent = str(Path(n).parent)
             roots.append(parent)
     return [r if r != "." else "" for r in roots]
+
+
+@router.put("/external", dependencies=[Depends(guard)])
+def update_external_plugins(payload: UpdateExternalPluginsRequest) -> JSONResponse:
+    """Bulk update external/pro plugins in the database.
+
+    Args:
+        payload: Plugin list, type, and delete_missing flag
+    """
+    ret = get_db().update_external_plugins(payload.plugins, _type=payload.plugin_type, delete_missing=payload.delete_missing)
+    if ret:
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(ret)})
+    return JSONResponse(status_code=200, content={"status": "success"})
 
 
 @router.get("", dependencies=[Depends(guard)])

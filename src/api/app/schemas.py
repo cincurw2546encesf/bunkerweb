@@ -1,5 +1,5 @@
 from ipaddress import ip_address
-from pydantic import BaseModel, Field, field_validator, RootModel, BeforeValidator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, RootModel, BeforeValidator
 from typing import Optional, List, Dict, Union, Literal, Annotated, Any
 from re import compile as re_compile
 
@@ -332,3 +332,34 @@ class BulkSaveCustomConfigsRequest(BaseModel):
     @classmethod
     def _validate_method(cls, v: str) -> str:
         return _validate_bulk_method(v)
+
+
+# Plugins (external/pro bulk update)
+class UpdateExternalPluginsRequest(BaseModel):
+    plugins: list = Field(..., min_length=0)
+    plugin_type: str = Field("external", alias="_type", pattern="^(external|pro)$")
+    delete_missing: bool = True
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# Instance status
+class InstanceStatusRequest(BaseModel):
+    status: str = Field(..., pattern="^(up|down|failover)$")
+
+
+# Job dispatch
+class DispatchJobItem(BaseModel):
+    name: str = Field(..., pattern=r"^[\w.-]{1,128}$")
+    plugin_id: str = Field(..., pattern=r"^[\w.-]{4,64}$")
+    file: str = Field(..., pattern=r"^[\w.-]{1,128}\.py$")
+    path: str
+    every: str = Field(..., pattern="^(once|minute|hour|day|week)$")
+    reload: bool = False
+    run_async: bool = Field(False, alias="async")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class DispatchJobsRequest(BaseModel):
+    jobs: List[DispatchJobItem] = Field(..., min_length=1, max_length=100)

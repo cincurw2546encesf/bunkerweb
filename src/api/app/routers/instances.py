@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 
 from ..auth.guard import guard
 from ..deps import get_instances_api_caller, get_api_for_hostname
-from ..schemas import BulkUpdateInstancesRequest, InstanceCreateRequest, InstancesDeleteRequest, InstanceUpdateRequest
+from ..schemas import BulkUpdateInstancesRequest, InstanceCreateRequest, InstancesDeleteRequest, InstanceStatusRequest, InstanceUpdateRequest
 from ..config import api_config
 from ..utils import get_db, LOGGER
 
@@ -97,6 +97,20 @@ def stop_one(hostname: str, api=Depends(get_api_for_hostname)) -> JSONResponse:
     sent, _err, status, _resp = api.request("POST", "/stop")
     ok = bool(sent and status == 200)
     return JSONResponse(status_code=200 if ok else 502, content={"status": "success" if ok else "error"})
+
+
+@router.patch("/{hostname}/status", dependencies=[Depends(guard)])
+def update_instance_status(hostname: str, payload: InstanceStatusRequest) -> JSONResponse:
+    """Update the status of a specific BunkerWeb instance (up/down/failover).
+
+    Args:
+        hostname: The hostname of the instance to update
+        payload: New status value
+    """
+    ret = get_db().update_instance(hostname, payload.status)
+    if ret:
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(ret)})
+    return JSONResponse(status_code=200, content={"status": "success"})
 
 
 # -------------------- CRUD over BunkerWeb instances --------------------
