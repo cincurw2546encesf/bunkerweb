@@ -12,6 +12,7 @@ from logger import getLogger  # type: ignore
 class Controller(Config):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._reverse_proxy_suffix_start = 1
         self._loaded = False
         self._instances = []
         self._services = []

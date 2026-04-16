@@ -2467,7 +2467,7 @@ span.cursor-pointer ~ .reset-setting {
   border: 1px solid #dee2e6;
   min-width: 300px;
   max-width: 450px;
-  z-index: 1071;
+  z-index: 1081;
 }
 
 .multiselect-menu .multiselect-search {

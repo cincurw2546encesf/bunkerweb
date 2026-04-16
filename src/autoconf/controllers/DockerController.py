@@ -182,9 +182,39 @@ class DockerController(Controller):
     def apply_config(self) -> bool:
         return self.apply(self._instances, self._services, configs=self._configs, first=not self._loaded)
 
+    # Container event actions that indicate a meaningful state change
+    # (container lifecycle). Excludes exec events (from healthchecks),
+    # attach/detach, and other non-config-relevant actions that would
+    # otherwise cause a feedback loop of constant re-deploys.
+    __RELEVANT_EVENT_ACTIONS = frozenset(
+        {
+            "create",
+            "start",
+            "restart",
+            "stop",
+            "die",
+            "destroy",
+            "kill",
+            "pause",
+            "unpause",
+            "rename",
+            "update",
+            "health_status",
+        }
+    )
+
     def __process_event(self, event):
         if self._first_start:
             return True
+
+        # Only process container lifecycle events, not exec/attach/etc.
+        # Docker health_status actions include a suffix like "health_status: healthy",
+        # so we extract the base action before the colon.
+        action = event.get("Action", "")
+        base_action = action.split(":")[0].strip()
+        if base_action not in self.__RELEVANT_EVENT_ACTIONS:
+            self._logger.debug(f"Ignoring Docker event with action '{action}' (not in relevant actions)")
+            return False
 
         attributes = event.get("Actor", {}).get("Attributes")
         if not isinstance(attributes, dict):

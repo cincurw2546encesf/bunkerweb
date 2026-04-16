@@ -40,6 +40,7 @@ class IngressController(KubernetesController):
                 continue
 
             services.append(ingress)
+        services.sort(key=lambda i: (i.metadata.namespace, i.metadata.name))
         return services
 
     def _to_services(self, controller_service) -> List[dict]:
@@ -57,6 +58,7 @@ class IngressController(KubernetesController):
 
             service = {}
             service["SERVER_NAME"] = rule.host
+            service["NAMESPACE"] = namespace
             server_names.add(rule.host)
             if not rule.http:
                 services.append(service)

@@ -28,9 +28,23 @@ CONFIG_TYPES = {
     },
     "STREAM": {"context": "global", "description": "Configurations at the Stream level of NGINX."},
     "SERVER_STREAM": {"context": "multisite", "description": "Configurations at the Stream/Server level of NGINX."},
+    "DEFAULT_SERVER_STREAM": {
+        "context": "global",
+        "description": 'Configurations at the Stream/Server level of NGINX, specifically for the "default server" when the supplied client name doesn\'t match any server name in SERVER_NAME.',
+    },
     "CRS_PLUGINS_BEFORE": {"context": "multisite", "description": "Configurations applied before the OWASP Core Rule Set plugins are loaded."},
     "CRS_PLUGINS_AFTER": {"context": "multisite", "description": "Configurations applied after the OWASP Core Rule Set plugins are loaded."},
 }
+
+
+def _use_modsecurity_global_crs() -> bool:
+    value = BW_CONFIG.get_config(
+        global_only=True,
+        methods=False,
+        with_drafts=True,
+        filtered_settings=("USE_MODSECURITY_GLOBAL_CRS",),
+    ).get("USE_MODSECURITY_GLOBAL_CRS", "no")
+    return str(value).lower() == "yes"
 
 
 @configs.route("/configs", methods=["GET"])
@@ -305,7 +319,16 @@ def configs_new():
         def create_config(
             service: Optional[str],
             config_type: Literal[
-                "HTTP", "SERVER_HTTP", "DEFAULT_SERVER_HTTP", "MODSEC_CRS", "MODSEC", "STREAM", "SERVER_STREAM", "CRS_PLUGINS_BEFORE", "CRS_PLUGINS_AFTER"
+                "HTTP",
+                "SERVER_HTTP",
+                "DEFAULT_SERVER_HTTP",
+                "MODSEC_CRS",
+                "MODSEC",
+                "STREAM",
+                "SERVER_STREAM",
+                "DEFAULT_SERVER_STREAM",
+                "CRS_PLUGINS_BEFORE",
+                "CRS_PLUGINS_AFTER",
             ],
             config_name: str,
             config_value: str,
@@ -374,6 +397,8 @@ def configs_new():
         type=config_type.upper(),
         name=config_name,
         is_draft=is_draft,
+        use_modsecurity_global_crs=_use_modsecurity_global_crs(),
+        global_crs_service_scoped_modsec_crs_error=DB.GLOBAL_CRS_SERVICE_SCOPED_MODSEC_CRS_ERROR,
         services=BW_CONFIG.get_config(global_only=True, methods=False, with_drafts=True, filtered_settings=("SERVER_NAME",))["SERVER_NAME"].split(),
     )
 
@@ -496,5 +521,7 @@ def configs_edit(service: str, config_type: str, name: str):
         config_method=db_config["method"],
         config_template=db_config.get("template"),
         is_draft=is_draft,
+        use_modsecurity_global_crs=_use_modsecurity_global_crs(),
+        global_crs_service_scoped_modsec_crs_error=DB.GLOBAL_CRS_SERVICE_SCOPED_MODSEC_CRS_ERROR,
         services=BW_CONFIG.get_config(global_only=True, methods=False, with_drafts=True, filtered_settings=("SERVER_NAME",))["SERVER_NAME"].split(),
     )

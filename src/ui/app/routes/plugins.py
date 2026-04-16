@@ -18,7 +18,7 @@ from flask_login import login_required
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from werkzeug.utils import secure_filename
 
-from common_utils import bytes_hash, create_plugin_tar_gz  # type: ignore
+from common_utils import bytes_hash, create_plugin_tar_gz, safe_tar_extractall, safe_zip_extractall  # type: ignore
 
 from app.dependencies import (
     API_CLIENT,
@@ -153,18 +153,15 @@ def run_action(plugin: str, function_name: str = "", *, tmp_dir: Optional[Path] 
                 tmp_dir.mkdir(parents=True, exist_ok=True)
 
                 with tar_open(fileobj=BytesIO(page), mode="r:gz") as tar:
+                    # Validate all members before extracting any
+                    tmp_dir_resolved = tmp_dir.resolve()
                     for member in tar.getmembers():
-                        # Prevent absolute paths and paths with '..'
                         if member.name.startswith("/") or ".." in Path(member.name).parts:
                             return {"status": "ko", "code": 400, "message": "Invalid file path"}
-
-                        # Construct the target path and ensure it is within tmp_dir
-                        target_path = tmp_dir.joinpath(member.name).resolve()
-                        if not str(target_path).startswith(str(tmp_dir)):
+                        if not tmp_dir.joinpath(member.name).resolve().is_relative_to(tmp_dir_resolved):
                             return {"status": "ko", "code": 400, "message": "Invalid file path"}
 
-                        # Extract the file safely
-                        tar.extract(member, tmp_dir)
+                    safe_tar_extractall(tar, tmp_dir)
 
                 tmp_dir = tmp_dir.joinpath("ui")
             except BaseException as e:
@@ -277,7 +274,7 @@ def plugins_refresh():
                             zip_file.getinfo("plugin.json")
                         except KeyError:
                             is_dir = True
-                        zip_file.extractall(str(temp_folder_path))
+                        safe_zip_extractall(zip_file, str(temp_folder_path))
                 except BadZipFile:
                     errors += 1
                     message = f"{file} is not a valid zip file. ({folder_name or temp_folder_name})"
@@ -290,12 +287,7 @@ def plugins_refresh():
                             tar_file.getmember("plugin.json")
                         except KeyError:
                             is_dir = True
-                        try:
-                            # deepcode ignore TarSlip: We don't need to check for tar slip as we are checking the files when they are uploaded
-                            tar_file.extractall(str(temp_folder_path), filter="data")
-                        except TypeError:
-                            # deepcode ignore TarSlip: We don't need to check for tar slip as we are checking the files when they are uploaded
-                            tar_file.extractall(str(temp_folder_path))
+                        safe_tar_extractall(tar_file, str(temp_folder_path))
                 except ReadError:
                     errors += 1
                     message = f"Couldn't read file {file} ({folder_name or temp_folder_name})"
@@ -478,7 +470,7 @@ def upload_plugin():
                             if isabs(file) or ".." in file:
                                 return {"status": "ko"}, 422
 
-                        zip_file.extractall(str(tmp_ui_path) + "/")
+                        safe_zip_extractall(zip_file, str(tmp_ui_path) + "/")
             else:
                 with tar_open(fileobj=plugin_file) as tar_file:
                     for file in tar_file.getnames():
@@ -489,12 +481,7 @@ def upload_plugin():
                             if isabs(member.name) or ".." in member.name:
                                 return {"status": "ko"}, 422
 
-                        try:
-                            # deepcode ignore TarSlip: The files in the tar are being inspected before extraction
-                            tar_file.extractall(str(tmp_ui_path) + "/", filter="data")
-                        except TypeError:
-                            # deepcode ignore TarSlip: The files in the tar are being inspected before extraction
-                            tar_file.extractall(str(tmp_ui_path) + "/")
+                        safe_tar_extractall(tar_file, str(tmp_ui_path) + "/")
 
             if len(plugins) <= 1:
                 plugin_file.seek(0, 0)
@@ -602,18 +589,15 @@ def custom_plugin_page(plugin: str):
             tmp_page_dir.mkdir(parents=True, exist_ok=True)
 
             with tar_open(fileobj=BytesIO(page), mode="r:gz") as tar:
+                # Validate all members before extracting any
+                tmp_page_dir_resolved = tmp_page_dir.resolve()
                 for member in tar.getmembers():
-                    # Prevent absolute paths and paths with '..'
                     if member.name.startswith("/") or ".." in Path(member.name).parts:
                         return {"status": "ko", "code": 400, "message": "Invalid file path"}
-
-                    # Construct the target path and ensure it is within tmp_dir
-                    target_path = tmp_page_dir.joinpath(member.name).resolve()
-                    if not str(target_path).startswith(str(tmp_page_dir)):
+                    if not tmp_page_dir.joinpath(member.name).resolve().is_relative_to(tmp_page_dir_resolved):
                         return {"status": "ko", "code": 400, "message": "the plugin page has an invalid file path"}
 
-                    # Extract the file safely
-                    tar.extract(member, tmp_page_dir)
+                safe_tar_extractall(tar, tmp_page_dir)
 
             tmp_page_dir = tmp_page_dir.joinpath("ui")
             LOGGER.debug(f"Plugin {plugin} page extracted successfully")

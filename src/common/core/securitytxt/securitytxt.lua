@@ -36,7 +36,7 @@ function securitytxt:initialize(ctx)
 	-- Call parent initialize
 	plugin.initialize(self, "securitytxt", ctx)
 	-- Load data from internalstore if needed
-	if get_phase() ~= "init" then
+	if get_phase() ~= "init" and self.ctx.bw.uri == self.variables["SECURITYTXT_URI"] then
 		-- Get security policies from internalstore
 		local security_policies, err = self.internalstore:get("plugin_securitytxt_security_policies", true)
 		if not security_policies then

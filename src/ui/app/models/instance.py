@@ -339,17 +339,6 @@ class InstancesUtils:
                     continue
                 seen_ids.add(report_id)
 
-            status = report.get("status", 0)
-            if not isinstance(status, int):
-                try:
-                    status = int(status)
-                except Exception:
-                    status = 0
-
-            security_mode = report.get("security_mode")
-            if not (400 <= status < 500 or security_mode == "detect"):
-                continue
-
             for field in pane_fields:
                 value = str(report.get(field, "N/A"))
                 if value not in pane_counts[field]:
@@ -667,7 +656,7 @@ class InstancesUtils:
                 search_lower = search_value.lower()
                 if not any(
                     search_lower in str(report.get(field, "")).lower()
-                    for field in ("ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
+                    for field in ("id", "ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
                 ):
                     return False
 
@@ -741,16 +730,6 @@ class InstancesUtils:
                         if report_id in seen_ids:
                             continue
                         seen_ids.add(report_id)
-
-                    status = report.get("status", 0)
-                    if not isinstance(status, int):
-                        try:
-                            status = int(status)
-                        except Exception:
-                            status = 0
-                    security_mode = report.get("security_mode")
-                    if not (400 <= status < 500 or security_mode == "detect"):
-                        continue
 
                     valid_total += 1
                     matches = matches_filters(report, search, pane_filters)
@@ -868,7 +847,7 @@ class InstancesUtils:
                 for r in filtered
                 if any(
                     search_lower in str(r.get(field, "")).lower()
-                    for field in ("ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
+                    for field in ("id", "ip", "country", "method", "url", "status", "user_agent", "reason", "server_name")
                 )
             ]
 
@@ -941,10 +920,11 @@ class InstancesUtils:
                 if not isinstance(request, dict):
                     continue
                 req_id = request.get("id")
-                if req_id is not None:
-                    if req_id in seen_ids:
-                        continue
-                    seen_ids.add(req_id)
+                if req_id is None:
+                    continue
+                if req_id in seen_ids:
+                    continue
+                seen_ids.add(req_id)
                 yield request
 
     def get_home_aggregates(self, hours: int = 24 * 7, top_ips_limit: int = 10) -> dict[str, Any]:

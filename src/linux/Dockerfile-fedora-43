@@ -2,7 +2,7 @@ FROM fedora:43@sha256:781b7642e8bf256e9cf75d2aa58d86f5cc695fd2df113517614e181a5e
 
 ENV OS=fedora
 ENV OS_VERSION=43
-ENV NGINX_VERSION=1.28.2
+ENV NGINX_VERSION=1.28.3
 
 # Install Nginx, fpm and dependencies
 RUN dnf update -y && \

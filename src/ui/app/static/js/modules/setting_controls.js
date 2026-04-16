@@ -496,7 +496,21 @@ class SettingControl {
 
     queueMicrotask(() => {
       if (typeof bootstrap !== "undefined" && bootstrap.Dropdown) {
-        bootstrap.Dropdown.getOrCreateInstance(toggle);
+        new bootstrap.Dropdown(toggle, {
+          autoClose: "outside",
+          popperConfig: {
+            strategy: "fixed",
+            modifiers: [
+              {
+                name: "preventOverflow",
+                options: {
+                  boundary: "viewport",
+                  padding: { top: 80 },
+                },
+              },
+            ],
+          },
+        });
       }
       if (typeof bootstrap !== "undefined" && bootstrap.Tooltip) {
         // Use a dynamic title function so applyTranslations() updates to

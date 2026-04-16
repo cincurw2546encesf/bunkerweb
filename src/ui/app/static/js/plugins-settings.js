@@ -550,11 +550,14 @@ $(document).ready(() => {
     templateContainer
       .find(".global-override-badge")
       .addClass("visually-hidden");
+    const useTemplateDefaults =
+      window.location.pathname.endsWith("/new") ||
+      normalizedTemplate !== usedTemplate;
+
     templateContainer.find("input, select").each(function () {
       const $field = $(this);
       const type = $field.attr("type");
-      const isNewEndpoint = window.location.pathname.endsWith("/new");
-      const templateValue = isNewEndpoint
+      const templateValue = useTemplateDefaults
         ? $(`#${this.id}-template`).val()
         : $field.data("original");
 
@@ -566,6 +569,14 @@ $(document).ready(() => {
       if (
         $field.prop("disabled") ||
         (type === "hidden" && !$field.hasClass("plugin-setting-file-text"))
+      ) {
+        return;
+      }
+
+      // Skip multiselect option checkboxes — handled separately below
+      if (
+        type === "checkbox" &&
+        $field.closest(".multiselect-options").length
       ) {
         return;
       }
@@ -590,6 +601,83 @@ $(document).ready(() => {
           setFileSettingStatus($field);
         }
       }
+    });
+
+    // Reset multiselect fields (hidden input + option checkboxes)
+    templateContainer
+      .find(".multiselect-container input.plugin-setting[type='hidden']")
+      .each(function () {
+        const $input = $(this);
+        if ($input.prop("disabled")) return;
+        const templateValue = useTemplateDefaults
+          ? $(`#${this.id}-template`).val()
+          : $input.data("original");
+        if (templateValue === undefined) return;
+
+        $input.val(templateValue).trigger("input");
+        const $dropdown = $input.closest(".dropdown");
+        const separator = $dropdown.data("separator");
+        const separatorValue =
+          separator === undefined ? " " : String(separator);
+        const selectedValues = templateValue
+          ? separatorValue === ""
+            ? templateValue.split("")
+            : templateValue.split(separatorValue)
+          : [];
+        $dropdown.find(".form-check-input").each(function () {
+          const $checkbox = $(this);
+          $checkbox.prop("checked", selectedValues.includes($checkbox.val()));
+        });
+        const selectedCount = selectedValues.filter((v) => v).length;
+        $dropdown
+          .find("[data-selected-count]")
+          .text(`${selectedCount} selected`);
+        $dropdown.find("[data-selected-badge]").text(selectedCount);
+      });
+
+    // Reset multivalue fields (hidden input + visible text inputs)
+    templateContainer.find(".multivalue-hidden-input").each(function () {
+      const $input = $(this);
+      if ($input.prop("disabled")) return;
+      const templateValue = useTemplateDefaults
+        ? $(`#${this.id}-template`).val()
+        : $input.data("original");
+      if (templateValue === undefined) return;
+
+      const $container = $input.closest(".multivalue-container");
+      const separator = $container.data("separator") || " ";
+      const values = templateValue ? templateValue.split(separator) : [""];
+      $container.find(".multivalue-input-group").remove();
+      $container.find(".multivalue-toggle").remove();
+
+      const $inputsContainer = $container.find(".multivalue-inputs");
+      values.forEach((value, index) => {
+        const $inputGroup = $("<div>", {
+          class: "input-group mb-2 multivalue-input-group",
+        });
+        const $input = $("<input>", {
+          type: "text",
+          class: "form-control multivalue-input",
+        });
+        $input.val(value.trim());
+        $inputGroup.append($input);
+        $inputGroup.append(
+          `<button type="button"
+                    class="btn btn-outline-success add-multivalue-item">
+              <i class="bx bx-plus"></i>
+            </button>`,
+        );
+        if (index > 0 || values.length > 1) {
+          $inputGroup.append(
+            `<button type="button"
+                    class="btn btn-outline-danger remove-multivalue-item">
+              <i class="bx bx-x"></i>
+            </button>`,
+          );
+        }
+        $inputsContainer.append($inputGroup);
+      });
+      updateMultivalueHiddenInput($container);
     });
 
     templateContainer.find(".ace-editor").each(function () {
@@ -726,7 +814,17 @@ $(document).ready(() => {
       if (nextTemplateId)
         setCurrentTemplate(nextTemplateId, { clearType: true });
 
-      if (!isInit) resetTemplateConfig(previousTemplate);
+      if (!isInit) {
+        resetTemplateConfig(previousTemplate);
+        // On existing services, apply the new template's defaults
+        // so the user sees what the switched-to template provides
+        if (
+          !window.location.pathname.endsWith("/new") &&
+          currentTemplate !== usedTemplate
+        ) {
+          resetTemplateConfig(currentTemplate);
+        }
+      }
     }
 
     return true; // Tab change is allowed
@@ -2110,28 +2208,30 @@ $(document).ready(() => {
 
               const $inputsContainer = $container.find(".multivalue-inputs");
               values.forEach((value, index) => {
-                const inputGroupHtml = `
-                  <div class="input-group mb-2 multivalue-input-group">
-                    <input type="text"
-                           class="form-control multivalue-input"
-                           value="${value.trim()}">
-                    <button type="button"
+                const $inputGroup = $("<div>", {
+                  class: "input-group mb-2 multivalue-input-group",
+                });
+                const $input = $("<input>", {
+                  type: "text",
+                  class: "form-control multivalue-input",
+                });
+                $input.val(value.trim());
+                $inputGroup.append($input);
+                $inputGroup.append(
+                  `<button type="button"
                             class="btn btn-outline-success add-multivalue-item">
                       <i class="bx bx-plus"></i>
-                    </button>
-                    ${
-                      index > 0 || values.length > 1
-                        ? `
-                    <button type="button"
+                    </button>`,
+                );
+                if (index > 0 || values.length > 1) {
+                  $inputGroup.append(
+                    `<button type="button"
                             class="btn btn-outline-danger remove-multivalue-item">
                       <i class="bx bx-x"></i>
-                    </button>
-                    `
-                        : ""
-                    }
-                  </div>
-                `;
-                $inputsContainer.append(inputGroupHtml);
+                    </button>`,
+                  );
+                }
+                $inputsContainer.append($inputGroup);
               });
               updateMultivalueHiddenInput($container);
             } else if (
@@ -2801,30 +2901,30 @@ $(document).ready(() => {
       // Add inputs for each value
       const $inputsContainer = $container.find(".multivalue-inputs");
       values.forEach((value, index) => {
-        const inputGroupHtml = `
-          <div class="input-group mb-2 multivalue-input-group">
-            <input type="text"
-                   class="form-control multivalue-input"
-                   value="${value.trim()}">
-
-            <button type="button"
+        const $inputGroup = $("<div>", {
+          class: "input-group mb-2 multivalue-input-group",
+        });
+        const $input = $("<input>", {
+          type: "text",
+          class: "form-control multivalue-input",
+        });
+        $input.val(value.trim());
+        $inputGroup.append($input);
+        $inputGroup.append(
+          `<button type="button"
                     class="btn btn-outline-success add-multivalue-item">
               <i class="bx bx-plus"></i>
-            </button>
-
-            ${
-              index > 0 || values.length > 1
-                ? `
-            <button type="button"
+            </button>`,
+        );
+        if (index > 0 || values.length > 1) {
+          $inputGroup.append(
+            `<button type="button"
                     class="btn btn-outline-danger remove-multivalue-item">
               <i class="bx bx-x"></i>
-            </button>
-            `
-                : ""
-            }
-          </div>
-        `;
-        $inputsContainer.append(inputGroupHtml);
+            </button>`,
+          );
+        }
+        $inputsContainer.append($inputGroup);
       });
 
       updateMultivalueHiddenInput($container);
@@ -3109,31 +3209,37 @@ $(document).ready(() => {
     const newIndex = currentCount + 1;
     const inputId = `${baseId}_${newIndex}`;
 
-    const inputGroupHtml = `
-      <div class="form-floating multivalue-input-group">
-        <div class="input-group">
-          <input type="text"
-                 class="form-control multivalue-input"
-                 value="${value}"
-                 id="${inputId}">
-          <button type="button"
-                  class="btn btn-outline-success add-multivalue-item">
+    const $inputGroup = $("<div>", {
+      class: "form-floating multivalue-input-group",
+    });
+    const $innerGroup = $("<div>", { class: "input-group" });
+    const $input = $("<input>", {
+      type: "text",
+      class: "form-control multivalue-input",
+      id: inputId,
+    });
+    $input.val(value);
+    $innerGroup.append($input);
+    $innerGroup.append(
+      `<button type="button"
+                class="btn btn-outline-success add-multivalue-item">
             <i class="bx bx-plus"></i>
           </button>
           <button type="button"
-                  class="btn btn-outline-danger remove-multivalue-item">
+                class="btn btn-outline-danger remove-multivalue-item">
             <i class="bx bx-x"></i>
-          </button>
-        </div>
-        <label for="${inputId}" class="text-truncate">Temporary</label>
-      </div>
-    `;
+          </button>`,
+    );
+    $inputGroup.append($innerGroup);
+    $inputGroup.append(
+      $("<label>", { for: inputId, class: "text-truncate", text: "Temporary" }),
+    );
 
     if ($insertAfter && $insertAfter.length) {
-      $insertAfter.after(inputGroupHtml);
+      $insertAfter.after($inputGroup);
     } else {
       const $inputsContainer = $container.find(".multivalue-inputs");
-      $inputsContainer.append(inputGroupHtml);
+      $inputsContainer.append($inputGroup);
     }
 
     // Update margin bottom for all input groups
@@ -3412,6 +3518,18 @@ $(document).ready(() => {
     if ($toggle.length) {
       new bootstrap.Dropdown($toggle[0], {
         autoClose: "outside",
+        popperConfig: {
+          strategy: "fixed",
+          modifiers: [
+            {
+              name: "preventOverflow",
+              options: {
+                boundary: "viewport",
+                padding: { top: 80 },
+              },
+            },
+          ],
+        },
       });
     }
 

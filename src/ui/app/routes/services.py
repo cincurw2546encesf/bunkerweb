@@ -383,11 +383,19 @@ def services_service_page(service: str):
                     removed_custom_configs.add(db_custom_config)
 
             # Force-refresh template-derived settings to prevent stale form values
-            # from being stored as explicit overrides (applies to all UI modes)
+            # from being stored as explicit overrides (applies to all UI modes).
+            # Skip when the user is switching templates — the old template's values
+            # must not overwrite the new template's defaults.
+            # Only restore the template default if the user did not change it
+            # (i.e., the submitted value still matches the template default).
             if service != "new":
-                for setting, value in db_config.items():
-                    if value.get("template") and value["method"] == "default":
-                        variables[setting] = value["value"]
+                old_template = db_config.get("USE_TEMPLATE", {}).get("value", "")
+                new_template = variables.get("USE_TEMPLATE", "")
+                if old_template == new_template:
+                    for setting, value in db_config.items():
+                        if value.get("template") and value["method"] == "default":
+                            if variables.get(setting) == value["value"]:
+                                variables[setting] = value["value"]
 
             variables_to_check = variables.copy()
             has_file_name_changes = False
