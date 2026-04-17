@@ -259,7 +259,11 @@ function badbehavior:timer()
 		if data.counter >= data.threshold then
 			local wl_ip, wl_info = is_ip_whitelisted(data.ip, data.server_name)
 			if wl_ip == nil then
-				self.logger:log(ERR, "can't check whitelist for IP " .. data.ip .. " : " .. wl_info)
+				self:log_throttled(
+					ERR,
+					"whitelist_check",
+					"can't check whitelist for IP " .. data.ip .. " : " .. wl_info
+				)
 			elseif wl_ip then
 				local rm_ok, rm_err = remove_ban(data.ip, data.server_name, data.ban_scope)
 				if rm_ok == false and rm_err then
@@ -323,6 +327,10 @@ function badbehavior:timer()
 			end
 		end
 	end
+
+	-- Flush any end-of-window recaps for errors that stopped repeating.
+	self:flush_log_recaps()
+
 	return self:ret(ret, ret_err)
 end
 
@@ -350,7 +358,11 @@ function badbehavior:increase(
 	if use_redis then
 		local redis_counter, err = self:redis_increase(ip, count_time, threshold, ban_time, server_name, ban_scope)
 		if not redis_counter then
-			self.logger:log(ERR, "(increase) redis_increase failed, falling back to local : " .. err)
+			self:log_throttled(
+				ERR,
+				"redis_increase",
+				"(increase) redis_increase failed, falling back to local : " .. err
+			)
 		else
 			counter = redis_counter
 		end
@@ -403,7 +415,11 @@ function badbehavior:decrease(ip, count_time, threshold, use_redis, server_name,
 	if use_redis then
 		local redis_counter, err = self:redis_decrease(ip, count_time, server_name, ban_scope)
 		if not redis_counter then
-			self.logger:log(ERR, "(decrease) redis_decrease failed, falling back to local : " .. err)
+			self:log_throttled(
+				ERR,
+				"redis_decrease",
+				"(decrease) redis_decrease failed, falling back to local : " .. err
+			)
 		else
 			counter = redis_counter
 		end
