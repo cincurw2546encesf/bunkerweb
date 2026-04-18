@@ -330,9 +330,25 @@
       (function () {
         var status = document.getElementById("capjs-status");
         var statusText = status.querySelector(".cap-status-text");
-        var cap = new Cap({
-          apiEndpoint: "{*capjs_url*}/{*capjs_sitekey*}/",
-        });
+        function showError() {
+          var spinner = status.querySelector(".cap-spinner");
+          if (spinner) status.removeChild(spinner);
+          statusText.className = "cap-error";
+          statusText.textContent =
+            "Verification failed. Please reload the page and try again.";
+        }
+        if (typeof Cap === "undefined") {
+          showError();
+          return;
+        }
+        try {
+          var cap = new Cap({
+            apiEndpoint: "{*capjs_url*}/{*capjs_sitekey*}/",
+          });
+        } catch (e) {
+          showError();
+          return;
+        }
         cap.addEventListener("progress", function (e) {
           statusText.textContent =
             "Verifying\u2026 " + Math.round(e.detail.progress) + "%";
@@ -343,13 +359,7 @@
             document.getElementById("token").value = solution.token;
             document.getElementById("form").submit();
           })
-          .catch(function () {
-            var spinner = status.querySelector(".cap-spinner");
-            if (spinner) status.removeChild(spinner);
-            statusText.className = "cap-error";
-            statusText.textContent =
-              "Verification failed. Please reload the page and try again.";
-          });
+          .catch(showError);
       })();
     </script>
     {-raw-}

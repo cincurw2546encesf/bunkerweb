@@ -92,6 +92,7 @@ local function get_http_client()
 	if not httpc then
 		return nil, "can't instantiate http object: " .. err
 	end
+	httpc:set_timeouts(5000, 5000, 5000)
 	return httpc
 end
 
@@ -218,7 +219,7 @@ function antibot:header()
 	elseif self.session_data.type == "capjs" then
 		local capjs_url = self.variables["ANTIBOT_CAPJS_FRONTEND_URL"]
 		-- Cap.js needs: no strict-dynamic (workers do dynamic imports from capjs_url),
-		-- no nonce on style-src (widget.js applies inline styles via JS),
+		-- no 'unsafe-inline' on style-src (widget.js sets styles via JS DOM properties, which CSP doesn't restrict),
 		-- wasm-unsafe-eval (workers execute WASM), no trusted types (widget.js uses innerHTML)
 		csp_directives["script-src"] = "'nonce-"
 			.. self.ctx.bw.antibot_nonce_script
@@ -691,11 +692,11 @@ function antibot:check_challenge()
 		local res, err = httpc:request_uri("https://hcaptcha.com/siteverify", {
 			method = "POST",
 			body = "secret="
-				.. self.variables["ANTIBOT_HCAPTCHA_SECRET"]
+				.. ngx.escape_uri(self.variables["ANTIBOT_HCAPTCHA_SECRET"])
 				.. "&response="
-				.. args["token"]
+				.. ngx.escape_uri(args["token"])
 				.. "&remoteip="
-				.. self.ctx.bw.remote_addr,
+				.. ngx.escape_uri(self.ctx.bw.remote_addr),
 			headers = {
 				["Content-Type"] = "application/x-www-form-urlencoded",
 			},
@@ -731,11 +732,11 @@ function antibot:check_challenge()
 		local res, err = httpc:request_uri("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
 			method = "POST",
 			body = "secret="
-				.. self.variables["ANTIBOT_TURNSTILE_SECRET"]
+				.. ngx.escape_uri(self.variables["ANTIBOT_TURNSTILE_SECRET"])
 				.. "&response="
-				.. args["token"]
+				.. ngx.escape_uri(args["token"])
 				.. "&remoteip="
-				.. self.ctx.bw.remote_addr,
+				.. ngx.escape_uri(self.ctx.bw.remote_addr),
 			headers = {
 				["Content-Type"] = "application/x-www-form-urlencoded",
 			},
