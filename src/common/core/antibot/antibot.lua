@@ -814,7 +814,6 @@ function antibot:check_challenge()
 			capjs_backend = self.variables["ANTIBOT_CAPJS_FRONTEND_URL"]
 		end
 		local capjs_verify_url = capjs_backend .. "/" .. self.variables["ANTIBOT_CAPJS_SITEKEY"] .. "/siteverify"
-		self.logger:log(ngx.NOTICE, "Cap.js siteverify URL: " .. capjs_verify_url)
 		local res, err = httpc:request_uri(
 			capjs_verify_url,
 			{

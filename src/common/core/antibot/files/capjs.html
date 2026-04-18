@@ -344,7 +344,8 @@
             document.getElementById("form").submit();
           })
           .catch(function () {
-            status.removeChild(status.querySelector(".cap-spinner"));
+            var spinner = status.querySelector(".cap-spinner");
+            if (spinner) status.removeChild(spinner);
             statusText.className = "cap-error";
             statusText.textContent =
               "Verification failed. Please reload the page and try again.";
