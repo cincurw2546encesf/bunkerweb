@@ -26,7 +26,7 @@ settings.json + plugin.json schemas
 
 ### Database Layer (`db/`)
 
-**`Database.py` (5300+ lines)** is the largest and most critical file. Key patterns:
+**`Database.py` (5700+ lines)** is the largest and most critical file. Key patterns:
 
 - **Transient error resilience**: The `@retry_on_transient_db_errors` decorator wraps most DB methods with configurable retry count/delay (`DATABASE_REQUEST_RETRY_*` env vars). Readonly fallback mode exists for degraded reads.
 - **Settings validation is in Database, not just Configurator**: `is_valid_setting(setting, value)` validates against pre-compiled regex caches at runtime.
@@ -88,11 +88,11 @@ The `stream` field in `plugin.json` (`yes`/`no`/`partial`) controls whether a pl
 
 ### CLI (`cli/`)
 
-`CLI.py` inherits from `ApiCaller`. Commands: `ban`, `unban`, `bans`, `plugin_list`, `custom` (plugin-specific). Connects directly to database and Redis for cache operations. Entry point: `main.py` → `bwcli` script in `helpers/`.
+`CLI.py` inherits from `ApiCaller`. Commands: `ban`, `unban`, `bans`, `plugin_list`, `custom` (plugin-specific). Connects directly to database and Redis for cache operations. Entry point: `main.py` → `bwcli` script in `helpers/` (installed to `/usr/bin/bwcli` by the Linux packaging in `src/linux/`).
 
 ### Settings Schema (`settings.json`)
 
-63 global settings (additional settings defined per-plugin in `plugin.json`). Each entry:
+64 global settings (additional settings defined per-plugin in `plugin.json`). Each entry:
 ```json
 {
   "SETTING_ID": {

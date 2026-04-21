@@ -43,22 +43,33 @@ No ESLint or Stylelint — only Prettier for JS/CSS. No unit test suite; testing
 
 ### Dependency injection: `app/dependencies.py`
 
-Four global singletons used by all routes:
+All UI data access goes through `API_CLIENT` — the UI no longer talks to the database directly. `DB` is exported as `None` purely as a backward-compat shim so external plugin blueprints that still `import DB` don't break at load time. Route code must never use it.
+
+Global singletons:
 
 | Object | Type | Purpose |
 |--------|------|---------|
-| `DB` | `UIDatabase` | SQLAlchemy ORM wrapper (extends `common/db/Database.py`) |
+| `API_CLIENT` | `ApiClient` | HTTP client for the BunkerWeb API — primary data access for all routes |
 | `DATA` | `UIData` | JSON file at `/var/tmp/bunkerweb/ui_data.json` — shared transient state (reload flags, flash messages) |
-| `BW_CONFIG` | `Config` | Settings & config builder with validation |
-| `BW_INSTANCES_UTILS` | `InstancesUtils` | Instance metrics, Redis access |
+| `BW_CONFIG` | `Config` | Settings & config builder (takes `API_CLIENT`) |
+| `BW_INSTANCES_UTILS` | `InstancesUtils` | Instance metrics and Redis access (takes `API_CLIENT`) |
+| `DB` | `None` | Legacy shim — kept only for backward compatibility with plugins that still import it |
 
-Also provides `CONFIG_TASKS_EXECUTOR` (ThreadPoolExecutor, 4 workers) for non-blocking config tasks.
+Also exported: `CONFIG_TASKS_EXECUTOR` (ThreadPoolExecutor, 4 workers) for non-blocking config tasks, plugin filesystem paths `CORE_PLUGINS_PATH` / `EXTERNAL_PLUGINS_PATH` / `PRO_PLUGINS_PATH`, and `reload_plugins()` / `safe_reload_plugins()` which pull plugin tarballs via `API_CLIENT.get_plugins(with_data=True)` and materialize them on disk.
+
+### API client: `app/api_client.py`
+
+`ApiClient` extends `BaseApiClient` (from `common/utils/base_api_client.py`) and is the single entry point for all UI↔API traffic. Configured from `API_URL` (default `http://bw-api:5000`) and `API_TOKEN`.
+
+- Low-level helpers inherited from base: `_get`, `_post`, `_patch`, `_put`, `_delete`, `_raw_request`, plus a `readonly` property reflecting the API's current state.
+- Domain methods grouped by resource: global settings, instances, bans, cache, jobs, services, configs, plugins, users, user preferences, templates, metadata — plus `save_config()` and `checked_changes()`.
+- Errors: `ApiClientError` (carries `status_code`) and `ApiUnavailableError`, both re-exported from `app.api_client`. Routes catch these and map to user-facing flashes via `handle_error()` / `error_message()` in `app/routes/utils.py`.
 
 ### Routes: `app/routes/`
 
 20 Flask Blueprints. Common patterns:
 
-- Import singletons from `app.dependencies`
+- Canonical imports from `app.dependencies` — e.g. `from app.dependencies import API_CLIENT, BW_CONFIG, BW_INSTANCES_UTILS, CONFIG_TASKS_EXECUTOR, DATA`. Pick the subset the route needs; never import `DB`.
 - `@login_required` on all authenticated routes
 - `verify_data_in_form()` for POST validation (from `app/routes/utils.py`)
 - `handle_error()` for error flash + redirect
@@ -79,8 +90,8 @@ Route → DATA["RELOADING"] = True → CONFIG_TASKS_EXECUTOR.submit(task)
 |------|---------|
 | `ui_database.py` | `UIDatabase` — UI-specific DB methods (users, sessions, roles, permissions) |
 | `models.py` | `UiUsers` (extends SQLAlchemy `Users` + Flask-Login `UserMixin`), `AnonymousUser` |
-| `config.py` | `Config` — configuration builder and validator |
-| `instance.py` | `InstancesUtils` — instance aggregation, Redis operations |
+| `config.py` | `Config` — configuration builder and validator (takes an `api_client` dependency — no direct DB access) |
+| `instance.py` | `InstancesUtils` — instance aggregation, Redis operations (takes an `api_client` dependency) |
 | `ui_data.py` | `UIData` — JSON file store for cross-process state |
 | `biscuit.py` | Biscuit token auth (RBAC middleware) |
 | `totp.py` | TOTP/2FA management |
@@ -123,7 +134,9 @@ Plugins can extend the UI by providing `ui/hooks.py` and `ui/blueprints/`. Hook 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | — | Initial admin credentials |
-| `DATABASE_URI` | sqlite | SQLAlchemy connection string |
+| `API_URL` | `http://bw-api:5000` | BunkerWeb API base URL — all UI data flows through it |
+| `API_TOKEN` | — | Shared secret for authenticating to the API (required in dev compose) |
+| `DATABASE_URI` | sqlite | SQLAlchemy connection string (used indirectly via the API; UI does not connect) |
 | `FLASK_SECRET` | generated | Session signing key |
 | `SESSION_LIFETIME_HOURS` | 12 | Session duration |
 | `MAX_WORKERS` / `MAX_THREADS` | auto | Gunicorn workers/threads |

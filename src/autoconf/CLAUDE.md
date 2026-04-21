@@ -77,6 +77,7 @@ All controllers share a debounce pattern (2-second window):
 | `KUBERNETES_REVERSE_PROXY_SUFFIX_START` | `1` | Starting index for numbered reverse proxy settings |
 | `API_URL` | `http://bw-api:5000` | FastAPI backend URL |
 | `API_TOKEN` | (empty) | Bearer token for API authentication |
+| `API_ERROR_TIMEOUT` | `60` | Seconds of consecutive API failures before `wait_applying()` escalates warnings to errors (see `Config.py`) |
 
 ### API Interaction
 
@@ -119,6 +120,13 @@ pip install -r src/autoconf/requirements.in
 ```
 
 The Dockerfile is a multi-stage build: builder stage compiles Python deps, final stage runs as `autoconf` user (UID 101). Autoconf has no database dependencies — it communicates exclusively via the API.
+
+**Dev iteration:** Unlike UI/API, the dev compose files do **not** volume-mount the autoconf source. To pick up code changes, rebuild and recreate the container:
+
+```bash
+docker build -f src/autoconf/Dockerfile -t bunkerweb-autoconf:dev .
+docker compose -f misc/dev/docker-compose.autoconf.yml up -d --force-recreate bw-autoconf
+```
 
 ## Conventions
 

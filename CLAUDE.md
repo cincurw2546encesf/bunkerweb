@@ -6,16 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 BunkerWeb is an open-source Web Application Firewall (WAF) built on NGINX with a modular plugin architecture. It provides "security by default" for web services through multiple integration modes (Docker, Kubernetes, Swarm, Linux) and is fully configurable via environment variables.
 
+## Start Here
+
+- **[AGENTS.md](AGENTS.md)** is the primary, short-form instruction file for AI agents — read it first for the repo map, critical architecture facts, and pitfalls.
+- This CLAUDE.md is the long-form architecture/reference. Component-level guidance lives in per-directory CLAUDE.md files linked from AGENTS.md.
+- [BUILD.md](BUILD.md) covers reproducible artifact builds; [CONTRIBUTING.md](CONTRIBUTING.md) covers the contribution process.
+
 ## Architecture
 
 ### Core Components
 
 - **BunkerWeb Core** (`src/bw/`, `src/common/core/`): NGINX-based reverse proxy with security modules in Lua (request-time) and Python (jobs). Lua modules live in `src/bw/lua/bunkerweb/` (plugin.lua, ctx.lua, datastore.lua, etc.).
-- **Scheduler** (`src/scheduler/`): Central orchestrator ("brain"). `main.py` runs the main loop; `JobScheduler.py` manages job execution with thread pools. Uses Python's `schedule` library.
+- **Scheduler** (`src/scheduler/`): Central orchestrator ("brain"). `main.py` runs the main loop; `JobScheduler.py` schedules jobs using Python's `schedule` library and **dispatches execution to Celery workers** (see `src/worker/`) rather than running them in-process. Still owns config reload orchestration for BunkerWeb instances.
+- **Worker** (`src/worker/`): Celery-based distributed job executor. `app.py` configures the Celery app with a Redis broker and two queues — `default` (fast jobs) and `heavy` (certbot, blocklist downloads, backups, etc.; see the `HEAVY_JOBS` set in `app.py`). `tasks.py` defines the `execute_job` Celery task; `executor.py` dynamically loads and runs plugin jobs from `src/common/core/*/jobs/`. Workers run independently of the Scheduler and write results to the shared DB. Redis is required: `CELERY_BROKER_URL` defaults to `redis://localhost:6379/0`.
 - **Autoconf** (`src/autoconf/`): Listens for Docker/Swarm/Kubernetes events and dynamically reconfigures BunkerWeb. Controllers in `controllers/`: DockerController, SwarmController, IngressController, GatewayController (all inherit from `Controller.py`).
-- **API** (`src/api/`): FastAPI service. Entry point: `src/api/app/main.py`. Routers in `src/api/app/routers/` (auth, bans, cache, configs, global_settings, instances, jobs, plugins, services, users, system, templates, metadata). `core.py` is the router hub that assembles all routers — it is NOT the FastAPI app entry point.
-- **Web UI** (`src/ui/`): Flask app using Blueprints. Entry point: `src/ui/main.py`. Routes in `src/ui/app/routes/` (22 blueprints including configs, plugins, jobs, logs, instances, services, bans, cache, global_settings, templates, reports, etc.). Uses Flask-Login for auth and Jinja2 templates. `dependencies.py` is the central dependency injection point providing API_CLIENT, DATA, BW_CONFIG, BW_INSTANCES_UTILS, CORE_PLUGINS_PATH, EXTERNAL_PLUGINS_PATH, PRO_PLUGINS_PATH. The UI no longer accesses the database directly — all data flows through the API via `api_client.py`. Frontend assets are static files in `src/ui/app/static/` (no separate build system).
+- **API** (`src/api/`): FastAPI service. Entry point: `src/api/app/main.py`. Routers in `src/api/app/routers/` (`auth`, `bans`, `cache`, `configs`, `global_settings`, `instances`, `jobs`, `metadata`, `plugins`, `services`, `system`, `templates`, `users`). `core.py` is the router hub that assembles all routers — it is NOT the FastAPI app entry point.
+- **Web UI** (`src/ui/`): Flask app using Blueprints. Entry point: `src/ui/main.py`. Routes in `src/ui/app/routes/` (~20 blueprints including configs, plugins, jobs, logs, instances, services, bans, cache, global_settings, templates, reports, etc.). Uses Flask-Login for auth and Jinja2 templates. `dependencies.py` is the central dependency injection point providing API_CLIENT, DATA, BW_CONFIG, BW_INSTANCES_UTILS, CORE_PLUGINS_PATH, EXTERNAL_PLUGINS_PATH, PRO_PLUGINS_PATH. The UI no longer accesses the database directly — all data flows through the API via `api_client.py`. Frontend assets are static files in `src/ui/app/static/` (no separate build system).
 - **Database** (`src/common/db/`): SQLAlchemy ORM with `model.py` defining all tables (Plugins, Settings, Services, Jobs, Custom_configs, Users, etc.). `Database.py` wraps high-level query methods. Supports SQLite (WAL mode), MariaDB, MySQL, PostgreSQL with QueuePool for connection pooling.
+- **Linux packaging** (`src/linux/`): Native deb/rpm packaging — systemd units, `postinst`/`prerm` scripts, `bwcli` installation. Used by the Linux integration mode.
+- **Vendored deps** (`src/deps/`): Third-party dependencies (Lua modules, Python packages, NGINX modules) bundled into the Docker images and Linux packages.
 
 ### Configuration Flow
 
@@ -80,6 +89,9 @@ docker build -f src/all-in-one/Dockerfile -t bunkerweb:dev .
 # Build specific component
 docker build -f src/scheduler/Dockerfile -t bunkerweb-scheduler:dev .
 docker build -f src/ui/Dockerfile -t bunkerweb-ui:dev .
+docker build -f src/api/Dockerfile -t bunkerweb-api:dev .
+docker build -f src/worker/Dockerfile -t bunkerweb-worker:dev .
+docker build -f src/autoconf/Dockerfile -t bunkerweb-autoconf:dev .
 ```
 
 ### Linting & Formatting
@@ -106,7 +118,7 @@ refurb                           # Python refactoring suggestions (excludes test
 docker compose -f misc/dev/docker-compose.ui.api.yml up -d
 ```
 
-Key dev compose files in `misc/dev/` (18 total):
+Key dev compose files in `misc/dev/` (17 total):
 
 - `docker-compose.ui.api.yml` — Full stack (UI + API + core + MariaDB) — **recommended**
 - `docker-compose.ui.yml` — UI + API + core + MariaDB (UI requires bw-api)
@@ -119,6 +131,8 @@ Key dev compose files in `misc/dev/` (18 total):
 Dev credentials: UI `admin`/`P@ssw0rd`, API `admin`/`P@ssw0rd`, DB `bunkerweb`/`secret`.
 
 The dev compose mounts `src/ui/app/` and `src/api/app/` as read-only volumes, so UI and API code changes apply without rebuilding (restart the container to pick up changes).
+
+`docker-compose.ui.api.yml` brings up a Redis (Valkey) broker (`bw-jobs-broker`) and a `bw-worker` service alongside the scheduler — required since the Celery-based job executor landed. Other compose files in `misc/dev/` do not yet include the worker/broker, so jobs requiring the Celery path will not run under those stacks.
 
 ### Database Migrations
 
@@ -133,7 +147,9 @@ Alembic migrations in `src/common/db/alembic/` with separate version directories
 - `src/common/gen/Configurator.py`: Settings validation engine
 - `src/common/gen/Templator.py`: NGINX config renderer
 - `src/scheduler/main.py`: Scheduler entry point
-- `src/scheduler/JobScheduler.py`: Job execution orchestrator
+- `src/scheduler/JobScheduler.py`: Job scheduling orchestrator (dispatches to Celery workers)
+- `src/worker/app.py`: Celery app config, queue routing (default/heavy), DB lifecycle hooks
+- `src/worker/tasks.py`: `execute_job` Celery task — job execution entry point
 - `src/ui/main.py`: Web UI entry point (registers all Blueprints)
 - `src/ui/app/dependencies.py`: UI dependency injection
 - `src/ui/app/api_client.py`: UI API client — all UI data access goes through the API
@@ -142,6 +158,10 @@ Alembic migrations in `src/common/db/alembic/` with separate version directories
 - `pyproject.toml`: Black config (160 char lines)
 - `.pre-commit-config.yaml`: All linting/formatting rules
 - `.luacheckrc`: Luacheck globals and ignores
+- `AGENTS.md`: Primary short-form entry point for AI agents — indexes component CLAUDE.md files, critical architecture facts, and pitfalls. Keep in sync with this file.
+- `BUILD.md`: Reproducible artifact build instructions (Docker images, Linux packages).
+- `CONTRIBUTING.md`: Contribution process and review expectations.
+- `.github/copilot-instructions.md`: Mirror of this guidance for GitHub Copilot — keep in sync when editing this file
 
 ## Important Patterns
 
@@ -160,6 +180,8 @@ Alembic migrations in `src/common/db/alembic/` with separate version directories
 Set one of these to `yes`: `AUTOCONF_MODE`, `SWARM_MODE`, `KUBERNETES_MODE`
 
 ### Testing
+
+Tests are **integration-focused only** — they spin up real Docker/Linux environments and hit BunkerWeb with actual HTTP requests. There is no unit-test suite under `tests/`; verify component behavior by running the relevant integration target below.
 
 ```bash
 python3 tests/main.py docker              # Docker integration tests

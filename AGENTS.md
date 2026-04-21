@@ -1,25 +1,68 @@
-# Repository Guidelines
+# AGENTS.md
 
-## Project Structure & Module Organization
+This is the primary instruction file for AI coding agents in this repository.
 
-Source lives in `src/`: `api/` (FastAPI service), `ui/` (admin UI), `linux/` (distribution packages and service units), `bw/` and `common/` (core WAF logic), plus packaging targets like `all-in-one/` and other platform bundles. Integration assets and manifests are under `examples/`, while reusable configuration templates live in `env/`. MkDocs content for docs.bunkerweb.io sits in `docs/`. System tests, fixtures, and helper scripts are consolidated in `tests/`.
+## Fast Start
 
-## Build, Test, and Development Commands
+- Read [CLAUDE.md](CLAUDE.md) for architecture and component boundaries.
+- Read [BUILD.md](BUILD.md) for reproducible artifact builds.
+- Read [README.md](README.md) and [docs/quickstart-guide.md](docs/quickstart-guide.md) for integration context.
+- Run `pre-commit run --all-files` before finishing code changes.
 
-Bootstrap Python deps per component, e.g. `pip install -r src/api/requirements.txt` or `pip install -r src/ui/requirements.txt`. Build a full appliance image with `docker build -f src/all-in-one/Dockerfile .`. Exercise integrations locally via `python tests/main.py docker`; swap `docker` for `linux`, `autoconf`, `swarm`, or `kubernetes` as needed (set the matching `TEST_DOMAIN*` env vars first). Regenerate docs with `mkdocs serve --watch` from the repo root. Run `pre-commit run --all-files` before pushing to execute the standard formatters and linters.
+## Repository Map
 
-## Coding Style & Naming Conventions
+- `src/bw/`: NGINX runtime + Lua request pipeline.
+- `src/common/`: shared generators, DB models, plugin metadata, utility modules.
+- `src/scheduler/`: orchestrator loop and config application logic.
+- `src/worker/`: Celery workers that execute plugin jobs (Scheduler dispatches here).
+- `src/api/`: FastAPI control plane.
+- `src/ui/`: Flask web UI.
+- `src/autoconf/`: Docker/Swarm/Kubernetes event-driven config sync.
+- `src/linux/` and `src/all-in-one/`: packaging and distribution targets.
+- `examples/`: integration scenarios and end-to-end test fixtures.
+- `tests/`: integration test harness (`tests/main.py`).
 
-Python uses Black (160 char lines) and Flake8 with ignores defined in `.pre-commit-config.yaml`; prefer snake_case for modules and functions, PascalCase for classes. Lua code is formatted with StyLua (see `stylua.toml`) and linted with Luacheck; follow lowercase module names and descriptive function names. Shell scripts must pass ShellCheck and stay POSIX-compatible unless a `#!/bin/bash` shebang is explicit. Front-end assets follow Prettier defaults.
+## Critical Architecture Facts
 
-## Testing Guidelines
+- Scheduler does not execute all jobs in-process anymore; it dispatches execution to Celery workers in `src/worker/` (Redis broker required).
+- UI should not bypass the API for data access; UI reads/writes flow through API client layers.
+- `src/api/app/routers/core.py` is router assembly, not the FastAPI app entry point (`src/api/app/main.py`).
+- Config pipeline is settings -> Configurator -> Templator -> rendered NGINX files; avoid bypassing validation.
+- Multisite settings are server-name prefixed; repeated setting families use numeric suffixes.
 
-High-level acceptance suites live in `tests/` and orchestrate Dockerized environments—verify Docker access and required `TEST_DOMAIN*` env vars before running. Add scenario files under `examples/<use-case>/tests.json` with descriptive names; tests should assert observable behavior rather than internals. For unit-style Python additions, provide lightweight checks inside the relevant module and hook them into integration flows when feasible. Capture regressions by replicating failing requests in the automated suites.
+## Build, Lint, Test
 
-## Commit & Pull Request Guidelines
+- Lint/format (all): `pre-commit run --all-files`
+- API deps: `pip install -r src/api/requirements.txt`
+- UI deps: `pip install -r src/ui/requirements.txt`
+- Scheduler deps: `pip install -r src/scheduler/requirements.txt`
+- Dev stack (recommended): `docker compose -f misc/dev/docker-compose.ui.api.yml up -d`
+- Integration tests: `python3 tests/main.py docker` (or `autoconf`, `swarm`, `kubernetes`, `linux`)
 
-Use concise, present-tense messages; the history favors Conventional Commits (`feat:`, `fix:`, `docs:`) or `<component> - …` prefixes. Reference issue IDs when closing or relating tickets. Each PR should include a summary of changes, validation steps (commands or screenshots for UI changes), and updated docs or config when behavior shifts. Coordinate breaking changes with maintainers and flag them clearly in both commit body and PR description.
+For packaging commands and distro-specific build details, use [BUILD.md](BUILD.md) instead of duplicating steps here.
 
-## Security & Configuration Tips
+## Working Conventions
 
-Never commit secrets—use sample files in `env/` or add new templates when introducing config. Review `.gitleaksignore` before adjusting dependencies. Docker Scout is used for container image vulnerability scanning in CI/CD—check the `container-build.yml` workflow for current scan configuration. When touching TLS, keys, or rule bundles, document rotation steps and default hardening in the accompanying docs update.
+- Prefer minimal, targeted changes; preserve existing APIs and behavior unless task requires a change.
+- Follow project styles configured in `pyproject.toml`, `.pre-commit-config.yaml`, `.luacheckrc`, and `stylua.toml`.
+- Add or update docs when behavior, configuration keys, or operational flows change.
+- Treat generated/vendor content under `src/deps/` as external unless the task explicitly targets it.
+
+## Practical Pitfalls
+
+- Many components expect container filesystem paths under `/usr/share/bunkerweb/` and `/var/tmp/bunkerweb/`; local ad-hoc runs can fail without that layout.
+- Dynamic imports and plugin discovery rely on metadata (`plugin.json`) and naming conventions; validate metadata changes carefully.
+- Scheduler/autoconf behavior depends on DB metadata flags; verify end-to-end reload signaling when changing config flows.
+- Integration tests are environment-heavy and may require domain/env setup (`TEST_DOMAIN*`).
+
+## Where To Go Next
+
+- Contribution process: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Security policy: [SECURITY.md](SECURITY.md)
+- Plugin reference: [docs/plugins.md](docs/plugins.md)
+- Architecture details by component:
+  - [src/api/CLAUDE.md](src/api/CLAUDE.md)
+  - [src/ui/CLAUDE.md](src/ui/CLAUDE.md)
+  - [src/scheduler/CLAUDE.md](src/scheduler/CLAUDE.md)
+  - [src/autoconf/CLAUDE.md](src/autoconf/CLAUDE.md)
+  - [src/bw/CLAUDE.md](src/bw/CLAUDE.md)
