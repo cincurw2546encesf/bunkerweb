@@ -18,7 +18,9 @@
   "aria": {
     "label": {
       "close": "Schließen",
-      "raw_configuration": "Rohkonfiguration"
+      "configs_dropzone": "Eine Exportdatei für benutzerdefinierte Konfigurationen auswählen oder hier ablegen",
+      "raw_configuration": "Rohkonfiguration",
+      "services_dropzone": "Eine Dienste-Exportdatei auswählen oder hier ablegen"
     }
   },
   "badge": {
@@ -107,6 +109,7 @@
     "go_back": "Zurück",
     "hide": "Ausblenden",
     "history": "Verlauf",
+    "import_configs": "Benutzerdefinierte Konfigurationen importieren",
     "import_services": "Dienste importieren",
     "login": "Anmelden",
     "multiple_add": "HINZUFÜGEN",
@@ -620,6 +623,8 @@
   },
   "form": {
     "checkbox": {
+      "include_attached_configs": "Angehängte benutzerdefinierte Konfigurationen einschließen",
+      "overwrite_existing_configs": "Vorhandene benutzerdefinierte UI/API-Konfigurationen überschreiben",
       "remember_me": "Angemeldet bleiben"
     },
     "help": {
@@ -692,11 +697,11 @@
       "use_real_ip": "Echte IP verwenden",
       "username": "Benutzername",
       "wildcard_certificates": "Wildcard-Zertifikate",
-      "zerossl_api_connect_timeout": "ZeroSSL-API-Verbindungs-Timeout",
       "zerossl_api_key": "ZeroSSL-API-Schlüssel",
-      "zerossl_api_max_time": "ZeroSSL-API-Maximalzeit",
       "zerossl_api_retry": "ZeroSSL-API-Wiederholungen",
-      "zerossl_api_retry_delay": "ZeroSSL-API-Wiederholungsverzögerung"
+      "zerossl_api_retry_delay": "ZeroSSL-API-Wiederholungsverzögerung",
+      "zerossl_api_connect_timeout": "ZeroSSL-API-Verbindungs-Timeout",
+      "zerossl_api_max_time": "ZeroSSL-API-Maximalzeit"
     },
     "placeholder": {
       "2fa_code": "Code eingeben",
@@ -789,6 +794,9 @@
       "fetch_global_settings_point_1": "Nur in dieser Vorlage vorhandene Einstellungen werden aktualisiert.",
       "fetch_global_settings_point_2": "Werte, die den Standardwerten entsprechen, werden ignoriert.",
       "fetch_global_settings_point_3": "SERVER_NAME wird nie überschrieben.",
+      "export_services_intro": "Die ausgewählten Dienste werden exportiert. Aktivieren Sie die Option unten, um ihre angehängten benutzerdefinierten Konfigurationen in ein .zip-Archiv zu bündeln.",
+      "import_configs_dropzone": "Ziehen Sie Ihre Exportdatei für benutzerdefinierte Konfigurationen hierher oder klicken Sie, um eine Datei auszuwählen.",
+      "import_configs_warning": "Benutzerdefinierte Konfigurationen, die von scheduler, autoconf oder templates erstellt wurden, bleiben immer erhalten. Nur UI/API-Konfigurationen können überschrieben werden.",
       "import_services_dropzone": "Ziehen Sie Ihre Dienste-Exportdatei hierher oder klicken Sie, um eine Datei auszuwählen.",
       "import_services_warning": "Durch das Importieren von Diensten werden neue UI-Dienste aus der Exportdatei erstellt. Vorhandene Dienste werden übersprungen.",
       "instance_creation_alert": "Sie müssen den Port oder den Servernamen nicht angeben; die Werte von `API_HTTP_PORT`, `API_LISTEN_HTTPS`, `API_HTTPS_PORT` und `API_SERVER_NAME` werden für die Instanzkonfiguration verwendet.",
@@ -823,8 +831,10 @@
       "delete_template": "Vorlagen löschen",
       "edit_template": "Vorlage bearbeiten: {{name}}",
       "fetch_global_settings": "Globale Einstellungen anwenden?",
+      "export_services": "Dienste exportieren",
       "from_plugin": "von Plugin",
       "full_url": "Vollständige URL",
+      "import_configs": "Benutzerdefinierte Konfigurationen importieren",
       "import_services": "Dienste importieren",
       "job_history": "Letzte 10 Auftragsausführungen",
       "job_history_count": "Letzte {{count}} Ausführungen von Auftrag",
@@ -1029,7 +1039,6 @@
     "last_30d": "Letzte 30 Tage",
     "last_7d": "Letzte 7 Tage",
     "last_run": "Letzter Lauf",
-    "last_run_state": "Status des letzten Laufs",
     "last_seen": "Zuletzt gesehen",
     "last_update": "Letzte Aktualisierung",
     "loading": "Suchbereiche werden geladen...",
@@ -1097,9 +1106,9 @@
       "section": {
         "custom_certificate": "Benutzerdefiniertes Zertifikat",
         "lets_encrypt": "Let's Encrypt",
+        "zerossl": "ZeroSSL",
         "real_ip": "Echte IP",
-        "reverse_proxy": "Reverse Proxy",
-        "zerossl": "ZeroSSL"
+        "reverse_proxy": "Reverse Proxy"
       },
       "subtitle": "Konfigurieren Sie spezifische Einstellungen für die Web-UI.",
       "title": "UI-Einstellungen"
@@ -1328,8 +1337,8 @@
       "raw_configs_title": "Benutzerdefinierte Konfigurationsimporte",
       "raw_configs_upload": "Konfigurationsdateien hochladen (.conf, .cfg, .txt)",
       "raw_configs_upload_failed": "Eine der ausgewählten Dateien konnte nicht gelesen werden.",
-      "raw_editor_aria": "Editor für rohes Vorlagen-JSON",
       "raw_editor_drop_hint": "Legen Sie eine Vorlagen-JSON-Datei (.json nur) ab, um den aktuellen Inhalt zu ersetzen.",
+      "raw_editor_aria": "Editor für rohes Vorlagen-JSON",
       "raw_editor_help": "Bearbeiten Sie die gesamte Vorlagendefinition als JSON. Das Zurückschalten in den Einfach-Modus validiert und lädt den visuellen Editor neu.",
       "raw_editor_import_success": "Vorlagen-JSON erfolgreich importiert.",
       "raw_editor_override_body": "Das Importieren dieser Datei ersetzt die aktuelle Vorlagen-JSON vollständig. Im Editor vorgenommene Änderungen gehen verloren. Möchten Sie fortfahren?",
@@ -1450,7 +1459,6 @@
     "auto_lets_encrypt": "Ob automatisch ein Let's Encrypt-Zertifikat angefordert werden soll.",
     "button": {
       "ban_ip": "Diese IP-Adresse sperren",
-      "clone_template": "Vorlage {{template}} klonen",
       "convert_config_to_draft": "Convert Config {{name}} to Draft",
       "convert_config_to_online": "Convert Config {{name}} to Online",
       "convert_service_to_draft": "Dienst {{name}} in Entwurf konvertieren",
@@ -1461,7 +1469,6 @@
       "delete_plugin": "Plugin {{name}} löschen",
       "delete_service": "Dienst {{name}} löschen",
       "delete_template": "Vorlage {{name}} löschen",
-      "edit_template": "Vorlage {{template}} bearbeiten",
       "force_check": "Prüfung planen; lädt nur bei verfügbaren Updates herunter.",
       "force_update": "Überspringt Prüfungen und erzwingt den Download von PRO-Plugins; behält aktuellen Zustand bei Fehler bei.",
       "ping_instance": "Instanz {{hostname}} pingen",
@@ -1472,8 +1479,7 @@
       "show_selected_only": "Nur ausgewählte anzeigen",
       "stop_instance": "Instanz {{hostname}} stoppen",
       "unban_ip": "{{ip}} entsperren",
-      "value_from_global": "Wert aus globalen Einstellungen",
-      "view_template": "Vorlage {{template}} anzeigen"
+      "value_from_global": "Wert aus globalen Einstellungen"
     },
     "cannot_delete_original_ban": "Der ursprüngliche Sperreintrag kann nicht gelöscht werden.",
     "cannot_remove_disabled": "Kann nicht entfernt werden, da eine oder mehrere Einstellungen deaktiviert sind.",
@@ -1520,8 +1526,8 @@
     "latest_version_installed": "Sie verwenden die neueste Version.",
     "lets_encrypt_custom_profile": "Das benutzerdefinierte Profil, das für Let's Encrypt verwendet werden soll (z. B. 'mein_benutzerdefiniertes_profil').",
     "lets_encrypt_disable_public_suffixes": "Zertifikatsanfragen für Domains, die mit der Public Suffix List übereinstimmen, deaktivieren (empfohlen).",
-    "lets_encrypt_profile": "Das Profil, das für Let's Encrypt verwendet werden soll (classic, tlsserver, shortlived).",
     "lets_encrypt_server": "Wählen Sie Ihren Zertifikatsanbieter, um anbieterspezifische Einstellungen anzuzeigen.",
+    "lets_encrypt_profile": "Das Profil, das für Let's Encrypt verwendet werden soll (classic, tlsserver, shortlived).",
     "license_key": "Ihr BunkerWeb PRO Lizenzschlüssel.",
     "link": {
       "access_plugin_page": "Zugriff auf Seite {{name}}",
@@ -1533,6 +1539,7 @@
       "edit_config": "Benutzerdefinierte Konfiguration {{name}} bearbeiten",
       "edit_service": "Dienst {{service}} bearbeiten",
       "edit_template": "Vorlage {{template}} bearbeiten",
+      "export_config": "Benutzerdefinierte Konfiguration {{name}} exportieren",
       "export_service": "Dienstkonfiguration {{name}} exportieren",
       "view_config": "Benutzerdefinierte Konfiguration {{name}} anzeigen",
       "view_file": "{{filename}} anzeigen",
@@ -1696,11 +1703,11 @@
     "view_full_url": "Klicken, um die vollständige URL anzuzeigen",
     "wildcard_certificates": "Wildcard-Zertifikate generieren (*.domain.com). Erfordert DNS-Challenge.",
     "wildcard_dns_only": "Wildcard-Zertifikate werden nur mit dem DNS-Challenge-Typ unterstützt.",
-    "zerossl_api_connect_timeout": "Verbindungs-Timeout in Sekunden für ZeroSSL-API-Aufrufe.",
     "zerossl_api_key": "Optionaler ZeroSSL-API-Schlüssel, der von zerossl-bot verwendet wird.",
-    "zerossl_api_max_time": "Maximale Gesamtzeit in Sekunden pro ZeroSSL-API-Anfrage.",
     "zerossl_api_retry": "Anzahl der Wiederholungen für ZeroSSL-API-Anfragen (0 deaktiviert Wiederholungen).",
-    "zerossl_api_retry_delay": "Verzögerung in Sekunden zwischen ZeroSSL-API-Wiederholungen."
+    "zerossl_api_retry_delay": "Verzögerung in Sekunden zwischen ZeroSSL-API-Wiederholungen.",
+    "zerossl_api_connect_timeout": "Verbindungs-Timeout in Sekunden für ZeroSSL-API-Aufrufe.",
+    "zerossl_api_max_time": "Maximale Gesamtzeit in Sekunden pro ZeroSSL-API-Anfrage."
   },
   "totp": {
     "prompt": "Bitte geben Sie Ihren TOTP-Code ein."

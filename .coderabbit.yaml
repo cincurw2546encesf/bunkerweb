@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 language: "en-GB"
-tone_instructions: "Be direct, technical, and actionable. Cite exact lines. Prefer concrete guidance over vague suggestions. Use British English."
+tone_instructions: "Be direct, technical, and actionable. Cite exact lines.
+  Prefer concrete guidance over vague suggestions. Use British English."
 early_access: false
 
 knowledge_base:
@@ -57,6 +58,8 @@ reviews:
       - "DO NOT REVIEW"
     ignore_usernames:
       - "dependabot[bot]"
+      - "TheophileDiot"
+      - "fl0ppy-d1sk"
 
   slop_detection:
     enabled: true

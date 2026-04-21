@@ -1,9 +1,11 @@
-from json import JSONDecodeError, loads
+from datetime import datetime, timezone
+from io import BytesIO
+from json import JSONDecodeError, dumps, loads
 from re import match
 from time import time
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Tuple
 
-from flask import Blueprint, redirect, render_template, request, url_for
+from flask import Blueprint, redirect, render_template, request, send_file, url_for
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 
@@ -13,6 +15,14 @@ from app.utils import flash, is_editable_method
 from app.routes.utils import handle_error, verify_data_in_form, wait_applying
 
 configs = Blueprint("configs", __name__)
+
+CONFIG_NAME_RX = r"^[\w_-]{1,255}$"
+EXPORT_FORMAT_VERSION = 1
+
+GLOBAL_CRS_SERVICE_SCOPED_MODSEC_CRS_ERROR = (
+    "Service-scoped modsec-crs configs are not supported when USE_MODSECURITY_GLOBAL_CRS is enabled. "
+    "Create a global modsec-crs config and scope it with a Host rule instead."
+)
 
 CONFIG_TYPES = {
     "HTTP": {"context": "global", "description": "Configurations at the HTTP level of NGINX."},
@@ -35,6 +45,179 @@ CONFIG_TYPES = {
     "CRS_PLUGINS_BEFORE": {"context": "multisite", "description": "Configurations applied before the OWASP Core Rule Set plugins are loaded."},
     "CRS_PLUGINS_AFTER": {"context": "multisite", "description": "Configurations applied after the OWASP Core Rule Set plugins are loaded."},
 }
+
+
+def parse_configs_export(content: str) -> Tuple[List[Dict], List[str]]:
+    """Parse a custom-configs export payload.
+
+    Returns (valid_configs, errors). Invalid entries are skipped with a recorded
+    error; callers may still import the valid ones."""
+    errors: List[str] = []
+    try:
+        payload = loads(content)
+    except JSONDecodeError as exc:
+        return [], [f"File is not valid JSON: {exc.msg}"]
+
+    if not isinstance(payload, dict):
+        return [], ["Export payload must be a JSON object with a 'configs' array."]
+
+    configs_raw = payload.get("configs")
+    if not isinstance(configs_raw, list):
+        return [], ["Export payload is missing a 'configs' array."]
+
+    valid: List[Dict] = []
+    allowed_types_lower = {key.lower() for key in CONFIG_TYPES}
+
+    for index, entry in enumerate(configs_raw, start=1):
+        label = f"entry #{index}"
+        if not isinstance(entry, dict):
+            errors.append(f"{label} is not a JSON object.")
+            continue
+
+        entry_name = entry.get("name")
+        entry_type = entry.get("type")
+        entry_service = entry.get("service_id")
+        entry_data = entry.get("data", "")
+        entry_draft = entry.get("is_draft", False)
+
+        if not isinstance(entry_name, str) or not match(CONFIG_NAME_RX, entry_name):
+            errors.append(f"{label} has an invalid name.")
+            continue
+        if not isinstance(entry_type, str):
+            errors.append(f"{label} ({entry_name}) has a missing or invalid type.")
+            continue
+        normalized_type = entry_type.strip().replace("-", "_").lower()
+        if normalized_type not in allowed_types_lower:
+            errors.append(f"{label} ({entry_name}) has an unknown type '{entry_type}'.")
+            continue
+        if entry_service is not None and not isinstance(entry_service, str):
+            errors.append(f"{label} ({entry_name}) has an invalid service_id.")
+            continue
+        if not isinstance(entry_data, str):
+            errors.append(f"{label} ({entry_name}) has non-string data.")
+            continue
+        if not isinstance(entry_draft, bool):
+            errors.append(f"{label} ({entry_name}) has a non-boolean is_draft value.")
+            continue
+
+        service_id: Optional[str]
+        if entry_service in (None, "", "global"):
+            service_id = None
+        else:
+            service_id = entry_service
+
+        valid.append(
+            {
+                "service_id": service_id,
+                "type": normalized_type,
+                "name": entry_name,
+                "data": entry_data,
+                "is_draft": entry_draft,
+            }
+        )
+
+    return valid, errors
+
+
+def apply_imported_configs(parsed_configs: List[Dict], overwrite: bool, parse_errors: Optional[List[str]] = None) -> Dict[str, List[str]]:
+    """Apply parsed custom configs to the database.
+
+    Returns a dict with keys 'created', 'overwritten', 'skipped', 'failed', 'parse_errors'.
+    Callers are responsible for flashing results and updating RELOADING/CONFIG_CHANGED."""
+    results: Dict[str, List[str]] = {
+        "created": [],
+        "overwritten": [],
+        "skipped": [],
+        "failed": [],
+        "parse_errors": list(parse_errors or []),
+    }
+
+    services_value = BW_CONFIG.get_config(global_only=True, methods=False, with_drafts=True, filtered_settings=("SERVER_NAME",)).get("SERVER_NAME", "")
+    existing_services = set(services_value.split()) if services_value else set()
+
+    try:
+        api_existing_configs = API_CLIENT.get_configs(with_drafts=True, with_data=False)
+    except Exception as fetch_err:
+        results["failed"].append(f"Could not fetch existing custom configs from the API: {fetch_err}")
+        return results
+
+    existing_configs = {}
+    for db_config in api_existing_configs:
+        sid = db_config.get("service") or None
+        if sid in ("global", ""):
+            sid = None
+        existing_configs[(sid, db_config["type"], db_config["name"])] = db_config
+
+    for entry in parsed_configs:
+        service_id = entry["service_id"]
+        config_type = entry["type"]
+        config_name = entry["name"]
+        label = f"{config_type}/{config_name}{f' for service {service_id}' if service_id else ''}"
+
+        if service_id and service_id not in existing_services:
+            results["failed"].append(f"{label} (service '{service_id}' does not exist)")
+            continue
+
+        existing = existing_configs.get((service_id, config_type, config_name))
+        is_new = existing is None
+
+        if existing is not None:
+            if existing.get("template") or not is_editable_method(existing.get("method")):
+                results["skipped"].append(f"{label} (non-editable method: {existing.get('method')})")
+                continue
+            if not overwrite:
+                results["skipped"].append(f"{label} (already exists; enable 'Overwrite existing' to replace)")
+                continue
+
+        try:
+            if is_new:
+                API_CLIENT.create_config(
+                    service=service_id,
+                    type=config_type,
+                    name=config_name,
+                    data=entry["data"],
+                    is_draft=entry["is_draft"],
+                )
+            else:
+                API_CLIENT.update_config(
+                    service_id,
+                    config_type,
+                    config_name,
+                    body={
+                        "service": service_id,
+                        "type": config_type,
+                        "name": config_name,
+                        "data": entry["data"],
+                        "is_draft": entry["is_draft"],
+                    },
+                )
+        except Exception as upsert_err:
+            results["failed"].append(f"{label} ({upsert_err})")
+            continue
+
+        (results["created"] if is_new else results["overwritten"]).append(label)
+
+    return results
+
+
+def flash_import_results(results: Dict[str, List[str]]) -> None:
+    """Append flash entries summarizing an apply_imported_configs run."""
+    for error in results.get("parse_errors", []):
+        DATA["TO_FLASH"].append({"content": f"Import warning: {error}", "type": "error"})
+    created = results.get("created", [])
+    overwritten = results.get("overwritten", [])
+    skipped = results.get("skipped", [])
+    failed = results.get("failed", [])
+    if created:
+        DATA["TO_FLASH"].append({"content": f"Imported custom configuration{'s' if len(created) > 1 else ''}: {', '.join(created)}", "type": "success"})
+    if overwritten:
+        DATA["TO_FLASH"].append(
+            {"content": f"Overwrote custom configuration{'s' if len(overwritten) > 1 else ''}: {', '.join(overwritten)}", "type": "success"}
+        )
+    if skipped:
+        DATA["TO_FLASH"].append({"content": f"Skipped custom configuration{'s' if len(skipped) > 1 else ''}: {', '.join(skipped)}", "type": "warning"})
+    if failed:
+        DATA["TO_FLASH"].append({"content": f"Failed to import custom configuration{'s' if len(failed) > 1 else ''}: {', '.join(failed)}", "type": "error"})
 
 
 def _use_modsecurity_global_crs() -> bool:
@@ -398,7 +581,7 @@ def configs_new():
         name=config_name,
         is_draft=is_draft,
         use_modsecurity_global_crs=_use_modsecurity_global_crs(),
-        global_crs_service_scoped_modsec_crs_error=DB.GLOBAL_CRS_SERVICE_SCOPED_MODSEC_CRS_ERROR,
+        global_crs_service_scoped_modsec_crs_error=GLOBAL_CRS_SERVICE_SCOPED_MODSEC_CRS_ERROR,
         services=BW_CONFIG.get_config(global_only=True, methods=False, with_drafts=True, filtered_settings=("SERVER_NAME",))["SERVER_NAME"].split(),
     )
 
@@ -522,6 +705,130 @@ def configs_edit(service: str, config_type: str, name: str):
         config_template=db_config.get("template"),
         is_draft=is_draft,
         use_modsecurity_global_crs=_use_modsecurity_global_crs(),
-        global_crs_service_scoped_modsec_crs_error=DB.GLOBAL_CRS_SERVICE_SCOPED_MODSEC_CRS_ERROR,
+        global_crs_service_scoped_modsec_crs_error=GLOBAL_CRS_SERVICE_SCOPED_MODSEC_CRS_ERROR,
         services=BW_CONFIG.get_config(global_only=True, methods=False, with_drafts=True, filtered_settings=("SERVER_NAME",))["SERVER_NAME"].split(),
+    )
+
+
+@configs.route("/configs/export", methods=["GET"])
+@login_required
+def configs_export():
+    selection_raw = request.args.get("configs", "").strip()
+    selection: Optional[List[Tuple[Optional[str], str, str]]] = None
+
+    if selection_raw:
+        try:
+            decoded = loads(selection_raw)
+        except JSONDecodeError:
+            return handle_error("Invalid configs parameter on /configs/export.", "configs", True)
+        if not isinstance(decoded, list) or not decoded:
+            return handle_error("Invalid configs parameter on /configs/export.", "configs", True)
+        selection = []
+        for entry in decoded:
+            if not isinstance(entry, dict):
+                return handle_error("Invalid configs parameter on /configs/export.", "configs", True)
+            entry_service = entry.get("service")
+            entry_type = entry.get("type")
+            entry_name = entry.get("name")
+            if not isinstance(entry_type, str) or not isinstance(entry_name, str):
+                return handle_error("Invalid configs parameter on /configs/export.", "configs", True)
+            normalized_service: Optional[str]
+            if entry_service in (None, "", "global"):
+                normalized_service = None
+            elif isinstance(entry_service, str):
+                normalized_service = entry_service
+            else:
+                return handle_error("Invalid configs parameter on /configs/export.", "configs", True)
+            selection.append((normalized_service, entry_type.strip().replace("-", "_").lower(), entry_name))
+
+    try:
+        db_configs = API_CLIENT.get_configs(with_drafts=True, with_data=True)
+    except Exception as fetch_err:
+        return handle_error(f"Could not fetch custom configurations from the API: {fetch_err}", "configs", True)
+    exported: List[Dict] = []
+    selection_set = set(selection) if selection else None
+
+    for db_config in db_configs:
+        if db_config.get("template"):
+            continue
+        service_id = db_config.get("service") or None
+        if service_id in ("global", ""):
+            service_id = None
+        config_type = db_config["type"]
+        config_name = db_config["name"]
+        if selection_set is not None and (service_id, config_type, config_name) not in selection_set:
+            continue
+        raw_data = db_config.get("data", b"") or b""
+        if isinstance(raw_data, bytes):
+            try:
+                data_str = raw_data.decode("utf-8")
+            except UnicodeDecodeError:
+                data_str = raw_data.decode("utf-8", errors="replace")
+        else:
+            data_str = str(raw_data)
+        exported.append(
+            {
+                "service_id": service_id,
+                "type": config_type,
+                "name": config_name,
+                "data": data_str,
+                "is_draft": bool(db_config.get("is_draft", False)),
+            }
+        )
+
+    if not exported:
+        return handle_error("No custom configurations to export.", "configs", True)
+
+    payload = {
+        "version": EXPORT_FORMAT_VERSION,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "configs": exported,
+    }
+
+    buffer = BytesIO(dumps(payload, indent=2, ensure_ascii=False).encode("utf-8"))
+    buffer.seek(0)
+    return send_file(buffer, mimetype="application/json", as_attachment=True, download_name="configs_export.json")
+
+
+@configs.route("/configs/import", methods=["POST"])
+@login_required
+def configs_import():
+    if API_CLIENT.readonly:
+        return handle_error("Database is in read-only mode", "configs")
+
+    configs_file = request.files.get("configs_file")
+    if not configs_file or not configs_file.filename:
+        return handle_error("No custom configurations file uploaded.", "configs", True)
+
+    try:
+        content = configs_file.read().decode("utf-8")
+    except UnicodeDecodeError:
+        return handle_error("Invalid file encoding. Please upload a UTF-8 JSON file.", "configs", True)
+
+    parsed_configs, parse_errors = parse_configs_export(content)
+    if not parsed_configs and parse_errors:
+        for error in parse_errors:
+            flash(f"Import error: {error}", "error")
+        return redirect(url_for("configs.configs_page"))
+    if not parsed_configs:
+        return handle_error("No custom configurations found in the import file.", "configs", True)
+
+    overwrite = request.form.get("overwrite", "no") == "yes"
+    DATA.load_from_file()
+
+    def import_configs(parsed_configs: List[Dict], parse_errors: List[str], overwrite: bool):
+        wait_applying()
+        results = apply_imported_configs(parsed_configs, overwrite, parse_errors)
+        flash_import_results(results)
+        DATA.update({"RELOADING": False, "CONFIG_CHANGED": bool(results["created"] or results["overwritten"])})
+
+    DATA.update({"RELOADING": True, "LAST_RELOAD": time(), "CONFIG_CHANGED": True})
+    CONFIG_TASKS_EXECUTOR.submit(import_configs, parsed_configs, parse_errors, overwrite)
+
+    return redirect(
+        url_for(
+            "loading",
+            next=url_for("configs.configs_page"),
+            message="Importing custom configurations",
+        )
     )
