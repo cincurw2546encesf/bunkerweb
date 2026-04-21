@@ -3752,3 +3752,11 @@ code.bad-behavior-event__value {
     justify-content: center;
   }
 }
+
+/* Keyboard focus ring for the import dropzones (role=button divs).
+   Bootstrap does not add a focus style to these; make it visible for a11y. */
+#configs-drag-area:focus-visible,
+#services-drag-area:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}
