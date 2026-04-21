@@ -1,18 +1,25 @@
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from io import BytesIO
 from itertools import chain
+from json import dumps
 from time import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from flask import Blueprint, redirect, render_template, request, send_file, url_for
 from flask_login import login_required
 from regex import sub
 
 from app.dependencies import BW_CONFIG, CONFIG_TASKS_EXECUTOR, DATA, DB
 
+from app.routes.configs import EXPORT_FORMAT_VERSION, apply_imported_configs, flash_import_results, parse_configs_export
 from app.routes.utils import CUSTOM_CONF_RX, extract_file_setting_names, handle_error, verify_data_in_form, wait_applying
 from app.utils import LOGGER, get_blacklisted_settings, is_editable_method, is_ui_api_method
 
 services = Blueprint("services", __name__)
+
+ZIP_ALLOWED_MEMBERS = frozenset({"services_export.env", "configs_export.json"})
+ZIP_MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024  # 20 MB aggregate cap guards against zip bombs.
 
 
 def parse_services_export(content: str) -> Tuple[Dict[str, Dict[str, str]], List[str]]:
@@ -44,7 +51,19 @@ def parse_services_export(content: str) -> Tuple[Dict[str, Dict[str, str]], List
 @services.route("/services", methods=["GET"])
 @login_required
 def services_page():
-    return render_template("services.html", services=DB.get_services(with_drafts=True), templates=DB.get_templates())
+    services_with_configs = sorted(
+        {
+            config["service_id"]
+            for config in DB.get_custom_configs(with_drafts=True, with_data=False)
+            if config.get("service_id") and not config.get("template") and is_editable_method(config.get("method"))
+        }
+    )
+    return render_template(
+        "services.html",
+        services=DB.get_services(with_drafts=True),
+        templates=DB.get_templates(),
+        services_with_configs=services_with_configs,
+    )
 
 
 @services.route("/services/", methods=["GET"])
@@ -590,6 +609,8 @@ def services_service_export():
     if not services:
         return handle_error("No services selected.", "services", True)
 
+    include_configs = request.args.get("include_configs", "").lower() in ("1", "yes", "true", "on")
+
     db_config = BW_CONFIG.get_config(methods=False, with_drafts=True)
 
     def export_service(service: str) -> List[str]:
@@ -610,10 +631,50 @@ def services_service_export():
     if not env_lines:
         return handle_error("No services to export.", "services", True)
 
-    env_output = BytesIO("".join(env_lines).encode("utf-8"))
-    env_output.seek(0)
+    env_bytes = "".join(env_lines).encode("utf-8")
 
-    return send_file(env_output, mimetype="text/plain", as_attachment=True, download_name="services_export.env")
+    if not include_configs:
+        return send_file(BytesIO(env_bytes), mimetype="text/plain", as_attachment=True, download_name="services_export.env")
+
+    selected_services = {service for service in services if service}
+    db_configs = DB.get_custom_configs(with_drafts=True, with_data=True)
+    configs_payload: List[Dict] = []
+    for db_config_row in db_configs:
+        if db_config_row.get("template"):
+            continue
+        service_id = db_config_row.get("service_id") or None
+        if service_id not in selected_services:
+            continue
+        raw_data = db_config_row.get("data", b"") or b""
+        if isinstance(raw_data, bytes):
+            try:
+                data_str = raw_data.decode("utf-8")
+            except UnicodeDecodeError:
+                data_str = raw_data.decode("utf-8", errors="replace")
+        else:
+            data_str = str(raw_data)
+        configs_payload.append(
+            {
+                "service_id": service_id,
+                "type": db_config_row["type"],
+                "name": db_config_row["name"],
+                "data": data_str,
+                "is_draft": bool(db_config_row.get("is_draft", False)),
+            }
+        )
+
+    configs_doc = {
+        "version": EXPORT_FORMAT_VERSION,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "configs": configs_payload,
+    }
+
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        zip_file.writestr("services_export.env", env_bytes)
+        zip_file.writestr("configs_export.json", dumps(configs_doc, indent=2, ensure_ascii=False))
+    zip_buffer.seek(0)
+    return send_file(zip_buffer, mimetype="application/zip", as_attachment=True, download_name="services_export.zip")
 
 
 @services.route("/services/import", methods=["POST"])
@@ -626,18 +687,67 @@ def services_service_import():
     if not services_file or not services_file.filename:
         return handle_error("No services file uploaded.", "services", True)
 
-    try:
-        content = services_file.read().decode("utf-8")
-    except UnicodeDecodeError:
-        return handle_error("Invalid file encoding. Please upload a UTF-8 file.", "services", True)
+    raw_bytes = services_file.read()
+    is_zip = raw_bytes.startswith(b"PK\x03\x04") or (services_file.filename or "").lower().endswith(".zip")
 
-    services_map, parse_errors = parse_services_export(content)
-    if not services_map:
-        return handle_error("No services found in the import file.", "services", True)
+    env_content: Optional[str] = None
+    parsed_configs: List[Dict] = []
+    configs_parse_errors: List[str] = []
+
+    if is_zip:
+        try:
+            zip_buffer = BytesIO(raw_bytes)
+            with zipfile.ZipFile(zip_buffer, "r") as zip_file:
+                entries = {zinfo.filename: zinfo for zinfo in zip_file.infolist() if zinfo.filename in ZIP_ALLOWED_MEMBERS}
+                if not entries:
+                    return handle_error(
+                        "The uploaded archive must contain services_export.env and/or configs_export.json.",
+                        "services",
+                        True,
+                    )
+                total_uncompressed = sum(zinfo.file_size for zinfo in entries.values())
+                if total_uncompressed > ZIP_MAX_UNCOMPRESSED_BYTES or any(zinfo.file_size > ZIP_MAX_UNCOMPRESSED_BYTES for zinfo in entries.values()):
+                    return handle_error("Refusing to extract the archive: uncompressed size exceeds the safety limit.", "services", True)
+                env_zinfo = entries.get("services_export.env")
+                if env_zinfo is not None:
+                    try:
+                        env_content = zip_file.read(env_zinfo).decode("utf-8")
+                    except UnicodeDecodeError:
+                        return handle_error("Invalid encoding for services_export.env inside the archive.", "services", True)
+                json_zinfo = entries.get("configs_export.json")
+                if json_zinfo is not None:
+                    try:
+                        configs_raw = zip_file.read(json_zinfo).decode("utf-8")
+                    except UnicodeDecodeError:
+                        return handle_error("Invalid encoding for configs_export.json inside the archive.", "services", True)
+                    parsed_configs, configs_parse_errors = parse_configs_export(configs_raw)
+        except zipfile.BadZipFile:
+            return handle_error("Uploaded file is not a valid zip archive.", "services", True)
+    else:
+        try:
+            env_content = raw_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return handle_error("Invalid file encoding. Please upload a UTF-8 file.", "services", True)
+
+    services_map: Dict[str, Dict[str, str]] = {}
+    parse_errors: List[str] = []
+    if env_content:
+        services_map, parse_errors = parse_services_export(env_content)
+
+    if not services_map and not parsed_configs and not configs_parse_errors:
+        return handle_error("No services or custom configurations found in the import file.", "services", True)
+
+    overwrite_configs = request.form.get("overwrite_configs", "no") == "yes"
 
     DATA.load_from_file()
 
-    def import_services(services_map: Dict[str, Dict[str, str]], parse_errors: List[str]):
+    def import_services(
+        services_map: Dict[str, Dict[str, str]],
+        parse_errors: List[str],
+        parsed_configs: List[Dict],
+        configs_parse_errors: List[str],
+        overwrite_configs: bool,
+    ):
         wait_applying()
 
         for error in parse_errors:
@@ -683,15 +793,31 @@ def services_service_import():
         if failed:
             DATA["TO_FLASH"].append({"content": f"Failed to import service{'s' if len(failed) > 1 else ''}: {', '.join(failed)}", "type": "error"})
 
-        DATA.update({"RELOADING": False, "CONFIG_CHANGED": bool(created)})
+        configs_results = None
+        if parsed_configs or configs_parse_errors:
+            # Let the scheduler observe the new services before we reference them by service_id.
+            wait_applying()
+            configs_results = apply_imported_configs(parsed_configs, overwrite_configs, configs_parse_errors)
+            flash_import_results(configs_results)
+
+        config_changed = bool(created) or bool(configs_results and (configs_results["created"] or configs_results["overwritten"]))
+        DATA.update({"RELOADING": False, "CONFIG_CHANGED": config_changed})
 
     DATA.update({"RELOADING": True, "LAST_RELOAD": time(), "CONFIG_CHANGED": True})
-    CONFIG_TASKS_EXECUTOR.submit(import_services, services_map, parse_errors)
+    CONFIG_TASKS_EXECUTOR.submit(
+        import_services,
+        services_map,
+        parse_errors,
+        parsed_configs,
+        configs_parse_errors,
+        overwrite_configs,
+    )
 
+    message = "Importing services and custom configurations" if parsed_configs or configs_parse_errors else "Importing services"
     return redirect(
         url_for(
             "loading",
             next=url_for("services.services_page"),
-            message="Importing services",
+            message=message,
         )
     )

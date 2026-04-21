@@ -257,6 +257,7 @@ Advanced ACME certificate management with custom CA support, certificate monitor
 | Einstellung                         | Standardwert | Kontext   | Mehrfach | Beschreibung                                                                                                                                                             |
 | ----------------------------------- | ------------ | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `USE_ACME`                          | `no`         | multisite | nein     | Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.                                                                |
+| `ACME_PASSTHROUGH`                  | `no`         | multisite | nein     | Pass through ACME HTTP-01 challenge requests to the upstream server.                                                                                                     |
 | `ACME_DIRECTORY_URL`                |              | multisite | nein     | ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI). |
 | `ACME_EMAIL`                        |              | multisite | nein     | Email address for ACME account registration and notifications.                                                                                                           |
 | `ACME_EAB_KID`                      |              | multisite | nein     | External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).                                                                              |
@@ -364,6 +365,9 @@ BunkerWeb ermöglicht es, bestimmte Benutzer, IPs oder Anfragen anzugeben, die d
 !!! note "Verhalten der länderspezifischen Einstellungen"
       - Wenn sowohl `ANTIBOT_IGNORE_COUNTRY` als auch `ANTIBOT_ONLY_COUNTRY` gesetzt sind, hat die Ignore-Liste Vorrang – Länder, die in beiden Listen stehen, umgehen die Herausforderung.
       - Private oder unbekannte IP-Adressen umgehen die Herausforderung, wenn `ANTIBOT_ONLY_COUNTRY` gesetzt ist, da kein Ländercode ermittelt werden kann.
+
+!!! tip "Challenge-Zustand über Subdomains hinweg teilen"
+    Der Antibot-Zustand (einschließlich `turnstile`, `hcaptcha`, `recaptcha`, `mcaptcha`, `captcha`, `javascript` und `cookie`) wird im BunkerWeb-[Sitzungs-Cookie](#sessions) gespeichert. Standardmäßig ist dieses Cookie auf genau den Host beschränkt, der es gesetzt hat. Das bedeutet: Wenn ein Benutzer die Herausforderung auf `a.example.com` löst, muss er sie auf `b.example.com` erneut lösen. Damit die Herausforderung einmal für alle gleichrangigen Subdomains derselben registrierbaren Domain gelöst werden kann, setzen Sie [`SESSIONS_DOMAIN`](#sessions) **für jeden relevanten Server** auf die Parent-Domain (zum Beispiel `example.com`). `SESSIONS_DOMAIN` ist eine Multisite-Einstellung – konfigurieren Sie sie pro Server, damit nicht verwandte Mandanten auf derselben BunkerWeb-Instanz niemals ein mandantenübergreifendes `Domain`-Attribut erhalten.
 
 Beispiele:
 
@@ -1764,7 +1768,7 @@ Die folgenden Abschnitte führen diese Schritte im Detail durch.
     services:
       bunkerweb:
         # Dies ist der Name, der zur Identifizierung der Instanz im Scheduler verwendet wird
-        image: bunkerity/bunkerweb:1.6.10-rc2
+        image: bunkerity/bunkerweb:1.6.10-rc3
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1781,7 +1785,7 @@ Die folgenden Abschnitte führen diese Schritte im Detail durch.
             syslog-address: "udp://10.20.30.254:514" # Die IP-Adresse des syslog-Dienstes
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc2
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Stellen Sie sicher, dass Sie den richtigen Instanznamen festlegen
@@ -3047,6 +3051,7 @@ Führen Sie die folgenden Schritte aus, um die Let's Encrypt-Funktion zu konfigu
 | `LETS_ENCRYPT_PROFILE`                      | `classic`     | multisite | nein     | **Zertifikatsprofil:** Wählen Sie das zu verwendende Zertifikatsprofil aus. Optionen: `classic` (Allzweck), `tlsserver` (optimiert für TLS-Server) oder `shortlived` (7-Tage-Zertifikate).                                                                                                                                                                             |
 | `LETS_ENCRYPT_CUSTOM_PROFILE`               |               | multisite | nein     | **Benutzerdefiniertes Zertifikatsprofil:** Geben Sie ein benutzerdefiniertes Zertifikatsprofil ein, wenn Ihr ACME-Server nicht standardmäßige Profile unterstützt. Dies überschreibt `LETS_ENCRYPT_PROFILE`, falls gesetzt.                                                                                                                                            |
 | `LETS_ENCRYPT_MAX_RETRIES`                  | `3`           | multisite | nein     | **Maximale Wiederholungen:** Anzahl der Wiederholungsversuche bei der Zertifikatserstellung bei einem Fehler. Auf `0` setzen, um Wiederholungen zu deaktivieren. Nützlich bei temporären Netzwerkproblemen.                                                                                                                                                            |
+| `LETS_ENCRYPT_MAX_LOG_BACKUPS`              | `50`          | global    | nein     | **Maximale Certbot-Log-Backups:** Anzahl rotierter `letsencrypt.log`-Backups, die Certbot pro Job behält. Certbots eigener Standardwert von 1000 sammelt sich schnell an; `50` ist ein sinnvoller Grenzwert. Setzen Sie `0`, um nur das aktuelle Log zu behalten.                                                                                                      |
 
 !!! info "Informationen und Verhalten"
     - Die Einstellung `LETS_ENCRYPT_DNS_CREDENTIAL_ITEM` ist eine Mehrfacheinstellung und kann verwendet werden, um mehrere Elemente für den DNS-Anbieter festzulegen. Die Elemente werden als Cache-Datei gespeichert, und Certbot liest die Anmeldeinformationen daraus.
@@ -5422,34 +5427,36 @@ Das Sessions-Plugin bietet eine robuste HTTP-Sitzungsverwaltung für BunkerWeb u
 
 **So funktioniert es:**
 
-1.  Wenn ein Benutzer zum ersten Mal mit Ihrer Website interagiert, erstellt BunkerWeb eine eindeutige Sitzungs-ID.
-2.  Diese ID wird sicher in einem Cookie im Browser des Benutzers gespeichert.
-3.  Bei nachfolgenden Anfragen ruft BunkerWeb die Sitzungs-ID aus dem Cookie ab und verwendet sie, um auf die Sitzungsdaten des Benutzers zuzugreifen.
-4.  Sitzungsdaten können lokal oder in [Redis](#redis) für verteilte Umgebungen mit mehreren BunkerWeb-Instanzen gespeichert werden.
-5.  Sitzungen werden automatisch mit konfigurierbaren Zeitüberschreitungen verwaltet, um die Sicherheit bei gleichzeitiger Benutzerfreundlichkeit zu gewährleisten.
-6.  Die kryptografische Sicherheit von Sitzungen wird durch einen geheimen Schlüssel gewährleistet, der zum Signieren von Sitzungs-Cookies verwendet wird.
+1. Wenn ein Benutzer zum ersten Mal mit Ihrer Website interagiert, erstellt BunkerWeb eine eindeutige Sitzungs-ID.
+2. Diese ID wird sicher in einem Cookie im Browser des Benutzers gespeichert.
+3. Bei nachfolgenden Anfragen ruft BunkerWeb die Sitzungs-ID aus dem Cookie ab und verwendet sie, um auf die Sitzungsdaten des Benutzers zuzugreifen.
+4. Sitzungsdaten können lokal oder in [Redis](#redis) für verteilte Umgebungen mit mehreren BunkerWeb-Instanzen gespeichert werden.
+5. Sitzungen werden automatisch mit konfigurierbaren Zeitüberschreitungen verwaltet, um die Sicherheit bei gleichzeitiger Benutzerfreundlichkeit zu gewährleisten.
+6. Die kryptografische Sicherheit von Sitzungen wird durch einen geheimen Schlüssel gewährleistet, der zum Signieren von Sitzungs-Cookies verwendet wird.
 
 ### Wie man es benutzt
 
 Führen Sie die folgenden Schritte aus, um die Sessions-Funktion zu konfigurieren und zu verwenden:
 
-1.  **Sitzungssicherheit konfigurieren:** Legen Sie einen starken, eindeutigen `SESSIONS_SECRET` fest, um sicherzustellen, dass Sitzungs-Cookies nicht gefälscht werden können. (Der Standardwert ist "random", wodurch BunkerWeb einen zufälligen geheimen Schlüssel generiert.)
-2.  **Sitzungsnamen wählen:** Passen Sie optional den `SESSIONS_NAME` an, um zu definieren, wie Ihr Sitzungs-Cookie im Browser heißen soll. (Der Standardwert ist "random", wodurch BunkerWeb einen zufälligen Namen generiert.)
-3.  **Sitzungs-Timeouts festlegen:** Konfigurieren Sie mit den Timeout-Einstellungen (`SESSIONS_IDLING_TIMEOUT`, `SESSIONS_ROLLING_TIMEOUT`, `SESSIONS_ABSOLUTE_TIMEOUT`), wie lange Sitzungen gültig bleiben.
-4.  **Redis-Integration konfigurieren:** Setzen Sie für verteilte Umgebungen `USE_REDIS` auf "yes" und konfigurieren Sie Ihre [Redis-Verbindung](#redis), um Sitzungsdaten über mehrere BunkerWeb-Knoten hinweg zu teilen.
-5.  **Lassen Sie BunkerWeb den Rest erledigen:** Nach der Konfiguration erfolgt die Sitzungsverwaltung für Ihre Website automatisch.
+1. **Sitzungssicherheit konfigurieren:** Legen Sie einen starken, eindeutigen `SESSIONS_SECRET` fest, um sicherzustellen, dass Sitzungs-Cookies nicht gefälscht werden können. (Der Standardwert ist "random", wodurch BunkerWeb einen zufälligen geheimen Schlüssel generiert.)
+2. **Sitzungsnamen wählen:** Passen Sie optional den `SESSIONS_NAME` an, um zu definieren, wie Ihr Sitzungs-Cookie im Browser heißen soll. (Der Standardwert ist "random", wodurch BunkerWeb einen zufälligen Namen generiert.)
+3. **Sitzungs-Timeouts festlegen:** Konfigurieren Sie mit den Timeout-Einstellungen (`SESSIONS_IDLING_TIMEOUT`, `SESSIONS_ROLLING_TIMEOUT`, `SESSIONS_ABSOLUTE_TIMEOUT`), wie lange Sitzungen gültig bleiben.
+4. **Cookie über Subdomains teilen (optional, pro Server):** Standardmäßig ist das Sitzungs-Cookie hostgebunden. Wenn ein bestimmter Server mehrere Subdomains derselben registrierbaren Domain hostet (zum Beispiel `a.example.com` und `b.example.com`) und Sie möchten, dass Anti-Bot-/Challenge-Zustände übernommen werden, setzen Sie `SESSIONS_DOMAIN` **nur auf diesem Server** auf die Parent-Domain (`example.com`). `SESSIONS_DOMAIN` ist eine Multisite-Einstellung, daher erhalten nicht verwandte Mandanten auf derselben BunkerWeb-Instanz niemals ein mandantenübergreifendes `Domain`-Attribut.
+5. **Redis-Integration konfigurieren:** Setzen Sie für verteilte Umgebungen `USE_REDIS` auf "yes" und konfigurieren Sie Ihre [Redis-Verbindung](#redis), um Sitzungsdaten über mehrere BunkerWeb-Knoten hinweg zu teilen.
+6. **Lassen Sie BunkerWeb den Rest erledigen:** Nach der Konfiguration erfolgt die Sitzungsverwaltung für Ihre Website automatisch.
 
 ### Konfigurationseinstellungen
 
-| Einstellung                 | Standard | Kontext | Mehrfach | Beschreibung                                                                                                                                                               |
-| --------------------------- | -------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SESSIONS_SECRET`           | `random` | global  | nein     | **Sitzungsgeheimnis:** Kryptografischer Schlüssel zum Signieren von Sitzungs-Cookies. Sollte eine starke, zufällige Zeichenfolge sein, die für Ihre Website eindeutig ist. |
-| `SESSIONS_NAME`             | `random` | global  | nein     | **Cookie-Name:** Der Name des Cookies, in dem die Sitzungs-ID gespeichert wird.                                                                                            |
-| `SESSIONS_IDLING_TIMEOUT`   | `1800`   | global  | nein     | **Leerlauf-Timeout:** Maximale Zeit (in Sekunden) der Inaktivität, bevor die Sitzung ungültig wird.                                                                        |
-| `SESSIONS_ROLLING_TIMEOUT`  | `3600`   | global  | nein     | **Rollierendes Timeout:** Maximale Zeit (in Sekunden), bevor eine Sitzung erneuert werden muss.                                                                            |
-| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`  | global  | nein     | **Absolutes Timeout:** Maximale Zeit (in Sekunden), bevor eine Sitzung unabhängig von der Aktivität zerstört wird.                                                         |
-| `SESSIONS_CHECK_IP`         | `yes`    | global  | nein     | **IP prüfen:** Wenn auf `yes` gesetzt, wird die Sitzung zerstört, wenn sich die IP-Adresse des Clients ändert.                                                             |
-| `SESSIONS_CHECK_USER_AGENT` | `yes`    | global  | nein     | **User-Agent prüfen:** Wenn auf `yes` gesetzt, wird die Sitzung zerstört, wenn sich der User-Agent des Clients ändert.                                                     |
+| Einstellung                 | Standard | Kontext   | Mehrfach | Beschreibung                                                                                                                                                                                                                                                                                             |
+| --------------------------- | -------- | --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SESSIONS_SECRET`           | `random` | global    | nein     | **Sitzungsgeheimnis:** Kryptografischer Schlüssel zum Signieren von Sitzungs-Cookies. Sollte eine starke, zufällige Zeichenfolge sein, die für Ihre Website eindeutig ist.                                                                                                                               |
+| `SESSIONS_NAME`             | `random` | global    | nein     | **Cookie-Name:** Der Name des Cookies, in dem die Sitzungs-ID gespeichert wird.                                                                                                                                                                                                                          |
+| `SESSIONS_DOMAIN`           |          | multisite | nein     | **Cookie-Domain:** Optionales `Domain`-Attribut für das Sitzungs-Cookie (zum Beispiel `example.com`). Leer lassen, um das Cookie hostgebunden zu halten. Pro Server setzen, um Sitzungszustände (Anti-Bot, Challenges, …) zwischen gleichrangigen Subdomains derselben registrierbaren Domain zu teilen. |
+| `SESSIONS_IDLING_TIMEOUT`   | `1800`   | global    | nein     | **Leerlauf-Timeout:** Maximale Zeit (in Sekunden) der Inaktivität, bevor die Sitzung ungültig wird.                                                                                                                                                                                                      |
+| `SESSIONS_ROLLING_TIMEOUT`  | `3600`   | global    | nein     | **Rollierendes Timeout:** Maximale Zeit (in Sekunden), bevor eine Sitzung erneuert werden muss.                                                                                                                                                                                                          |
+| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`  | global    | nein     | **Absolutes Timeout:** Maximale Zeit (in Sekunden), bevor eine Sitzung unabhängig von der Aktivität zerstört wird.                                                                                                                                                                                       |
+| `SESSIONS_CHECK_IP`         | `yes`    | global    | nein     | **IP prüfen:** Wenn auf `yes` gesetzt, wird die Sitzung zerstört, wenn sich die IP-Adresse des Clients ändert.                                                                                                                                                                                           |
+| `SESSIONS_CHECK_USER_AGENT` | `yes`    | global    | nein     | **User-Agent prüfen:** Wenn auf `yes` gesetzt, wird die Sitzung zerstört, wenn sich der User-Agent des Clients ändert.                                                                                                                                                                                   |
 
 !!! warning "Sicherheitshinweise"
     Die Einstellung `SESSIONS_SECRET` ist für die Sicherheit von entscheidender Bedeutung. In Produktionsumgebungen:
@@ -5519,6 +5526,39 @@ Führen Sie die folgenden Schritte aus, um die Sessions-Funktion zu konfiguriere
     SESSIONS_ROLLING_TIMEOUT: "172800"  # 2 Tage
     SESSIONS_ABSOLUTE_TIMEOUT: "604800"  # 7 Tage
     ```
+
+=== "Subdomain-übergreifende Sitzungen (ein Mandant)"
+
+    Teilen Sie das Sitzungs-Cookie über alle Subdomains von `example.com`, damit der Anti-Bot-/Challenge-Zustand einmal für die gesamte Website gelöst wird:
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com shop.example.com"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "crossdomainsession"
+    # SESSIONS_DOMAIN ist eine Multisite-Einstellung: Präfix mit dem Servernamen, damit sie nur für passende Hosts gilt
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    shop.example.com_SESSIONS_DOMAIN: "example.com"
+    USE_ANTIBOT: "turnstile"
+    ```
+
+=== "Subdomain-übergreifende Sitzungen (gemischte Mandanten)"
+
+    Wenn dieselbe BunkerWeb-Instanz mehrere nicht verwandte registrierbare Domains hostet, begrenzen Sie `SESSIONS_DOMAIN` auf die Server, die das Cookie tatsächlich teilen sollen. Server ohne diese Einstellung behalten das standardmäßige hostgebundene Cookie, sodass Mandanten isoliert bleiben:
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com billing.acme.org www.unrelated.io"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "tenantsession"
+    # Teilen Sie das Cookie nur über example.com-Subdomains
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    # billing.acme.org und www.unrelated.io bleiben absichtlich hostgebunden
+    USE_ANTIBOT: "turnstile"
+    ```
+
+    !!! note
+        `SESSIONS_DOMAIN` muss immer eine Parent-Domain des Servers sein, auf den es angewendet wird. Zum Beispiel ist `example.com` sowohl für `example.com` als auch für jeden `*.example.com`-Host gültig, und ein führender Punkt (`.example.com`) wird aus Kompatibilitätsgründen weiterhin toleriert. Wenn Sie eine nicht verwandte registrierbare Domain setzen, lehnen Browser das Cookie ab.
 
 ## SSL
 
@@ -5841,7 +5881,7 @@ TrustedMonitor/\d+\.\d+
 ## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
-STREAM-Unterstützung :white_check_mark:
+STREAM-Unterstützung :x:
 
 Adds wildcard server_name support (*.domain) for services.
 

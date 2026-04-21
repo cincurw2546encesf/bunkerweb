@@ -60,7 +60,7 @@ def update_global_settings(payload: GlobalSettingsUpdate) -> JSONResponse:
 
     base = _current_api_global_overrides()
     base.update(to_set)
-    ret = get_db().save_config(base, "api", changed=True, global_only=True)
+    ret = get_db().save_config(base, "api", changed=True, skip_service_management=True)
     if isinstance(ret, str):
         code = 400 if ret and ("read-only" in ret or "already exists" in ret or "doesn't exist" in ret) else (200 if ret == "" else 500)
         status = "success" if code == 200 else "error"

@@ -18,6 +18,10 @@ $(document).ready(function () {
   const isReadOnly = $("#is-read-only").val().trim() === "True";
   const userReadOnly = $("#user-read-only").val().trim() === "True";
 
+  const importDragArea = $("#configs-drag-area");
+  const importFileInput = $("#configs-import-file");
+  const importFileList = $("#configs-import-file-list");
+
   const servicesSearchPanesOptions = [
     {
       label: `<span data-i18n="scope.global">${t(
@@ -241,6 +245,9 @@ $(document).ready(function () {
       extend: "create_config",
     },
     {
+      extend: "import_configs",
+    },
+    {
       extend: "colvis",
       columns: "th:not(:nth-child(-n+3)):not(:last-child)",
       text: `<span class="tf-icons bx bx-columns bx-18px me-md-2"></span><span class="d-none d-md-inline" data-i18n="button.columns">${t(
@@ -333,6 +340,10 @@ $(document).ready(function () {
           attr: { "data-convert-to": "draft" },
         },
         {
+          extend: "export_configs",
+          text: '<span class="tf-icons bx bx-export bx-18px me-2"></span>Export',
+        },
+        {
           extend: "delete_configs",
           className: "text-danger",
         },
@@ -358,6 +369,15 @@ $(document).ready(function () {
       $("#conversion-type").val("draft");
     },
   );
+
+  $("#modal-import-configs").on("hidden.bs.modal", function () {
+    importFileInput.val("");
+    importFileList.empty();
+    $("#configs-import-overwrite").prop("checked", false);
+    importDragArea.addClass("border-dashed");
+    importDragArea.removeClass("bg-primary text-white");
+    importDragArea.find("i").addClass("text-primary");
+  });
 
   const getSelectedConfigs = () => {
     const configs = [];
@@ -385,12 +405,59 @@ $(document).ready(function () {
     return configs;
   };
 
+  $.fn.dataTable.ext.buttons.import_configs = {
+    text: `<span class="tf-icons bx bx-import bx-18px me-md-2"></span><span class="d-none d-md-inline" data-i18n="button.import_configs">${t(
+      "button.import_configs",
+      "Import custom configurations",
+    )}</span>`,
+    className: `btn btn-sm rounded btn-outline-bw-green me-2${
+      isReadOnly ? " disabled" : ""
+    }`,
+    action: function () {
+      if (isReadOnly) {
+        alert(
+          t(
+            "alert.readonly_mode",
+            "This action is not allowed in read-only mode.",
+          ),
+        );
+        return;
+      }
+      importFileInput.val("");
+      importFileList.empty();
+      $("#configs-import-overwrite").prop("checked", false);
+      const modalInstance = new bootstrap.Modal(
+        document.getElementById("modal-import-configs"),
+      );
+      modalInstance.show();
+    },
+  };
+
+  $.fn.dataTable.ext.buttons.export_configs = {
+    action: function () {
+      if (actionLock) return;
+      actionLock = true;
+      $(".dt-button-background").click();
+
+      const configs = getSelectedConfigs();
+      if (configs.length === 0) {
+        actionLock = false;
+        return;
+      }
+
+      const baseUrl = `${window.location.origin}${window.location.pathname}`;
+      const payload = encodeURIComponent(JSON.stringify(configs));
+      window.open(`${baseUrl}/export?configs=${payload}`, "_blank");
+      actionLock = false;
+    },
+  };
+
   $.fn.dataTable.ext.buttons.create_config = {
     text: `<span class="tf-icons bx bx-plus"></span><span class="d-none d-md-inline" data-i18n="button.create_config"> ${t(
       "button.create_config",
       "Create new custom config",
     )}</span>`,
-    className: `btn btn-sm rounded me-4 btn-bw-green${
+    className: `btn btn-sm rounded me-2 btn-bw-green${
       isReadOnly ? " disabled" : ""
     }`,
     action: function (e, dt, node, config) {
@@ -773,5 +840,65 @@ $(document).ready(function () {
     };
     const conversionType = $(this).data("value");
     setupConversionModal([config], conversionType);
+  });
+
+  const validateImportFile = (file) => {
+    if (!file) return false;
+    const name = (file.name || "").toLowerCase();
+    if (name.endsWith(".json")) return true;
+    return (file.type || "").toLowerCase().includes("json");
+  };
+
+  importDragArea.on("click", function () {
+    importFileInput.click();
+  });
+
+  importDragArea.on("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+      e.preventDefault();
+      importFileInput.click();
+    }
+  });
+
+  importDragArea.on("dragover", function (e) {
+    e.preventDefault();
+    importDragArea.removeClass("border-dashed");
+    importDragArea.addClass("bg-primary text-white");
+    importDragArea.find("i").removeClass("text-primary");
+  });
+
+  importDragArea.on("dragleave", function (e) {
+    e.preventDefault();
+    importDragArea.addClass("border-dashed");
+    importDragArea.removeClass("bg-primary text-white");
+    importDragArea.find("i").addClass("text-primary");
+  });
+
+  importFileInput.on("change", function () {
+    const file = this.files[0];
+    importFileList.empty();
+    if (!file) return;
+    if (!validateImportFile(file)) {
+      alert(
+        t(
+          "alert.configs_import_invalid_file",
+          "Please upload a valid custom configurations export file (.json).",
+        ),
+      );
+      importFileInput.val("");
+      return;
+    }
+    importFileList.append(
+      `<div class="alert alert-info text-center" role="alert">${file.name}</div>`,
+    );
+  });
+
+  importDragArea.on("drop", function (e) {
+    e.preventDefault();
+    importDragArea.addClass("border-dashed");
+    importDragArea.removeClass("bg-primary text-white");
+    importDragArea.find("i").addClass("text-primary");
+    importFileInput.prop("files", e.originalEvent.dataTransfer.files);
+    importFileInput.trigger("change");
   });
 });

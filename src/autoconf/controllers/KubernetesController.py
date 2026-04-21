@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from contextlib import suppress
+from logging import DEBUG
 from os import getenv
 from re import compile as re_compile, split as re_split
 from threading import Lock, Thread
@@ -172,6 +173,38 @@ class KubernetesController(Controller):
     # OR-merge keys: if any service has "yes", the merged result is "yes"
     _OR_MERGE_KEYS = frozenset({"USE_REVERSE_PROXY", "USE_GRPC", "USE_CUSTOM_SSL"})
 
+    # Keys that legitimately differ between Ingresses sharing a primary host
+    # (e.g. alias lists in SERVER_NAME) — last-wins is still applied, but no
+    # WARN log is emitted because the operator did not actually misconfigure
+    # anything. NAMESPACE never reaches the conflict branch because the
+    # cross-namespace check at the top of the merge loop short-circuits first.
+    _CONFLICT_LOG_SKIP_KEYS = frozenset({"SERVER_NAME", "NAMESPACE"})
+
+    # Substrings that mark an annotation value as sensitive. Conflict logs that
+    # would otherwise echo the old/new value verbatim substitute "<redacted>"
+    # for any key matching one of these substrings, so secrets do not leak into
+    # scheduler logs that may be shipped to centralized log sinks. Operators
+    # who need the raw values for debugging can drop the controller logger to
+    # DEBUG (the most verbose level the project ships) — the redaction is
+    # bypassed in that mode.
+    _SENSITIVE_KEY_SUBSTRINGS = ("PASSWORD", "SECRET", "TOKEN", "API_KEY", "PRIVATE_KEY", "AUTH_BASIC")
+
+    def _format_conflict_value(self, key: str, value) -> str:
+        """Return ``repr(value)`` unless ``key`` looks sensitive.
+
+        When the controller logger is enabled for ``DEBUG`` the original value
+        is always shown — operators on debug/trace verbosity have explicitly
+        opted into verbose output, so silent redaction would defeat the purpose
+        of turning the level up in the first place.
+        """
+        if self._logger.isEnabledFor(DEBUG):
+            return repr(value)
+        upper_key = key.upper()
+        for marker in self._SENSITIVE_KEY_SUBSTRINGS:
+            if marker in upper_key:
+                return "'<redacted>'"
+        return repr(value)
+
     def _merge_services_by_server_name(self, services: list) -> list:
         """Merge services that share the same primary SERVER_NAME.
 
@@ -235,13 +268,33 @@ class KubernetesController(Controller):
                     if "yes" in (svc.get(key, "").lower(), svc.get(f"{server_name_prefix}{key}", "").lower()):
                         or_merge_accum[key] = True
 
-                # Scalar settings: last-wins
+                # Scalar settings: last-wins. When two Ingresses targeting the
+                # same primary host disagree on the same scalar annotation, the
+                # later one overwrites the earlier — log a WARN so operators can
+                # see they have conflicting Ingress annotations rather than
+                # silently shipping whichever one happened to be processed last.
+                # SERVER_NAME / NAMESPACE are excluded because alias-list
+                # differences are a legitimate merge case, not a misconfig.
+                # Sensitive-looking keys have their values redacted so secrets
+                # passed through Ingress annotations do not leak into logs.
                 for key, value in svc.items():
                     if (key not in self._OR_MERGE_KEYS and not key.startswith(server_name_prefix)) or key in ("SERVER_NAME", "NAMESPACE"):
+                        if key in merged and merged[key] != value and key not in self._CONFLICT_LOG_SKIP_KEYS:
+                            old_repr = self._format_conflict_value(key, merged[key])
+                            new_repr = self._format_conflict_value(key, value)
+                            self._logger.warning(
+                                f"Conflicting annotation for {primary}: {key}={old_repr} overwritten by {new_repr} from another Ingress/Route — last-wins"
+                            )
                         merged[key] = value
                     elif key.startswith(server_name_prefix):
                         stripped = key.removeprefix(server_name_prefix)
                         if stripped not in self._OR_MERGE_KEYS:
+                            if key in merged and merged[key] != value and stripped not in self._CONFLICT_LOG_SKIP_KEYS:
+                                old_repr = self._format_conflict_value(stripped, merged[key])
+                                new_repr = self._format_conflict_value(stripped, value)
+                                self._logger.warning(
+                                    f"Conflicting annotation for {primary}: {stripped}={old_repr} overwritten by {new_repr} from another Ingress/Route — last-wins"
+                                )
                             merged[key] = value
 
             # Deterministic sort: for each group, sort slot lists by their content

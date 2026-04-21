@@ -1,13 +1,31 @@
 # Changelog
 
-## v1.6.10~rc3 - 2026/03/??
+## v1.6.10~rc4 - 2026/04/??
+
+- [SECURITY] Harden AIO log wrapper: strip C0/C1 control chars from service output to prevent terminal injection in `docker logs`, disable pathname expansion around `HIDE_SERVICE_LOGS` word splitting, and reject `..` path-traversal segments in `LOG_FILE_PATH` validation.
+- [SECURITY] Harden the AIO `logstream.sh` nginx/ModSecurity log forwarder with the same C0/DEL control-character strip as `service-log-wrapper.sh`, so attacker-controlled `access.log`/`error.log`/`modsec_audit.log` content cannot inject ANSI/CSI/OSC escape sequences into `docker logs` output.
+- [SECURITY] `errors`: honor `DENY_HTTP_STATUS=444` on `/bwerror*` handlers — close the connection instead of serving the branded BunkerWeb error page.
+- [BUGFIX] Throttle repeated Redis-failure logs in `metrics`, `sessions`, and `badbehavior` timer hooks: errors of the same kind now log once then recap with a count at 60s window boundaries instead of flooding the error log on every tick.
+- [BUGFIX] Add multisite `SESSIONS_DOMAIN` setting (default empty) that emits a `Domain` attribute on the session cookie per server, allowing antibot/challenge state to be shared across sibling subdomains of the same registrable domain. (Fixes #3415)
+- [BUGFIX] Web UI: launch `tmp-gunicorn` with `env -u LOG_FILE_PATH` so the bootstrap UI falls back to its own `tmp-ui.log` instead of colliding with the main UI's `ui.log`.
+- [BUGFIX] Fix `securitytxt` RFC 9116 compliance: populate the default `Canonical:` URL (was `https:///.well-known/security.txt`), emit `Expires:` as UTC with a trailing `Z`, rename the field to `Acknowledgments:`, and cache the auto-generated expiry per server so the served file is byte-stable across requests.
+- [BUGFIX] Fix `DATABASE_URI` driver injection corrupting hostnames when the host matches the scheme name (e.g. `postgresql://u:p@postgresql:5432/db`). Use SQLAlchemy's `make_url` + `URL.set(drivername=...)` instead of `str.replace` so only the scheme is rewritten.
+- [BUGFIX] `badbehavior`: don't increment the counter for already-banned IPs. Log phase fast-paths on `ctx.bw.is_banned`; timer phase re-checks `is_banned()` authoritatively (Redis reachable) before calling `increase()`.
+- [FEATURE] Let's Encrypt: new `LETS_ENCRYPT_MAX_LOG_BACKUPS` global setting (default `50`) caps certbot's own log rotation via `--max-log-backups`, preventing the default 1000-file pile-up in every integration mode.
+- [ALL-IN-ONE] Python services (UI, API, scheduler, autoconf) now log to the container's stdout/stderr only. `service-log-wrapper.sh` prefixes each line with `[SERVICE]`, strips control characters, and honors `HIDE_SERVICE_LOGS`; no on-disk files are written. Retention is managed by the container logging driver (`docker logs`, `journald`, ...).
+- [UI] Fix "Blocked Requests by Country" map: an off-by-one in `getColor()` plus an HSL-ramp clip to `#000` collapsed every populated country to the same color.
+- [UI] Add import/export for custom configurations, with an opt-in `.zip` bundle that lets a service export include its attached custom configurations and re-import them in one shot.
+
+## v1.6.10~rc3 - 2026/04/11
 
 - [API/SECURITY] Fix `PATCH /global_config` accidentally deleting all services, custom configs, and jobs cache.
+- [API/SECURITY] Add data-loss guards in `Database.save_config` and `Database.update_external_plugins`: refuse to delete every global setting for a method when the incoming config would wipe every existing row, refuse to cascade-delete plugins when the incoming plugins list is empty, and skip setting/selects/multiselects pruning on same-content plugin reinstalls (detected via checksum comparison) to prevent user-set values from being wiped.
 - [SECURITY] Updated coreruleset-v3 version to v3.3.9 (fixes CVE-2026-33691)
 - [SECURITY] Updated coreruleset-v4 version to v4.25.0 (fixes CVE-2026-33691)
 - [SECURITY] Harden all tar/zip extraction with centralized `safe_tar_extractall`/`safe_zip_extractall` helpers, pre-extraction member validation, and `Path.is_relative_to()` containment checks (mitigates CVE-2025-4517 on Python < 3.13.4).
-- [BUGFIX] Fix scheduler memory leak from unbounded job module cache, broken `sys.modules` cleanup, bulk cache loading, and infrequent garbage collection.
+- [BUGFIX] `Configurator` now supplements its internal server list from the database `Services` table in multisite mode so that autoconf-managed services are recognized even when `SERVER_NAME` hasn't been updated in the variables yet at startup.
 - [BUGFIX] Fix `bw_plugin_pages` and `bw_jobs_cache` PostgreSQL table bloat caused by non-deterministic tar archives and unconditional UPDATEs triggering massive TOAST dead tuple accumulation on every scheduler restart.
+- [BUGFIX] Fix scheduler memory leak from unbounded job module cache, broken `sys.modules` cleanup, bulk cache loading, and infrequent garbage collection.
 - [BUGFIX] Fix `cachestore:set()` silently dropping cache writes in non-cosocket phases due to an incorrect guard.
 - [BUGFIX] Fix `cachestore:del_redis()` calling non-existent `clusterstore:del()` method.
 - [BUGFIX] Fix metrics Redis sync cascading failures after a mid-cycle connection drop by adding auto-reconnect with circuit-breaker.
@@ -16,8 +34,11 @@
 - [AUTOCONF] Fix multiple Kubernetes Ingress/Route resources for the same hostname overwriting each other instead of merging their paths into a single service configuration.
 - [AUTOCONF] Fix Docker autoconf feedback loop where healthcheck exec events caused endless config regeneration and NGINX reloads by filtering events to container lifecycle actions only.
 - [ALL-IN-ONE] Update CrowdSec version to 1.7.7
-- [UI] Add missing `DEFAULT_SERVER_STREAM` custom config type to the Web UI, allowing creation and management of stream-level default server configurations.
+- [UI] Fix multiselect dropdown being clipped in template wizard steps. (Fixes #3401)
+- [UI] Fix Reports page IP hit counts decreasing when clicking through to filter by IP: the precomputed Redis facet counts (unfiltered view) included all stored requests, but the streaming path dropped 5xx/3xx requests via an extra `400 <= status < 500 or security_mode == "detect"` filter. (Fixes #3407)
+- [API] Fix `update_config_upload` resetting a custom config's service scope to global when the caller did not explicitly request a service move.
 - [MISC] Update default value for Permissions-Policy header to include additional features (`local-network`, `local-network-access` and `loopback-network`).
+- [MISC] Accept `g`/`G` suffix on memory size settings (`WORKERLOCK_MEMORY_SIZE`, `DATASTORE_MEMORY_SIZE`, `CACHESTORE_MEMORY_SIZE`, `CACHESTORE_IPC_MEMORY_SIZE`, `CACHESTORE_MISS_MEMORY_SIZE`, `CACHESTORE_LOCKS_MEMORY_SIZE`, `INTERNALSTORE_MEMORY_SIZE`): values are automatically normalized to megabytes at template rendering time since NGINX's `ngx_parse_size()` only supports `k`/`m` for `lua_shared_dict`.
 - [MISC] Allow custom uppercase HTTP methods containing underscores and dashes in `ALLOWED_METHODS` (e.g. `CCM_POST`, `M-SEARCH`) for compatibility with non-standard protocols.
 - [MISC] `JobScheduler` tracks per-job failures better
 

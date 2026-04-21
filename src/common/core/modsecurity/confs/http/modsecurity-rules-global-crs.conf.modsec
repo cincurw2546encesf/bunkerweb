@@ -18,8 +18,14 @@ SecRule REQUEST_HEADERS:Content-Type "(?:application(?:/soap\+|/)|text/)xml" \
 SecRule REQUEST_HEADERS:Content-Type "application/json" \
   "id:'200001',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
-# Request body limits and REQBODY_ERROR handling are emitted at server scope in
-# global CRS mode so multisite services can keep their own ModSecurity values.
+# NOTE: SecRequestBodyLimit, SecRequestBodyLimitAction and the REQBODY_ERROR
+# handling rules (ids 200002 / 200005) are intentionally NOT emitted at http
+# scope in global CRS mode so multisite services can keep their own per-server
+# ModSecurity values. They are rendered at server scope from the matching
+# server-http template:
+#   src/common/core/modsecurity/confs/server-http/modsecurity-rules-global-crs.conf.modsec
+# Both templates MUST stay in sync — if you remove the body-limit block from
+# one, also remove/update it in the other.
 
 # Be strict with multipart/form-data body
 SecRule MULTIPART_STRICT_ERROR "!@eq 0" \

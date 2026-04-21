@@ -8,7 +8,7 @@ for deps_path in [join(sep, "usr", "share", "bunkerweb", *paths) for paths in ((
         sys_path.append(deps_path)
 
 from common_utils import handle_docker_secrets  # type: ignore
-from logger import getLogger, env_log_types  # type: ignore
+from logger import getLogger, log_types  # type: ignore
 
 TMP_DIR = Path(sep, "var", "tmp", "bunkerweb")
 TMP_UI_DIR = TMP_DIR.joinpath("ui")
@@ -19,7 +19,9 @@ HEALTH_FILE = TMP_DIR.joinpath("tmp-ui.healthy")
 PID_FILE = RUN_DIR.joinpath("tmp-ui.pid")
 
 LOG_LEVEL = getenv("CUSTOM_LOG_LEVEL", getenv("LOG_LEVEL", "info"))
-LISTEN_ADDR = getenv("UI_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0"))
+LISTEN_ADDR = getenv(
+    "UI_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0")
+)  # nosec B104 - 0.0.0.0 is the documented containerized default; operators override via UI_LISTEN_ADDR / LISTEN_ADDR.
 LISTEN_PORT = getenv("UI_LISTEN_PORT", getenv("LISTEN_PORT", "7000"))
 FORWARDED_ALLOW_IPS = getenv(
     "UI_FORWARDED_ALLOW_IPS",
@@ -29,14 +31,14 @@ PROXY_ALLOW_IPS = getenv("UI_PROXY_ALLOW_IPS", getenv("PROXY_ALLOW_IPS", FORWARD
 CAPTURE_OUTPUT = getenv("CAPTURE_OUTPUT", "no").lower() == "yes"
 DEBUG = getenv("DEBUG", False)
 
-if CAPTURE_OUTPUT or "file" in env_log_types:
+if CAPTURE_OUTPUT or "file" in log_types:
     errorlog = getenv("LOG_FILE_PATH", join(sep, "var", "log", "bunkerweb", "tmp-ui.log"))
     accesslog = f"{errorlog.rsplit('.', 1)[0]}-access.log"
 else:
     errorlog = "-"
     accesslog = "-"
 
-if "syslog" in env_log_types:
+if "syslog" in log_types:
     syslog = True
     syslog_addr = getenv("LOG_SYSLOG_ADDRESS", "").strip()
     if not syslog_addr.startswith(("/", "udp://", "tcp://")):

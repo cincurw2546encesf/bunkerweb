@@ -486,7 +486,8 @@ class JobScheduler(ApiCaller):
 
             module_count = len(self.__module_cache)
             self.__module_cache.clear()
-            self.__logger.debug(f"Cleared {module_count} cached job modules")
+            if module_count > 0:
+                self.__logger.debug(f"Cleared {module_count} cached job modules")
 
     def __del__(self):
         """Destructor to clean up resources."""

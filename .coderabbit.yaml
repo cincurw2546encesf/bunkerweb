@@ -46,6 +46,10 @@ reviews:
     drafts: false
     auto_incremental_review: true
     auto_pause_after_reviewed_commits: 8
+    base_branches:
+      - "staging"
+      - "rc"
+      - "dev"
     ignore_title_keywords:
       - "WIP"
       - "[WIP]"

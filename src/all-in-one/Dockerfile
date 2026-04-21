@@ -164,6 +164,7 @@ RUN apk add --no-cache bash curl geoip grep libgcc libgd libmagic libpq libstdc+
 # Fix CVEs
 RUN apk add --no-cache "zlib>=1.3.2-r0" # CVE-2026-22184, CVE-2026-27171
 RUN apk add --no-cache "openssl>=3.5.6-r0" # CVE-2026-31790, CVE-2026-2673
+RUN apk add --no-cache "musl>=1.2.5-r23" && apk upgrade --no-cache --available musl # CVE-2026-40200
 
 COPY src/deps/requirements.txt /tmp/requirements-deps.txt
 
@@ -230,7 +231,7 @@ COPY --chown=root:nginx --chmod=770 src/bw/misc/asn.mmdb /var/tmp/bunkerweb/asn.
 COPY --chown=root:nginx --chmod=770 src/bw/misc/country.mmdb /var/tmp/bunkerweb/country.mmdb
 
 LABEL maintainer="Bunkerity <contact@bunkerity.com>"
-LABEL version="1.6.10~rc2"
+LABEL version="1.6.10~rc3"
 LABEL url="https://www.bunkerweb.io"
 LABEL bunkerweb.type="all-in-one"
 

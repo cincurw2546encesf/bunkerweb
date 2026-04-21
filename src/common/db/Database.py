@@ -54,6 +54,7 @@ from common_utils import bytes_hash, create_plugin_tar_gz  # type: ignore
 from pymysql import install_as_MySQLdb
 from sqlalchemy import case, create_engine, event, MetaData as sql_metadata, func, join, select as db_select, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.exc import (
     ArgumentError,
     DatabaseError,
@@ -195,13 +196,22 @@ class Database:
                     path.parent.mkdir(parents=True, exist_ok=True)
                 return db_string, match
 
-            # Add recommended drivers for MySQL/MariaDB and PostgreSQL
-            if db_type.startswith("m") and not db_type.endswith("+pymysql"):
-                return db_string.replace(db_type, f"{db_type}+pymysql"), match
-            elif db_type.startswith("postgresql") and not db_type.endswith("+psycopg"):
-                return db_string.replace(db_type, f"{db_type}+psycopg"), match
-            elif db_type.startswith("oracle") and not db_type.endswith("+oracledb"):
-                return db_string.replace(db_type, f"{db_type}+oracledb"), match
+            # Inject the recommended driver via SQLAlchemy's URL parser so only the drivername component is rewritten.
+            recommended_driver = {
+                "postgresql": "psycopg",
+                "mysql": "pymysql",
+                "mariadb": "pymysql",
+                "oracle": "oracledb",
+            }.get(db_type)
+            if recommended_driver is not None:
+                try:
+                    url = make_url(db_string)
+                except ArgumentError:
+                    self.logger.error(f"Invalid database string provided: {db_string}, exiting...")
+                    _exit(1)
+                if "+" not in url.drivername:
+                    url = url.set(drivername=f"{url.drivername}+{recommended_driver}")
+                    return url.render_as_string(hide_password=False), match
 
             return db_string, match
 
@@ -632,7 +642,7 @@ class Database:
                 metadata = session.query(Metadata).with_entities(Metadata.version).filter_by(id=1).first()
                 if metadata:
                     return metadata.version
-                return "1.6.10~rc2"
+                return "1.6.10~rc3"
             except BaseException as e:
                 return f"Error: {e}"
 
@@ -666,7 +676,7 @@ class Database:
             "last_instances_change": None,
             "reload_ui_plugins": False,
             "integration": "unknown",
-            "version": "1.6.10~rc2",
+            "version": "1.6.10~rc3",
             "database_version": "Unknown",  # ? Extracted from the database
             "default": True,  # ? Extra field to know if the returned data is the default one
         }
@@ -1593,15 +1603,27 @@ class Database:
         return True, ""
 
     def save_config(
-        self, config: Dict[str, Any], method: str, changed: Optional[bool] = True, file_names: Optional[Dict[str, str]] = None, global_only: bool = False
+        self,
+        config: Dict[str, Any],
+        method: str,
+        changed: Optional[bool] = True,
+        file_names: Optional[Dict[str, str]] = None,
+        *,
+        skip_service_management: bool = False,
     ) -> Union[str, Set[str]]:
         """Save the config in the database.
 
         Args:
-            global_only: When True, only global settings are processed — service management,
-                         service settings cleanup, and multisite logic are skipped entirely.
-                         This prevents accidental deletion of services when the caller only
-                         intends to update global settings.
+            skip_service_management: When True, the entire service-management block is
+                                     skipped — service settings cleanup, the SERVER_NAME
+                                     reconciliation that adds/draftifies/deletes Services
+                                     rows, and the multisite per-service settings pass.
+                                     Use this when the caller only intends to update
+                                     global settings and must not touch any service rows.
+                                     The historical name was ``global_only`` which was
+                                     misleading: it does not restrict input to global
+                                     settings, it only disables the service-management
+                                     side-effects.
         """
         to_put = []
         to_update = []
@@ -1721,9 +1743,9 @@ class Database:
                 return changed_plugins
 
             self.logger.debug(f"Cleaning up {method} old services settings")
-            # Collect service settings to delete (skip entirely when global_only to avoid deleting service settings)
+            # Collect service settings to delete (skip entirely when skip_service_management to avoid deleting service settings)
             service_settings_to_delete = []
-            for db_service_config in [] if global_only else session.query(Services_settings).filter_by(method=method).all():
+            for db_service_config in [] if skip_service_management else session.query(Services_settings).filter_by(method=method).all():
                 key = f"{db_service_config.service_id}_{db_service_config.setting_id}"
                 if db_service_config.suffix:
                     key = f"{key}_{db_service_config.suffix}"
@@ -1755,7 +1777,7 @@ class Database:
 
                 template = config.get("USE_TEMPLATE", "")
 
-                if not global_only:
+                if not skip_service_management:
                     self.logger.debug("Checking if the services have changed")
                     db_services = session.query(Services).with_entities(Services.id, Services.method, Services.is_draft).all()
                     db_ids: Dict[str, dict] = {service.id: {"method": service.method, "is_draft": service.is_draft} for service in db_services}
@@ -1772,7 +1794,7 @@ class Database:
                         # abort the entire save_config to prevent catastrophic data loss.
                         # For autoconf: protects against transient Docker API failures.
                         # For other methods: protects against callers that omit SERVER_NAME entirely
-                        # (e.g. a global-only config update that forgot to set global_only=True).
+                        # (e.g. a global-only config update that forgot to set skip_service_management=True).
                         method_services = [s for s in db_services if s.method == method or (s.method in ("ui", "api") and method in ("ui", "api"))]
                         if not services and method_services and (method == "autoconf" or "SERVER_NAME" not in config):
                             self.logger.warning(
@@ -1832,7 +1854,7 @@ class Database:
                                 to_update.append({"model": Services, "filter": {"id": draft}, "values": {"is_draft": True, "last_update": current_time}})
                                 changed_services = True
 
-                if not global_only and config.get("MULTISITE", "no") == "yes":
+                if not skip_service_management and config.get("MULTISITE", "no") == "yes":
                     self.logger.debug("Checking if the multisite settings have changed")
 
                     service_configs = defaultdict(dict)
@@ -2094,7 +2116,7 @@ class Database:
                     # Non-multisite configuration
                     self.logger.debug("Checking if non-multisite settings have changed")
 
-                    if not global_only:
+                    if not skip_service_management:
                         server_name = config.get("SERVER_NAME", None)
                         if template and server_name is None:
                             server_name = (

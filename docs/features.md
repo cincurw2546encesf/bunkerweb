@@ -256,6 +256,7 @@ Advanced ACME certificate management with custom CA support, certificate monitor
 | Setting                             | Default     | Context   | Multiple | Description                                                                                                                                                              |
 | ----------------------------------- | ----------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `USE_ACME`                          | `no`        | multisite | no       | Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.                                                                |
+| `ACME_PASSTHROUGH`                  | `no`        | multisite | no       | Pass through ACME HTTP-01 challenge requests to the upstream server.                                                                                                     |
 | `ACME_DIRECTORY_URL`                |             | multisite | no       | ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI). |
 | `ACME_EMAIL`                        |             | multisite | no       | Email address for ACME account registration and notifications.                                                                                                           |
 | `ACME_EAB_KID`                      |             | multisite | no       | External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).                                                                              |
@@ -363,6 +364,9 @@ BunkerWeb allows you to specify certain users, IPs, or requests that should bypa
 !!! note "Behavior of Country-Based Settings"
       - When both `ANTIBOT_IGNORE_COUNTRY` and `ANTIBOT_ONLY_COUNTRY` are set, the ignore list takes precedence—countries listed in both will bypass the challenge.
       - Private or unknown IP addresses bypass the challenge when `ANTIBOT_ONLY_COUNTRY` is set because no country code can be determined.
+
+!!! tip "Sharing challenge state across subdomains"
+    The antibot state (including `turnstile`, `hcaptcha`, `recaptcha`, `mcaptcha`, `captcha`, `javascript` and `cookie`) is persisted in the BunkerWeb [session cookie](#sessions). By default that cookie is scoped to the exact host that served it, so a user who solves the challenge on `a.example.com` will be challenged again on `b.example.com`. To solve the challenge once for every sibling subdomain of the same registrable domain, set [`SESSIONS_DOMAIN`](#sessions) to the parent domain (for example `example.com`) **for each relevant server**. `SESSIONS_DOMAIN` is a multisite setting — configure it per-server so unrelated tenants hosted on the same BunkerWeb instance never receive a cross-tenant `Domain` attribute.
 
 **Examples:**
 
@@ -1816,7 +1820,7 @@ Follow one of the environment-specific guides below so the CrowdSec agent ingest
     services:
       bunkerweb:
         # This is the name that will be used to identify the instance in the Scheduler
-        image: bunkerity/bunkerweb:1.6.10-rc2
+        image: bunkerity/bunkerweb:1.6.10-rc3
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1833,7 +1837,7 @@ Follow one of the environment-specific guides below so the CrowdSec agent ingest
             syslog-address: "udp://10.20.30.254:514" # The IP address of the syslog service
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc2
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Make sure to set the correct instance name
@@ -3154,6 +3158,7 @@ Follow these steps to configure and use the Let's Encrypt feature:
 | `LETS_ENCRYPT_PROFILE`                      | `classic`     | multisite | no       | **Certificate Profile:** Select the certificate profile to use. Options: `classic` (general-purpose), `tlsserver` (optimized for TLS servers), or `shortlived` (7-day certificates).                                                                                           |
 | `LETS_ENCRYPT_CUSTOM_PROFILE`               |               | multisite | no       | **Custom Certificate Profile:** Enter a custom certificate profile if your ACME server supports non-standard profiles. This overrides `LETS_ENCRYPT_PROFILE` if set.                                                                                                           |
 | `LETS_ENCRYPT_MAX_RETRIES`                  | `3`           | multisite | no       | **Maximum Retries:** Number of times to retry certificate generation on failure. Set to `0` to disable retries. Useful for handling temporary network issues or API rate limits.                                                                                               |
+| `LETS_ENCRYPT_MAX_LOG_BACKUPS`              | `50`          | global    | no       | **Maximum Certbot Log Backups:** Number of rotated `letsencrypt.log` backups certbot keeps per job. Certbot's own default of 1000 piles up quickly; `50` is a sensible cap. Set to `0` to keep only the live log.                                                              |
 
 !!! info "Information and behavior"
     - The `LETS_ENCRYPT_DNS_CREDENTIAL_ITEM` setting is a multiple setting and can be used to set multiple items for the DNS provider. The items will be saved as a cache file, and Certbot will read the credentials from it.
@@ -5623,20 +5628,22 @@ Follow these steps to configure and use the Sessions feature:
 1. **Configure session security:** Set a strong, unique `SESSIONS_SECRET` to ensure session cookies cannot be forged. (The default value is "random" which triggers BunkerWeb to generate a random secret key.)
 2. **Choose a session name:** Optionally customize the `SESSIONS_NAME` to define what your session cookie will be called in the browser. (The default value is "random" which triggers BunkerWeb to generate a random name.)
 3. **Set session timeouts:** Configure how long sessions remain valid with the timeout settings (`SESSIONS_IDLING_TIMEOUT`, `SESSIONS_ROLLING_TIMEOUT`, `SESSIONS_ABSOLUTE_TIMEOUT`).
-4. **Configure Redis integration:** For distributed environments, set `USE_REDIS` to "yes" and configure your [Redis connection](#redis) to share session data across multiple BunkerWeb nodes.
-5. **Let BunkerWeb handle the rest:** Once configured, session management happens automatically for your website.
+4. **Share the cookie across subdomains (optional, per-server):** By default the session cookie is host-only. If a given server hosts several subdomains of the same registrable domain (for example `a.example.com` and `b.example.com`) and you want anti‑bot/challenge state to carry over, set `SESSIONS_DOMAIN` to the parent domain (`example.com`) **on that server only**. `SESSIONS_DOMAIN` is a multisite setting, so unrelated tenants on the same BunkerWeb instance never receive a cross-tenant `Domain` attribute.
+5. **Configure Redis integration:** For distributed environments, set `USE_REDIS` to "yes" and configure your [Redis connection](#redis) to share session data across multiple BunkerWeb nodes.
+6. **Let BunkerWeb handle the rest:** Once configured, session management happens automatically for your website.
 
 ### Configuration Settings
 
-| Setting                     | Default  | Context | Multiple | Description                                                                                                                |
-| --------------------------- | -------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `SESSIONS_SECRET`           | `random` | global  | no       | **Session Secret:** Cryptographic key used to sign session cookies. Should be a strong, random string unique to your site. |
-| `SESSIONS_NAME`             | `random` | global  | no       | **Cookie Name:** The name of the cookie that will store the session identifier.                                            |
-| `SESSIONS_IDLING_TIMEOUT`   | `1800`   | global  | no       | **Idling Timeout:** Maximum time (in seconds) of inactivity before the session is invalidated.                             |
-| `SESSIONS_ROLLING_TIMEOUT`  | `3600`   | global  | no       | **Rolling Timeout:** Maximum time (in seconds) before a session must be renewed.                                           |
-| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`  | global  | no       | **Absolute Timeout:** Maximum time (in seconds) before a session is destroyed regardless of activity.                      |
-| `SESSIONS_CHECK_IP`         | `yes`    | global  | no       | **Check IP:** When set to `yes`, destroys the session if the client IP address changes.                                    |
-| `SESSIONS_CHECK_USER_AGENT` | `yes`    | global  | no       | **Check User-Agent:** When set to `yes`, destroys the session if the client User-Agent changes.                            |
+| Setting                     | Default  | Context   | Multiple | Description                                                                                                                                                                                                                                                                  |
+| --------------------------- | -------- | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SESSIONS_SECRET`           | `random` | global    | no       | **Session Secret:** Cryptographic key used to sign session cookies. Should be a strong, random string unique to your site.                                                                                                                                                   |
+| `SESSIONS_NAME`             | `random` | global    | no       | **Cookie Name:** The name of the cookie that will store the session identifier.                                                                                                                                                                                              |
+| `SESSIONS_DOMAIN`           |          | multisite | no       | **Cookie Domain:** Optional `Domain` attribute set on the session cookie (for example `example.com`). Leave empty to keep the cookie host‑only. Set it per-server to share session state (anti‑bot, challenges, …) across sibling subdomains of the same registrable domain. |
+| `SESSIONS_IDLING_TIMEOUT`   | `1800`   | global    | no       | **Idling Timeout:** Maximum time (in seconds) of inactivity before the session is invalidated.                                                                                                                                                                               |
+| `SESSIONS_ROLLING_TIMEOUT`  | `3600`   | global    | no       | **Rolling Timeout:** Maximum time (in seconds) before a session must be renewed.                                                                                                                                                                                             |
+| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`  | global    | no       | **Absolute Timeout:** Maximum time (in seconds) before a session is destroyed regardless of activity.                                                                                                                                                                        |
+| `SESSIONS_CHECK_IP`         | `yes`    | global    | no       | **Check IP:** When set to `yes`, destroys the session if the client IP address changes.                                                                                                                                                                                      |
+| `SESSIONS_CHECK_USER_AGENT` | `yes`    | global    | no       | **Check User-Agent:** When set to `yes`, destroys the session if the client User-Agent changes.                                                                                                                                                                              |
 
 !!! warning "Security Considerations"
     The `SESSIONS_SECRET` setting is critical for security. In production environments:
@@ -5706,6 +5713,39 @@ Follow these steps to configure and use the Sessions feature:
     SESSIONS_ROLLING_TIMEOUT: "172800"  # 2 days
     SESSIONS_ABSOLUTE_TIMEOUT: "604800"  # 7 days
     ```
+
+=== "Cross-subdomain Sessions (single tenant)"
+
+    Share the session cookie across every subdomain of `example.com` so anti‑bot/challenge state is solved once for the whole site:
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com shop.example.com"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "crossdomainsession"
+    # SESSIONS_DOMAIN is a multisite setting: prefix with the server name so it only applies to matching hosts
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    shop.example.com_SESSIONS_DOMAIN: "example.com"
+    USE_ANTIBOT: "turnstile"
+    ```
+
+=== "Cross-subdomain Sessions (mixed tenants)"
+
+    When the same BunkerWeb instance hosts multiple unrelated registrable domains, scope `SESSIONS_DOMAIN` only to the servers that should share it. Unset servers keep the default host-only cookie so tenants stay isolated:
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com billing.acme.org www.unrelated.io"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "tenantsession"
+    # Share the cookie across example.com subdomains only
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    # billing.acme.org and www.unrelated.io are intentionally left as host-only
+    USE_ANTIBOT: "turnstile"
+    ```
+
+    !!! note
+        `SESSIONS_DOMAIN` must always be a parent of the server it is applied to — for example `example.com` is valid for both `example.com` and any `*.example.com` host, and a leading dot (`.example.com`) is tolerated for legacy compatibility. Setting it to an unrelated registrable domain will cause browsers to reject the cookie.
 
 ## SSL
 
@@ -6045,7 +6085,7 @@ TrustedMonitor/\d+\.\d+
 ## Wildcard <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
-STREAM support :white_check_mark:
+STREAM support :x:
 
 Adds wildcard server_name support (*.domain) for services.
 
