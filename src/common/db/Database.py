@@ -54,6 +54,7 @@ from common_utils import bytes_hash, create_plugin_tar_gz  # type: ignore
 from pymysql import install_as_MySQLdb
 from sqlalchemy import case, create_engine, event, MetaData as sql_metadata, func, join, select as db_select, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.exc import (
     ArgumentError,
     DatabaseError,
@@ -195,13 +196,22 @@ class Database:
                     path.parent.mkdir(parents=True, exist_ok=True)
                 return db_string, match
 
-            # Add recommended drivers for MySQL/MariaDB and PostgreSQL
-            if db_type.startswith("m") and not db_type.endswith("+pymysql"):
-                return db_string.replace(db_type, f"{db_type}+pymysql"), match
-            elif db_type.startswith("postgresql") and not db_type.endswith("+psycopg"):
-                return db_string.replace(db_type, f"{db_type}+psycopg"), match
-            elif db_type.startswith("oracle") and not db_type.endswith("+oracledb"):
-                return db_string.replace(db_type, f"{db_type}+oracledb"), match
+            # Inject the recommended driver via SQLAlchemy's URL parser so only the drivername component is rewritten.
+            recommended_driver = {
+                "postgresql": "psycopg",
+                "mysql": "pymysql",
+                "mariadb": "pymysql",
+                "oracle": "oracledb",
+            }.get(db_type)
+            if recommended_driver is not None:
+                try:
+                    url = make_url(db_string)
+                except ArgumentError:
+                    self.logger.error(f"Invalid database string provided: {db_string}, exiting...")
+                    _exit(1)
+                if "+" not in url.drivername:
+                    url = url.set(drivername=f"{url.drivername}+{recommended_driver}")
+                    return url.render_as_string(hide_password=False), match
 
             return db_string, match
 
