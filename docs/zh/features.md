@@ -4005,6 +4005,11 @@ ModSecurity 插件将功能强大的 [ModSecurity](https://modsecurity.org) Web 
 
     CRS 团队积极维护着针对 WordPress、Nextcloud、Drupal 和 Cpanel 等流行应用程序的排除项列表，从而更容易在不影响功能的情况下进行集成。其安全优势远远超过了解决误报所需的最低配置工作量。
 
+!!! warning "大文件上传的安全建议"
+    ModSecurity 会将完整请求体缓冲到内存中，并且无法为数 GB 的上传设置上限，这可能导致 worker OOM。如果——**并且仅当**——某个反向代理 URL *专门* 用于文件上传（例如专用的 `/upload` 端点），请在该 URL 上设置 `REVERSE_PROXY_MODSECURITY_N: "no"`，以便在其 `location` 块中生成 `modsecurity off;`。不要在混合用途的 URL 上禁用它：否则该 location 提供的所有内容都会失去 WAF 覆盖。
+
+    为了在绕过 ModSecurity 后仍保护上传内容，请将其与文件扫描插件配合使用，例如 [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) 或 [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal)——它们检查上传文件本身，而不是原始请求体。
+
 ### 可用的 CRS 版本
 
 选择一个 CRS 版本以最符合您的安全需求：
@@ -5112,13 +5117,19 @@ STREAM 支持 :warning:
         - **性能优化：** 针对特定用例微调请求处理
         - **灵活性：** 通过专门的配置适应独特的应用程序需求
 
-    | 设置                              | 默认值 | 上下文    | 多选 | 描述                                            |
-    | --------------------------------- | ------ | --------- | ---- | ----------------------------------------------- |
-    | `REVERSE_PROXY_INCLUDES`          |        | multisite | 是   | **附加配置：** 在 location 块中包含额外的配置。 |
-    | `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`  | multisite | 是   | **传递请求体：** 启用或禁用传递请求体。         |
+    | 设置                              | 默认值 | 上下文    | 多选 | 描述                                                                                                                                                  |
+    | --------------------------------- | ------ | --------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `REVERSE_PROXY_INCLUDES`          |        | multisite | 是   | **附加配置：** 在 location 块中包含额外的配置。                                                                                                       |
+    | `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`  | multisite | 是   | **传递请求体：** 启用或禁用传递请求体。                                                                                                               |
+    | `REVERSE_PROXY_MODSECURITY`       | `yes`  | multisite | 是   | **ModSecurity（按 location）：** 设置为 `no` 可在此 location 中生成 `modsecurity off;`，从而在大文件上传端点上绕过 WAF 以避免 OOM（请参阅下方说明）。 |
 
     !!! warning "安全注意事项"
         包含自定义配置片段时请小心，因为如果配置不当，它们可能会覆盖 BunkerWeb 的安全设置或引入漏洞。
+
+    !!! warning "大文件上传的安全建议"
+        ModSecurity 会将完整请求体缓冲到内存中，并且无法为数 GB 的上传设置上限，这可能导致 worker OOM。如果——**并且仅当**——某个反向代理 URL *专门* 用于文件上传（例如专用的 `/upload` 端点），请在该 URL 上设置 `REVERSE_PROXY_MODSECURITY_N: "no"`。不要在混合用途的 URL 上禁用它：否则该 location 提供的所有内容都会失去 WAF 覆盖。
+
+        为了在绕过 ModSecurity 后仍保护上传内容，请将其与文件扫描插件配合使用，例如 [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) 或 [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal)——它们检查上传文件本身，而不是原始请求体。
 
 === "缓存配置"
 

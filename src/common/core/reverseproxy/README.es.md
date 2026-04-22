@@ -188,9 +188,15 @@ Siga estos pasos para configurar y usar la función de Proxy Inverso:
 | --------------------------------- | ----------------- | --------- | -------- | ----------------------------------------------------------------------------------------------- |
 | `REVERSE_PROXY_INCLUDES`          |                   | multisite | yes      | **Configuraciones Adicionales:** Incluya configuraciones adicionales en el bloque de ubicación. |
 | `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`             | multisite | yes      | **Pasar el Cuerpo de la Solicitud:** Habilite o deshabilite el paso del cuerpo de la solicitud. |
+| `REVERSE_PROXY_MODSECURITY`       | `yes`             | multisite | yes      | **ModSecurity (por ubicación):** Establézcalo en `no` para emitir `modsecurity off;` en esta ubicación; omite el WAF en endpoints de cargas grandes para evitar OOM (consulte la nota siguiente). |
 
     !!! warning "Consideraciones de Seguridad"
         Tenga cuidado al incluir fragmentos de configuración personalizados, ya que pueden anular la configuración de seguridad de BunkerWeb o introducir vulnerabilidades si no se configuran correctamente.
+
+    !!! warning "Recomendación de seguridad para cargas grandes"
+        ModSecurity almacena en memoria el cuerpo completo de la solicitud y no puede limitarlo para cargas de varios GB, lo que puede provocar OOM en el worker. Si — **y solo si** — una URL de proxy inverso se usa *exclusivamente* para cargas de archivos (por ejemplo, un endpoint `/upload` dedicado), establezca `REVERSE_PROXY_MODSECURITY_N: "no"` en esa URL. No lo deshabilite en URL de uso mixto: perdería la cobertura del WAF en todo lo servido por esa ubicación.
+
+        Para mantener protegidas las cargas después de omitir ModSecurity, combínelo con un plugin de análisis de archivos como [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) o [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal); inspeccionan el archivo cargado en sí en lugar del cuerpo bruto de la solicitud.
 
 === "Configuración de Caché"
 

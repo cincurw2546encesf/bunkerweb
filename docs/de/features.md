@@ -3933,6 +3933,11 @@ Führen Sie die folgenden Schritte aus, um ModSecurity zu konfigurieren und zu v
 
     Das CRS-Team pflegt aktiv eine Liste von Ausschlüssen für beliebte Anwendungen wie WordPress, Nextcloud, Drupal und Cpanel, was die Integration erleichtert, ohne die Funktionalität zu beeinträchtigen. Die Sicherheitsvorteile überwiegen bei weitem den minimalen Konfigurationsaufwand, der zur Behebung von Falsch-Positiven erforderlich ist.
 
+!!! warning "Sicherheitsempfehlung für große Uploads"
+    ModSecurity puffert den vollständigen Anforderungskörper im Arbeitsspeicher und kann ihn bei Uploads mit mehreren GB nicht begrenzen, was zu einem OOM des Workers führen kann. Wenn — **und nur wenn** — eine Reverse-Proxy-URL *ausschließlich* für Datei-Uploads verwendet wird (z. B. ein dedizierter `/upload`-Endpunkt), setzen Sie `REVERSE_PROXY_MODSECURITY_N: "no"` für diese URL, um `modsecurity off;` in ihrem `location`-Block auszugeben. Deaktivieren Sie dies nicht für gemischt genutzte URLs: Sie würden die WAF-Abdeckung für alles verlieren, was von dieser Location bereitgestellt wird.
+
+    Um Uploads nach dem Umgehen von ModSecurity weiterhin zu schützen, kombinieren Sie dies mit einem Datei-Scan-Plugin wie [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) oder [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal) — sie prüfen die hochgeladene Datei selbst statt des rohen Anforderungskörpers.
+
 ### Verfügbare CRS-Versionen
 
 Wählen Sie eine CRS-Version, die Ihren Sicherheitsanforderungen am besten entspricht:
@@ -4971,13 +4976,19 @@ Führen Sie die folgenden Schritte aus, um die Reverse-Proxy-Funktion zu konfigu
         - **Leistungsoptimierung:** Optimieren Sie die Anforderungsbehandlung für bestimmte Anwendungsfälle
         - **Flexibilität:** Passen Sie sich mit speziellen Konfigurationen an einzigartige Anwendungsanforderungen an
 
-    | Einstellung                       | Standard | Kontext   | Mehrfach | Beschreibung                                                                                              |
-    | --------------------------------- | -------- | --------- | -------- | --------------------------------------------------------------------------------------------------------- |
-    | `REVERSE_PROXY_INCLUDES`          |          | multisite | ja       | **Zusätzliche Konfigurationen:** Fügen Sie zusätzliche Konfigurationen in den Standortblock ein.          |
-    | `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`    | multisite | ja       | **Anforderungskörper weiterleiten:** Aktiviert oder deaktiviert das Weiterleiten des Anforderungskörpers. |
+    | Einstellung                       | Standard | Kontext   | Mehrfach | Beschreibung                                                                                                                                                                                       |
+    | --------------------------------- | -------- | --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `REVERSE_PROXY_INCLUDES`          |          | multisite | ja       | **Zusätzliche Konfigurationen:** Fügen Sie zusätzliche Konfigurationen in den Standortblock ein.                                                                                                   |
+    | `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`    | multisite | ja       | **Anforderungskörper weiterleiten:** Aktiviert oder deaktiviert das Weiterleiten des Anforderungskörpers.                                                                                          |
+    | `REVERSE_PROXY_MODSECURITY`       | `yes`    | multisite | ja       | **ModSecurity (pro Location):** Auf `no` setzen, um `modsecurity off;` in dieser Location auszugeben — umgeht die WAF auf Endpunkten für große Uploads, um OOM zu vermeiden (siehe Hinweis unten). |
 
     !!! warning "Sicherheitsüberlegungen"
         Seien Sie vorsichtig, wenn Sie benutzerdefinierte Konfigurationsausschnitte einfügen, da diese die Sicherheitseinstellungen von BunkerWeb überschreiben oder bei unsachgemäßer Konfiguration Schwachstellen einführen können.
+
+    !!! warning "Sicherheitsempfehlung für große Uploads"
+        ModSecurity puffert den vollständigen Anforderungskörper im Arbeitsspeicher und kann ihn bei Uploads mit mehreren GB nicht begrenzen, was zu einem OOM des Workers führen kann. Wenn — **und nur wenn** — eine Reverse-Proxy-URL *ausschließlich* für Datei-Uploads verwendet wird (z. B. ein dedizierter `/upload`-Endpunkt), setzen Sie `REVERSE_PROXY_MODSECURITY_N: "no"` für diese URL. Deaktivieren Sie dies nicht für gemischt genutzte URLs: Sie würden die WAF-Abdeckung für alles verlieren, was von dieser Location bereitgestellt wird.
+
+        Um Uploads nach dem Umgehen von ModSecurity weiterhin zu schützen, kombinieren Sie dies mit einem Datei-Scan-Plugin wie [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) oder [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal) — sie prüfen die hochgeladene Datei selbst statt des rohen Anforderungskörpers.
 
 === "Caching-Konfiguration"
 
