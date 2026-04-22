@@ -219,13 +219,12 @@ function antibot:header()
 	elseif self.session_data.type == "capjs" then
 		local capjs_url = self.variables["ANTIBOT_CAPJS_FRONTEND_URL"]
 		-- Cap.js needs: no strict-dynamic (workers do dynamic imports from capjs_url),
-		-- no 'unsafe-inline' on style-src (widget.js sets styles via JS DOM properties, which CSP doesn't restrict),
-		-- wasm-unsafe-eval (workers execute WASM), no trusted types (widget.js uses innerHTML)
-		csp_directives["script-src"] = "'nonce-"
-			.. self.ctx.bw.antibot_nonce_script
-			.. "' "
-			.. capjs_url
-			.. " 'wasm-unsafe-eval'"
+		-- 'unsafe-inline' on script-src (the sandboxed instrumentation iframe's srcdoc
+		-- cannot carry a nonce; per CSP3, adding 'unsafe-inline' implies dropping the
+		-- nonce), wasm-unsafe-eval (workers execute WASM), no trusted types (widget.js
+		-- uses innerHTML). The widget's inline <style> is nonced via window.CAP_CSS_NONCE
+		-- (see capjs.html), so style-src stays strict.
+		csp_directives["script-src"] = "'unsafe-inline' " .. capjs_url .. " 'wasm-unsafe-eval'"
 		csp_directives["style-src"] = "'self' 'nonce-" .. self.ctx.bw.antibot_nonce_style .. "'"
 		csp_directives["connect-src"] = capjs_url
 		csp_directives["frame-src"] = capjs_url
@@ -814,20 +813,18 @@ function antibot:check_challenge()
 		if not capjs_backend or capjs_backend == "" then
 			capjs_backend = self.variables["ANTIBOT_CAPJS_FRONTEND_URL"]
 		end
+		capjs_backend = capjs_backend:gsub("/+$", "")
 		local capjs_verify_url = capjs_backend .. "/" .. self.variables["ANTIBOT_CAPJS_SITEKEY"] .. "/siteverify"
-		local res, err = httpc:request_uri(
-			capjs_verify_url,
-			{
-				method = "POST",
-				body = "secret="
-					.. ngx.escape_uri(self.variables["ANTIBOT_CAPJS_SECRET"])
-					.. "&response="
-					.. ngx.escape_uri(args["token"]),
-				headers = {
-					["Content-Type"] = "application/x-www-form-urlencoded",
-				},
-			}
-		)
+		local res, err = httpc:request_uri(capjs_verify_url, {
+			method = "POST",
+			body = "secret="
+				.. ngx.escape_uri(self.variables["ANTIBOT_CAPJS_SECRET"])
+				.. "&response="
+				.. ngx.escape_uri(args["token"]),
+			headers = {
+				["Content-Type"] = "application/x-www-form-urlencoded",
+			},
+		})
 		httpc:close()
 		if not res then
 			return nil, "can't send request to Cap.js API : " .. err, nil
