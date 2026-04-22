@@ -847,25 +847,25 @@
     "ANTIBOT_CAPJS_FRONTEND_URL": {
       "context": "multisite",
       "default": "",
-      "help": "Public URL of the Cap.js server used by the browser to load the widget (e.g. https://cap.example.com).",
+      "help": "Public origin the browser loads the Cap.js widget from (e.g. https://cap.example.com). Origin only, no path.",
       "id": "antibot-capjs-frontend-url",
       "label": "Cap.js frontend URL",
-      "regex": "^(https?://[A-Za-z0-9.\\-]+(:[0-9]+)?(/[A-Za-z0-9._~\\-/]*)?)?$",
+      "regex": "^(https?://[A-Za-z0-9.\\-]+(:[0-9]+)?)?$",
       "type": "text"
     },
     "ANTIBOT_CAPJS_BACKEND_URL": {
       "context": "multisite",
       "default": "",
-      "help": "Internal URL of the Cap.js server used by BunkerWeb for token verification via the siteverify API (e.g. http://cap-server:3000). If empty, the frontend URL is used.",
+      "help": "Internal origin BunkerWeb calls for /siteverify (e.g. http://cap-server:3000). Origin only, no path. Falls back to the frontend URL when empty.",
       "id": "antibot-capjs-backend-url",
       "label": "Cap.js backend URL",
-      "regex": "^(https?://[A-Za-z0-9.\\-]+(:[0-9]+)?(/[A-Za-z0-9._~\\-/]*)?)?$",
+      "regex": "^(https?://[A-Za-z0-9.\\-]+(:[0-9]+)?)?$",
       "type": "text"
     },
     "ANTIBOT_CAPJS_SITEKEY": {
       "context": "multisite",
       "default": "",
-      "help": "Sitekey for Cap.js challenge.",
+      "help": "Sitekey created in the Cap.js dashboard for this site.",
       "id": "antibot-capjs-sitekey",
       "label": "Cap.js sitekey",
       "regex": "^[A-Za-z0-9._\\-]*$",
@@ -874,7 +874,7 @@
     "ANTIBOT_CAPJS_SECRET": {
       "context": "multisite",
       "default": "",
-      "help": "Secret for Cap.js challenge.",
+      "help": "Secret paired with the sitekey, used by BunkerWeb to authenticate /siteverify calls.",
       "id": "antibot-capjs-secret",
       "label": "Cap.js secret",
       "regex": "^[A-Za-z0-9._\\-]*$",
