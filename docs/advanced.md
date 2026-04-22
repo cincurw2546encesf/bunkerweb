@@ -3790,7 +3790,7 @@ The Custom Pages plugin lets you replace BunkerWeb's built-in pages (error pages
 
 ### Features
 
-- **Per-service custom error pages** and **antibot challenge pages** (captcha, JavaScript check, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).
+- **Per-service custom error pages** and **antibot challenge pages** (captcha, JavaScript check, reCAPTCHA, hCaptcha, Turnstile, mCaptcha, Cap.js).
 - **Global custom default server page** for the fallback/default vhost.
 - **HTML parsing and Lua template tag balance checks** before a template is accepted.
 - **Automatic caching** to `/var/cache/bunkerweb/custom_pages` with change detection to trigger reloads.
@@ -3815,6 +3815,7 @@ The Custom Pages plugin lets you replace BunkerWeb's built-in pages (error pages
 | `CUSTOM_ANTIBOT_HCAPTCHA_PAGE`   |         | multisite | Absolute path to the custom antibot hCaptcha page.          |
 | `CUSTOM_ANTIBOT_TURNSTILE_PAGE`  |         | multisite | Absolute path to the custom antibot Turnstile page.         |
 | `CUSTOM_ANTIBOT_MCAPTCHA_PAGE`   |         | multisite | Absolute path to the custom antibot mCaptcha page.          |
+| `CUSTOM_ANTIBOT_CAPJS_PAGE`      |         | multisite | Absolute path to the custom antibot Cap.js page.            |
 
 ### Template Variables Reference
 
@@ -3895,6 +3896,13 @@ These variables are available in antibot challenge page templates:
 | ------------------ | ------ | ---------------------- |
 | `mcaptcha_sitekey` | string | Your mCaptcha site key |
 | `mcaptcha_url`     | string | Your mCaptcha URL      |
+
+**Cap.js (`CUSTOM_ANTIBOT_CAPJS_PAGE`):**
+
+| Variable        | Type   | Description                  |
+| --------------- | ------ | ---------------------------- |
+| `capjs_sitekey` | string | Your Cap.js site key         |
+| `capjs_url`     | string | Your Cap.js frontend base URL |
 
 ### Template Syntax
 

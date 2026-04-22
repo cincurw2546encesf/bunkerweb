@@ -3802,7 +3802,7 @@ El plugin Custom Pages le permite reemplazar las páginas integradas de BunkerWe
 
 ### Características
 
-- **Páginas de error personalizadas por servicio** y **páginas de desafío antibot** (captcha, verificación JavaScript, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).
+- **Páginas de error personalizadas por servicio** y **páginas de desafío antibot** (captcha, verificación JavaScript, reCAPTCHA, hCaptcha, Turnstile, mCaptcha, Cap.js).
 - **Página del servidor por defecto personalizada global** para el vhost de respaldo/por defecto.
 - **Análisis HTML y verificaciones de balance de etiquetas de plantilla Lua** antes de que una plantilla sea aceptada.
 - **Caché automático** a `/var/cache/bunkerweb/custom_pages` con detección de cambios para activar recargas.
@@ -3827,6 +3827,7 @@ El plugin Custom Pages le permite reemplazar las páginas integradas de BunkerWe
 | `CUSTOM_ANTIBOT_HCAPTCHA_PAGE`   |                | multisite | Ruta absoluta a la página hCaptcha antibot personalizada.                      |
 | `CUSTOM_ANTIBOT_TURNSTILE_PAGE`  |                | multisite | Ruta absoluta a la página Turnstile antibot personalizada.                     |
 | `CUSTOM_ANTIBOT_MCAPTCHA_PAGE`   |                | multisite | Ruta absoluta a la página mCaptcha antibot personalizada.                      |
+| `CUSTOM_ANTIBOT_CAPJS_PAGE`      |                | multisite | Ruta absoluta a la página Cap.js antibot personalizada.                        |
 
 ### Referencia de variables de plantilla
 
@@ -3907,6 +3908,13 @@ Estas variables están disponibles en plantillas de página de desafío antibot:
 | ------------------ | ------ | -------------------------- |
 | `mcaptcha_sitekey` | string | Su clave de sitio mCaptcha |
 | `mcaptcha_url`     | string | Su URL de mCaptcha         |
+
+**Cap.js (`CUSTOM_ANTIBOT_CAPJS_PAGE`):**
+
+| Variable        | Tipo   | Descripción                    |
+| --------------- | ------ | ------------------------------ |
+| `capjs_sitekey` | string | Su clave de sitio Cap.js       |
+| `capjs_url`     | string | URL base del frontend de Cap.js |
 
 ### Sintaxis de plantilla
 

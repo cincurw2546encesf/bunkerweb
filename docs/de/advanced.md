@@ -3802,7 +3802,7 @@ Das Custom Pages Plugin ermöglicht es Ihnen, die eingebauten Seiten von BunkerW
 
 ### Funktionen
 
-- **Benutzerdefinierte Fehlerseiten pro Service** und **Antibot-Challenge-Seiten** (Captcha, JavaScript-Prüfung, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).
+- **Benutzerdefinierte Fehlerseiten pro Service** und **Antibot-Challenge-Seiten** (Captcha, JavaScript-Prüfung, reCAPTCHA, hCaptcha, Turnstile, mCaptcha, Cap.js).
 - **Globale benutzerdefinierte Standard-Server-Seite** für den Fallback/Standard-vhost.
 - **HTML-Parsing und Lua-Vorlagen-Tag-Balanceprüfungen** bevor eine Vorlage akzeptiert wird.
 - **Automatisches Caching** nach `/var/cache/bunkerweb/custom_pages` mit Änderungserkennung für Neuladen.
@@ -3827,6 +3827,7 @@ Das Custom Pages Plugin ermöglicht es Ihnen, die eingebauten Seiten von BunkerW
 | `CUSTOM_ANTIBOT_HCAPTCHA_PAGE`   |          | multisite | Absoluter Pfad zur benutzerdefinierten Antibot-hCaptcha-Seite.          |
 | `CUSTOM_ANTIBOT_TURNSTILE_PAGE`  |          | multisite | Absoluter Pfad zur benutzerdefinierten Antibot-Turnstile-Seite.         |
 | `CUSTOM_ANTIBOT_MCAPTCHA_PAGE`   |          | multisite | Absoluter Pfad zur benutzerdefinierten Antibot-mCaptcha-Seite.          |
+| `CUSTOM_ANTIBOT_CAPJS_PAGE`      |          | multisite | Absoluter Pfad zur benutzerdefinierten Antibot-Cap.js-Seite.            |
 
 ### Vorlagenvariablen-Referenz
 
@@ -3907,6 +3908,13 @@ Diese Variablen sind in Antibot-Challenge-Seiten-Vorlagen verfügbar:
 | ------------------ | ------ | --------------------- |
 | `mcaptcha_sitekey` | string | Ihr mCaptcha-Site-Key |
 | `mcaptcha_url`     | string | Ihre mCaptcha-URL     |
+
+**Cap.js (`CUSTOM_ANTIBOT_CAPJS_PAGE`):**
+
+| Variable        | Typ    | Beschreibung                   |
+| --------------- | ------ | ------------------------------ |
+| `capjs_sitekey` | string | Ihr Cap.js-Site-Key            |
+| `capjs_url`     | string | Ihre Cap.js-Frontend-Basis-URL |
 
 ### Vorlagensyntax
 
