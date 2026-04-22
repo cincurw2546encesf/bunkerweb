@@ -669,7 +669,6 @@ class KubernetesController(Controller):
                     sleep(10)
 
     def process_events(self):
-        self._set_autoconf_load_db()
         watchers = self._get_watchers()
         threads = [Thread(target=self._watch, args=(watch_type, watcher)) for watch_type, watcher in watchers.items()]
         for thread in threads:
