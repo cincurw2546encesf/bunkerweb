@@ -1792,16 +1792,35 @@ class Database:
                     if db_services:
                         # Guard: if an empty services list is received but DB has services for this method,
                         # abort the entire save_config to prevent catastrophic data loss.
-                        # For autoconf: protects against transient Docker API failures.
+                        # For autoconf: only guard when existing DB services were created by a *different*
+                        # method (ui/api/manual). If every existing service was itself created by autoconf,
+                        # an empty SERVER_NAME is a legitimate "all ingresses removed" signal and clearing
+                        # those services is the correct behaviour. Without this relaxation, tearing down
+                        # the last Ingress and re-applying a new one gets stuck with stale services in the DB.
                         # For other methods: protects against callers that omit SERVER_NAME entirely
                         # (e.g. a global-only config update that forgot to set skip_service_management=True).
                         method_services = [s for s in db_services if s.method == method or (s.method in ("ui", "api") and method in ("ui", "api"))]
                         if not services and method_services and (method == "autoconf" or "SERVER_NAME" not in config):
-                            self.logger.warning(
-                                f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
-                                "skipping entire config save to prevent data loss"
-                            )
-                            return changed_plugins
+                            if method == "autoconf":
+                                foreign_services = [s for s in db_services if s.method not in ("autoconf", "scheduler")]
+                                if not foreign_services:
+                                    self.logger.debug(
+                                        f"Received empty SERVER_NAME for autoconf and all {len(method_services)} existing service(s) are autoconf-owned; "
+                                        "proceeding with removal"
+                                    )
+                                    missing_ids = [service.id for service in method_services]
+                                else:
+                                    self.logger.warning(
+                                        f"Received empty SERVER_NAME for method 'autoconf' but database has {len(foreign_services)} non-autoconf service(s), "
+                                        "skipping entire config save to prevent data loss"
+                                    )
+                                    return changed_plugins
+                            else:
+                                self.logger.warning(
+                                    f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
+                                    "skipping entire config save to prevent data loss"
+                                )
+                                return changed_plugins
                         else:
                             missing_ids = [
                                 service.id
