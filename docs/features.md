@@ -325,9 +325,9 @@ Attackers often use automated tools (bots) to try and exploit your website. To p
 
 Follow these steps to enable and configure the Antibot feature:
 
-1. **Choose a challenge type:** Decide which type of antibot challenge to use (e.g., [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [javascript](#__tabbed_3_2)).
+1. **Choose a challenge type:** Decide which type of antibot challenge to use (e.g., [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [capjs](#__tabbed_3_8), [javascript](#__tabbed_3_2)).
 2. **Enable the feature:** Set the `USE_ANTIBOT` setting to your chosen challenge type in your BunkerWeb configuration.
-3. **Configure the settings:** Adjust the other `ANTIBOT_*` settings as needed. For reCAPTCHA, hCaptcha, Turnstile, and mCaptcha, you must create an account with the respective service and obtain API keys.
+3. **Configure the settings:** Adjust the other `ANTIBOT_*` settings as needed. For reCAPTCHA, hCaptcha, and Turnstile, create an account with the respective service and obtain API keys. For mCaptcha and Cap.js, you can either self-host the provider or use a hosted service, then configure the required sitekey and secret.
 4. **Important:** Ensure the `ANTIBOT_URI` is a unique URL on your site that is not in use.
 
 !!! important "About the `ANTIBOT_URI` Setting"
@@ -547,6 +547,29 @@ BunkerWeb allows you to specify certain users, IPs, or requests that should bypa
 
     Refer to the [Common Settings](#common-settings) for additional configuration options.
 
+=== "Cap.js"
+
+    [Cap.js](https://capjs.js.org/) is a self-hosted, open-source, privacy-friendly proof-of-work CAPTCHA. Instead of delegating verification to a third-party service, you run the Cap.js server yourself and BunkerWeb verifies tokens against that server.
+
+    Use the frontend URL for the browser-facing endpoint that serves the widget. If BunkerWeb can reach the Cap.js server through an internal address, set the backend URL to that internal endpoint; otherwise leave it empty and BunkerWeb will use the frontend URL for `/siteverify`.
+
+    **Configuration Settings:**
+
+    | Setting                      | Default | Context   | Multiple | Description                                                                                                              |
+    | ---------------------------- | ------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+    | `USE_ANTIBOT`                | `no`    | multisite | no       | **Enable Antibot:** Set to `capjs` to enable the Cap.js challenge.                                                       |
+    | `ANTIBOT_CAPJS_FRONTEND_URL` |         | multisite | no       | **Cap.js Frontend URL:** Browser-facing URL of the Cap.js server that serves the widget.                                 |
+    | `ANTIBOT_CAPJS_BACKEND_URL`  |         | multisite | no       | **Cap.js Backend URL:** Optional internal URL BunkerWeb uses for `/siteverify`; falls back to the frontend URL if empty. |
+    | `ANTIBOT_CAPJS_SITEKEY`      |         | multisite | no       | **Cap.js Sitekey:** The sitekey for the Cap.js challenge.                                                                |
+    | `ANTIBOT_CAPJS_SECRET`       |         | multisite | no       | **Cap.js Secret:** The secret key BunkerWeb uses to verify Cap.js tokens.                                                |
+
+    !!! note "Operator requirements"
+        - Use HTTPS for `ANTIBOT_CAPJS_FRONTEND_URL` in production. The browser worker requires `crypto.subtle` in a secure context, and HTTPS prevents MITM changes to the widget.
+        - Configure CORS on the Cap.js sitekey to allow the protected origin.
+        - Set both `ANTIBOT_CAPJS_FRONTEND_URL` and `ANTIBOT_CAPJS_BACKEND_URL` to origins only: scheme, host, and optional port, with no path.
+
+    Refer to the [Common Settings](#common-settings) for additional configuration options.
+
 ### Example Configurations
 
 === "Cookie Challenge"
@@ -654,6 +677,21 @@ BunkerWeb allows you to specify certain users, IPs, or requests that should bypa
     ANTIBOT_MCAPTCHA_SITEKEY: "your-site-key"
     ANTIBOT_MCAPTCHA_SECRET: "your-secret-key"
     ANTIBOT_MCAPTCHA_URL: "https://demo.mcaptcha.org"
+    ANTIBOT_URI: "/challenge"
+    ANTIBOT_TIME_RESOLVE: "60"
+    ANTIBOT_TIME_VALID: "86400"
+    ```
+
+=== "Cap.js Challenge"
+
+    Example configuration for enabling the Cap.js challenge:
+
+    ```yaml
+    USE_ANTIBOT: "capjs"
+    ANTIBOT_CAPJS_FRONTEND_URL: "https://cap.example.com"
+    ANTIBOT_CAPJS_BACKEND_URL: "http://cap-server:3000"
+    ANTIBOT_CAPJS_SITEKEY: "your-site-key"
+    ANTIBOT_CAPJS_SECRET: "your-secret-key"
     ANTIBOT_URI: "/challenge"
     ANTIBOT_TIME_RESOLVE: "60"
     ANTIBOT_TIME_VALID: "86400"
@@ -4003,6 +4041,11 @@ Follow these steps to configure and use ModSecurity:
 
     The CRS team actively maintains a list of exclusions for popular applications such as WordPress, Nextcloud, Drupal, and Cpanel, making it easier to integrate without impacting functionality. The security benefits far outweigh the minimal configuration effort required to address false positives.
 
+!!! warning "Safety recommendation for large uploads"
+    ModSecurity buffers the full request body in memory and cannot cap it for multi-GB uploads, which can OOM the worker. If — **and only if** — a reverse-proxy URL is used *exclusively* for file uploads (e.g. a dedicated `/upload` endpoint), set `REVERSE_PROXY_MODSECURITY_N: "no"` on that URL to emit `modsecurity off;` in its `location` block. Do not disable it on mixed-use URLs: you would lose WAF coverage on everything served by that location.
+
+    To keep uploads protected after bypassing ModSecurity, pair this with a file-scanning plugin such as [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) or [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal) — they inspect the uploaded file itself instead of the raw request body.
+
 ### Available CRS Versions
 
 Select a CRS version to best match your security needs:
@@ -5107,13 +5150,19 @@ Follow these steps to configure and use the Reverse Proxy feature:
         - **Performance Optimization:** Fine-tune request handling for specific use cases
         - **Flexibility:** Adapt to unique application requirements with specialized configurations
 
-    | Setting                           | Default | Context   | Multiple | Description                                                                  |
-    | --------------------------------- | ------- | --------- | -------- | ---------------------------------------------------------------------------- |
-    | `REVERSE_PROXY_INCLUDES`          |         | multisite | yes      | **Additional Configurations:** Include additional configs in location block. |
-    | `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`   | multisite | yes      | **Pass Request Body:** Enable or disable passing the request body.           |
+    | Setting                           | Default | Context   | Multiple | Description                                                                                                                                                         |
+    | --------------------------------- | ------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `REVERSE_PROXY_INCLUDES`          |         | multisite | yes      | **Additional Configurations:** Include additional configs in location block.                                                                                        |
+    | `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`   | multisite | yes      | **Pass Request Body:** Enable or disable passing the request body.                                                                                                  |
+    | `REVERSE_PROXY_MODSECURITY`       | `yes`   | multisite | yes      | **ModSecurity (per location):** Set to `no` to emit `modsecurity off;` in this location — bypasses the WAF on large-upload endpoints to avoid OOM (see note below). |
 
     !!! warning "Security Considerations"
         Be careful when including custom configuration snippets as they may override BunkerWeb's security settings or introduce vulnerabilities if not properly configured.
+
+    !!! warning "Safety recommendation for large uploads"
+        ModSecurity buffers the full request body in memory and cannot cap it for multi-GB uploads, which can OOM the worker. If — **and only if** — a reverse-proxy URL is used *exclusively* for file uploads (e.g. a dedicated `/upload` endpoint), set `REVERSE_PROXY_MODSECURITY_N: "no"` on that URL. Do not disable it on mixed-use URLs: you would lose WAF coverage on everything served by that location.
+
+        To keep uploads protected after bypassing ModSecurity, pair this with a file-scanning plugin such as [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) or [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal) — they inspect the uploaded file itself instead of the raw request body.
 
 === "Caching Configuration"
 

@@ -11,9 +11,9 @@ Comment ça marche :
 
 Suivez ces étapes pour activer et configurer Antibot :
 
-1. Choisir un type de défi : décidez du mécanisme à utiliser (ex. [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [javascript](#__tabbed_3_2)).
+1. Choisir un type de défi : décidez du mécanisme à utiliser (ex. [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [capjs](#__tabbed_3_8), [javascript](#__tabbed_3_2)).
 2. Activer la fonctionnalité : définissez le paramètre `USE_ANTIBOT` sur le type choisi dans votre configuration BunkerWeb.
-3. Configurer les paramètres : ajustez les autres paramètres `ANTIBOT_*` si nécessaire. Pour reCAPTCHA, hCaptcha, Turnstile et mCaptcha, créez un compte auprès du service choisi et obtenez des clés API.
+3. Configurer les paramètres : ajustez les autres paramètres `ANTIBOT_*` si nécessaire. Pour reCAPTCHA, hCaptcha et Turnstile, créez un compte auprès du service choisi et obtenez des clés API. Pour mCaptcha et Cap.js, vous pouvez auto-héberger le fournisseur ou utiliser un service hébergé, puis configurer la clé de site et la clé secrète requises.
 4. Important : assurez‑vous que `ANTIBOT_URI` est une URL unique de votre site et qu’elle n’est pas utilisée ailleurs.
 
 !!! important "À propos du paramètre `ANTIBOT_URI`"
@@ -221,6 +221,29 @@ Exemples :
 
     Reportez‑vous aux Paramètres communs pour les options supplémentaires.
 
+=== "Cap.js"
+
+    [Cap.js](https://capjs.js.org/) est un CAPTCHA de preuve de travail auto-hébergé, open source et respectueux de la vie privée. Au lieu de déléguer la vérification à un service tiers, vous exécutez vous-même le serveur Cap.js et BunkerWeb vérifie les jetons auprès de ce serveur.
+
+    Utilisez l’URL frontend pour le point d’accès visible depuis le navigateur qui sert le widget. Si BunkerWeb peut joindre le serveur Cap.js via une adresse interne, définissez l’URL backend sur ce point d’accès interne ; sinon, laissez-la vide et BunkerWeb utilisera l’URL frontend pour `/siteverify`.
+
+    **Paramètres :**
+
+    | Paramètre                    | Défaut | Contexte  | Multiple | Description                                                                                                                    |
+    | ---------------------------- | ------ | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+    | `USE_ANTIBOT`                | `no`   | multisite | non      | Activer Antibot : définir sur `capjs` pour activer ce mécanisme.                                                               |
+    | `ANTIBOT_CAPJS_FRONTEND_URL` |        | multisite | non      | URL accessible depuis le navigateur du serveur Cap.js qui sert le widget.                                                       |
+    | `ANTIBOT_CAPJS_BACKEND_URL`  |        | multisite | non      | URL interne optionnelle que BunkerWeb utilise pour `/siteverify` ; si elle est vide, l’URL frontend est utilisée.              |
+    | `ANTIBOT_CAPJS_SITEKEY`      |        | multisite | non      | Clé site Cap.js.                                                                                                               |
+    | `ANTIBOT_CAPJS_SECRET`       |        | multisite | non      | Clé secrète Cap.js utilisée par BunkerWeb pour vérifier les jetons.                                                            |
+
+    !!! note "Exigences d’exploitation"
+        - Utilisez HTTPS pour `ANTIBOT_CAPJS_FRONTEND_URL` en production. Le worker du navigateur exige `crypto.subtle` dans un contexte sécurisé, et HTTPS empêche les modifications MITM du widget.
+        - Configurez CORS sur la clé de site Cap.js pour autoriser l’origine protégée.
+        - Définissez `ANTIBOT_CAPJS_FRONTEND_URL` et `ANTIBOT_CAPJS_BACKEND_URL` uniquement sur des origines : schéma, hôte et port optionnel, sans chemin.
+
+    Reportez‑vous aux Paramètres communs pour les options supplémentaires.
+
 ### Exemples de configuration
 
 === "Défi Cookie"
@@ -316,6 +339,19 @@ Exemples :
     ANTIBOT_MCAPTCHA_SITEKEY: "your-site-key"
     ANTIBOT_MCAPTCHA_SECRET: "your-secret-key"
     ANTIBOT_MCAPTCHA_URL: "https://demo.mcaptcha.org"
+    ANTIBOT_URI: "/challenge"
+    ANTIBOT_TIME_RESOLVE: "60"
+    ANTIBOT_TIME_VALID: "86400"
+    ```
+
+=== "Défi Cap.js"
+
+    ```yaml
+    USE_ANTIBOT: "capjs"
+    ANTIBOT_CAPJS_FRONTEND_URL: "https://cap.example.com"
+    ANTIBOT_CAPJS_BACKEND_URL: "http://cap-server:3000"
+    ANTIBOT_CAPJS_SITEKEY: "your-site-key"
+    ANTIBOT_CAPJS_SECRET: "your-secret-key"
     ANTIBOT_URI: "/challenge"
     ANTIBOT_TIME_RESOLVE: "60"
     ANTIBOT_TIME_VALID: "86400"

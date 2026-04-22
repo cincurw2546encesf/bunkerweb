@@ -133,22 +133,18 @@ class Config:
             )
         )
 
-    def wait_applying(self, startup: bool = False):
+    def wait_applying(self):
+        # Ready when DB is initialized and no scheduler apply is in flight.
         current_time = datetime.now().astimezone()
         ready = False
         while not ready and (datetime.now().astimezone() - current_time).seconds < 240:
             db_metadata = self._db.get_metadata()
             if isinstance(db_metadata, str):
-                if not startup:
-                    self.__logger.error(f"An error occurred when checking for changes in the database : {db_metadata}")
-            elif (
-                db_metadata["is_initialized"]
-                and db_metadata["first_config_saved"]
-                and not any(
-                    v
-                    for k, v in db_metadata.items()
-                    if k in ("custom_configs_changed", "external_plugins_changed", "pro_plugins_changed", "plugins_config_changed", "instances_changed")
-                )
+                self.__logger.error(f"An error occurred when checking for changes in the database : {db_metadata}")
+            elif db_metadata["is_initialized"] and not any(
+                v
+                for k, v in db_metadata.items()
+                if k in ("custom_configs_changed", "external_plugins_changed", "pro_plugins_changed", "plugins_config_changed", "instances_changed")
             ):
                 ready = True
                 continue

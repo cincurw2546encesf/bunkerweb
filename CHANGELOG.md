@@ -11,12 +11,14 @@
 - [BUGFIX] Fix `securitytxt` RFC 9116 compliance: populate the default `Canonical:` URL (was `https:///.well-known/security.txt`), emit `Expires:` as UTC with a trailing `Z`, rename the field to `Acknowledgments:`, and cache the auto-generated expiry per server so the served file is byte-stable across requests.
 - [BUGFIX] Fix `DATABASE_URI` driver injection corrupting hostnames when the host matches the scheme name (e.g. `postgresql://u:p@postgresql:5432/db`). Use SQLAlchemy's `make_url` + `URL.set(drivername=...)` instead of `str.replace` so only the scheme is rewritten. (Fixes #3438)
 - [BUGFIX] `badbehavior`: don't increment the counter for already-banned IPs. Log phase fast-paths on `ctx.bw.is_banned`; timer phase re-checks `is_banned()` authoritatively (Redis reachable) before calling `increase()`. (Fixes #3448)
+- [BUGFIX] Add `REVERSE_PROXY_MODSECURITY` multisite setting (default `yes`) that emits `modsecurity off;` in the per-URL reverse-proxy `location` block when set to `no`, working around the ModSecurity-nginx connector's full-body buffering that causes OOM on large uploads. (Fixes #3154)
 - [FEATURE] Let's Encrypt: new `LETS_ENCRYPT_MAX_LOG_BACKUPS` global setting (default `50`) caps certbot's own log rotation via `--max-log-backups`, preventing the default 1000-file pile-up in every integration mode.
 - [ALL-IN-ONE] Python services (UI, API, scheduler, autoconf) now log to the container's stdout/stderr only. `service-log-wrapper.sh` prefixes each line with `[SERVICE]`, strips control characters, and honors `HIDE_SERVICE_LOGS`; no on-disk files are written. Retention is managed by the container logging driver (`docker logs`, `journald`, ...).
 - [UI] Fix "Blocked Requests by Country" map: an off-by-one in `getColor()` plus an HSL-ramp clip to `#000` collapsed every populated country to the same color.
 - [UI] Add import/export for custom configurations, with an opt-in `.zip` bundle that lets a service export include its attached custom configurations and re-import them in one shot.
 - [CONTRIBUTION] Thank you [harshadkhetpal](https://github.com/harshadkhetpal) for your contribution regarding exception handling in the `autoconf` entrypoint. (#3421)
 - [CONTRIBUTION] Thank you [Simonmiz](https://github.com/Simonmiz) for your contribution regarding the `German` translation of the web UI. (#3422)
+- [CONTRIBUTION] Thank you [daemon-byte](https://github.com/daemon-byte) for your contribution adding the [Cap.js](https://capjs.js.org/) self-hosted proof-of-work antibot mode. (#3454)
 
 ## v1.6.10~rc3 - 2026/04/11
 

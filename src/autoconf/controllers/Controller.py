@@ -106,6 +106,32 @@ class Controller(Config):
     def apply_config(self):
         raise NotImplementedError
 
+    def initial_apply(self) -> bool:
+        """Force a first apply with the current cluster state (first=True)."""
+        self._update_settings()
+        self._instances = self.get_instances()
+        self._services = self.get_services()
+        configs_result = self.get_configs()
+        # Kubernetes returns (extra_config, configs); others return configs.
+        if isinstance(configs_result, tuple) and len(configs_result) == 2:
+            self._extra_config, self._configs = configs_result
+        else:
+            self._configs = configs_result
+
+        self._logger.info("Applying initial autoconf configuration ...")
+        try:
+            success = self.apply_config()
+        except BaseException as e:
+            self._logger.error(f"Exception during initial autoconf apply: {e}")
+            success = False
+
+        if success:
+            self._set_autoconf_load_db()
+            self._logger.info("Initial autoconf configuration applied 🚀")
+        else:
+            self._logger.error("Initial autoconf apply failed, scheduler may start with stale configuration")
+        return success
+
     @abstractmethod
     def process_events(self):
         raise NotImplementedError
