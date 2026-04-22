@@ -621,6 +621,14 @@ class KubernetesController(Controller):
                         self._extra_config, self._configs = self.get_configs()
 
                         if not self.update_needed(self._instances, self._services, self._configs, self._extra_config):
+                            # Make this branch observable: without it, a race where a transiently
+                            # missing backend Service causes `_to_services` to drop an Ingress rule
+                            # looks identical to "nothing changed" and the controller goes silent
+                            # until the next event — which may be much later or never.
+                            self._logger.debug(
+                                f"No config change detected after {watch_type} event, skipping apply "
+                                f"(services={len(self._services)}, instances={len(self._instances)})"
+                            )
                             if locked:
                                 self._internal_lock.release()
                                 locked = False
