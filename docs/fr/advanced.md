@@ -3801,7 +3801,7 @@ Le plugin Custom Pages vous permet de remplacer les pages intégrées de BunkerW
 
 ### Fonctionnalités
 
-- **Pages d'erreur personnalisées par service** et **pages de défi antibot** (captcha, vérification JavaScript, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).
+- **Pages d'erreur personnalisées par service** et **pages de défi antibot** (captcha, vérification JavaScript, reCAPTCHA, hCaptcha, Turnstile, mCaptcha, Cap.js).
 - **Page du serveur par défaut personnalisée globale** pour le vhost de repli/par défaut.
 - **Analyse HTML et vérifications d'équilibre des balises de modèle Lua** avant qu'un modèle soit accepté.
 - **Mise en cache automatique** vers `/var/cache/bunkerweb/custom_pages` avec détection des modifications pour déclencher les rechargements.
@@ -3826,6 +3826,7 @@ Le plugin Custom Pages vous permet de remplacer les pages intégrées de BunkerW
 | `CUSTOM_ANTIBOT_HCAPTCHA_PAGE`   |        | multisite | Chemin absolu vers la page hCaptcha antibot personnalisée.                   |
 | `CUSTOM_ANTIBOT_TURNSTILE_PAGE`  |        | multisite | Chemin absolu vers la page Turnstile antibot personnalisée.                  |
 | `CUSTOM_ANTIBOT_MCAPTCHA_PAGE`   |        | multisite | Chemin absolu vers la page mCaptcha antibot personnalisée.                   |
+| `CUSTOM_ANTIBOT_CAPJS_PAGE`      |        | multisite | Chemin absolu vers la page Cap.js antibot personnalisée.                     |
 
 ### Référence des variables de modèle
 
@@ -3906,6 +3907,13 @@ Ces variables sont disponibles dans les modèles de page de défi antibot :
 | ------------------ | ------ | -------------------------- |
 | `mcaptcha_sitekey` | string | Votre clé de site mCaptcha |
 | `mcaptcha_url`     | string | Votre URL mCaptcha         |
+
+**Cap.js (`CUSTOM_ANTIBOT_CAPJS_PAGE`) :**
+
+| Variable        | Type   | Description                           |
+| --------------- | ------ | ------------------------------------- |
+| `capjs_sitekey` | string | Votre clé de site Cap.js              |
+| `capjs_url`     | string | URL de base du frontend Cap.js        |
 
 ### Syntaxe de modèle
 
