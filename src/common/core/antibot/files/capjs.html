@@ -235,13 +235,17 @@
             JavaScript needs to be enabled to complete this challenge.
           </p>
         </noscript>
-        <div id="capjs-status" role="status" aria-live="polite" aria-atomic="true">
-        <span class="cap-spinner"></span>
+        <div
+          id="capjs-status"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <span class="cap-spinner"></span>
           <span class="cap-status-text">Verifying you are human&hellip;</span>
         </div>
         <p class="subtitle">
-          This site is protected by a proof-of-work challenge powered
-          by&nbsp;<a
+          This site is protected by a proof-of-work challenge powered by&nbsp;<a
             href="https://capjs.js.org"
             target="_blank"
             rel="noopener noreferrer"
@@ -284,7 +288,9 @@
     </footer>
     {-raw-}
     <script nonce="{*nonce_script*}">
-      window.CAP_CUSTOM_WASM_URL = "{*capjs_url*}/assets/cap_wasm.js";
+      window.CAP_CUSTOM_WASM_URL = "{*capjs_url*}/assets/cap_wasm_bg.wasm";
+      // Stamp the widget's injected <style> with our style nonce so strict CSP allows it.
+      window.CAP_CSS_NONCE = "{*nonce_style*}";
     </script>
     <script
       src="{*capjs_url*}/assets/widget.js"
