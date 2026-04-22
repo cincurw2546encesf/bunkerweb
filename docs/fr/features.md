@@ -325,9 +325,9 @@ Comment ça marche :
 
 Suivez ces étapes pour activer et configurer Antibot :
 
-1. Choisir un type de défi : décidez du mécanisme à utiliser (ex. [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [javascript](#__tabbed_3_2)).
+1. Choisir un type de défi : décidez du mécanisme à utiliser (ex. [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [capjs](#__tabbed_3_8), [javascript](#__tabbed_3_2)).
 2. Activer la fonctionnalité : définissez le paramètre `USE_ANTIBOT` sur le type choisi dans votre configuration BunkerWeb.
-3. Configurer les paramètres : ajustez les autres paramètres `ANTIBOT_*` si nécessaire. Pour reCAPTCHA, hCaptcha, Turnstile et mCaptcha, créez un compte auprès du service choisi et obtenez des clés API. Pour Cap.js, exécutez votre propre serveur Cap.js et utilisez sa clé de site et sa clé secrète ; aucun compte tiers n’est nécessaire.
+3. Configurer les paramètres : ajustez les autres paramètres `ANTIBOT_*` si nécessaire. Pour reCAPTCHA, hCaptcha et Turnstile, créez un compte auprès du service choisi et obtenez des clés API. Pour mCaptcha et Cap.js, vous pouvez auto-héberger le fournisseur ou utiliser un service hébergé, puis configurer la clé de site et la clé secrète requises.
 4. Important : assurez‑vous que `ANTIBOT_URI` est une URL unique de votre site et qu’elle n’est pas utilisée ailleurs.
 
 !!! important "À propos du paramètre `ANTIBOT_URI`"
@@ -5507,4 +5507,3 @@ Adds wildcard server_name support (*.domain) for services.
 | Paramètre      | Valeur par défaut | Contexte  | Multiple | Description                                                                                       |
 | -------------- | ----------------- | --------- | -------- | ------------------------------------------------------------------------------------------------- |
 | `USE_WILDCARD` | `no`              | multisite | non      | Enable wildcard server_name for this service (adds *.domain for the first domain in SERVER_NAME). |
-

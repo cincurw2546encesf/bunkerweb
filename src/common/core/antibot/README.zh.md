@@ -11,9 +11,9 @@
 
 请按照以下步骤启用和配置 Antibot 功能：
 
-1.  **选择一个挑战类型：** 决定使用哪种类型的 antibot 挑战（例如，[captcha](#__tabbed_3_3)、[hcaptcha](#__tabbed_3_5)、[javascript](#__tabbed_3_2)）。
+1.  **选择一个挑战类型：** 决定使用哪种类型的 antibot 挑战（例如，[captcha](#__tabbed_3_3)、[hcaptcha](#__tabbed_3_5)、[capjs](#__tabbed_3_8)、[javascript](#__tabbed_3_2)）。
 2.  **启用该功能：** 在您的 BunkerWeb 配置中将 `USE_ANTIBOT` 设置为您选择的挑战类型。
-3.  **配置设置：** 根据需要调整其他 `ANTIBOT_*` 设置。对于 reCAPTCHA、hCaptcha、Turnstile 和 mCaptcha，您必须在相应的服务上创建一个账户并获取 API 密钥。对于 Cap.js，请运行您自己的 Cap.js 服务器，并使用其站点密钥和密钥；无需第三方账户。
+3.  **配置设置：** 根据需要调整其他 `ANTIBOT_*` 设置。对于 reCAPTCHA、hCaptcha 和 Turnstile，请在相应的服务上创建账户并获取 API 密钥。对于 mCaptcha 和 Cap.js，您可以自行托管提供程序，或使用托管服务，然后配置所需的站点密钥和密钥。
 4.  **重要提示：** 确保 `ANTIBOT_URI` 是您网站上一个未被使用的唯一 URL。
 
 !!! important "关于 `ANTIBOT_URI` 设置"

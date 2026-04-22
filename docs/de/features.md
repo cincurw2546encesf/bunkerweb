@@ -326,9 +326,9 @@ So funktioniert es:
 
 Befolgen Sie diese Schritte, um Antibot zu aktivieren und zu konfigurieren:
 
-1. Wählen Sie einen Herausforderungstyp: Entscheiden Sie sich für den zu verwendenden Mechanismus (z. B. [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [javascript](#__tabbed_3_2)).
+1. Wählen Sie einen Herausforderungstyp: Entscheiden Sie sich für den zu verwendenden Mechanismus (z. B. [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [capjs](#__tabbed_3_8), [javascript](#__tabbed_3_2)).
 2. Aktivieren Sie die Funktion: Setzen Sie den Parameter `USE_ANTIBOT` in Ihrer BunkerWeb-Konfiguration auf den gewählten Typ.
-3. Konfigurieren Sie die Einstellungen: Passen Sie bei Bedarf andere `ANTIBOT_*`-Parameter an. Für reCAPTCHA, hCaptcha, Turnstile und mCaptcha erstellen Sie ein Konto beim gewählten Dienst und erhalten Sie API-Schlüssel. Für Cap.js betreiben Sie den Cap.js-Server selbst und verwenden dessen Site-Schlüssel und Geheimschlüssel; ein Konto bei einem Drittanbieter ist nicht erforderlich.
+3. Konfigurieren Sie die Einstellungen: Passen Sie bei Bedarf andere `ANTIBOT_*`-Parameter an. Für reCAPTCHA, hCaptcha und Turnstile erstellen Sie ein Konto beim gewählten Dienst und erhalten Sie API-Schlüssel. Für mCaptcha und Cap.js können Sie den Anbieter selbst hosten oder einen gehosteten Dienst nutzen und anschließend den erforderlichen Site-Schlüssel und Geheimschlüssel konfigurieren.
 4. Wichtig: Stellen Sie sicher, dass `ANTIBOT_URI` eine eindeutige URL Ihrer Website ist und nirgendwo anders verwendet wird.
 
 !!! important "Über den Parameter `ANTIBOT_URI`"
@@ -5924,4 +5924,3 @@ Adds wildcard server_name support (*.domain) for services.
 | Einstellung    | Standardwert | Kontext   | Mehrfach | Beschreibung                                                                                      |
 | -------------- | ------------ | --------- | -------- | ------------------------------------------------------------------------------------------------- |
 | `USE_WILDCARD` | `no`         | multisite | nein     | Enable wildcard server_name for this service (adds *.domain for the first domain in SERVER_NAME). |
-
