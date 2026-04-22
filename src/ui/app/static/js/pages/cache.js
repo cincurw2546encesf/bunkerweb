@@ -172,7 +172,8 @@ $(document).ready(function () {
     if (cacheNumber > 100) {
       menu.push(100);
     }
-    menu.push({ label: t("datatable.length_all", "All"), value: -1 });
+    if (cacheNumber > 500) menu.push(500);
+    if (cacheNumber > 1000) menu.push(1000);
     layout.bottomStart = {
       pageLength: {
         menu: menu,

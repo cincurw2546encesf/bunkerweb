@@ -51,6 +51,9 @@ BunkerWeb permet d’indiquer certains utilisateurs, IP ou requêtes qui doivent
       - Lorsque `ANTIBOT_IGNORE_COUNTRY` et `ANTIBOT_ONLY_COUNTRY` sont définis, la liste d’exclusion est prioritaire : un pays présent dans les deux listes contourne le défi.
       - Les adresses IP privées ou inconnues contournent le défi lorsque `ANTIBOT_ONLY_COUNTRY` est défini, car aucun code pays ne peut être déterminé.
 
+!!! tip "Partager l’état du défi entre sous-domaines"
+    L’état antibot (y compris `turnstile`, `hcaptcha`, `recaptcha`, `mcaptcha`, `captcha`, `javascript` et `cookie`) est conservé dans le [cookie de session](#sessions) de BunkerWeb. Par défaut, ce cookie est limité à l’hôte exact qui l’a émis. Ainsi, un utilisateur qui résout le défi sur `a.example.com` devra le résoudre à nouveau sur `b.example.com`. Pour résoudre le défi une seule fois pour tous les sous-domaines frères d’un même domaine enregistrable, définissez [`SESSIONS_DOMAIN`](#sessions) sur le domaine parent (par exemple `example.com`) **pour chaque serveur concerné**. `SESSIONS_DOMAIN` est un paramètre multisite : configurez-le par serveur afin que des tenants non liés hébergés sur la même instance BunkerWeb ne reçoivent jamais un attribut `Domain` partagé entre tenants.
+
 Exemples :
 
 - `ANTIBOT_IGNORE_URI: "^/api/ ^/webhook/ ^/assets/"`

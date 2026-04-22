@@ -51,6 +51,9 @@ BunkerWeb allows you to specify certain users, IPs, or requests that should bypa
       - When both `ANTIBOT_IGNORE_COUNTRY` and `ANTIBOT_ONLY_COUNTRY` are set, the ignore list takes precedence—countries listed in both will bypass the challenge.
       - Private or unknown IP addresses bypass the challenge when `ANTIBOT_ONLY_COUNTRY` is set because no country code can be determined.
 
+!!! tip "Sharing challenge state across subdomains"
+    The antibot state (including `turnstile`, `hcaptcha`, `recaptcha`, `mcaptcha`, `captcha`, `javascript` and `cookie`) is persisted in the BunkerWeb [session cookie](#sessions). By default that cookie is scoped to the exact host that served it, so a user who solves the challenge on `a.example.com` will be challenged again on `b.example.com`. To solve the challenge once for every sibling subdomain of the same registrable domain, set [`SESSIONS_DOMAIN`](#sessions) to the parent domain (for example `example.com`) **for each relevant server**. `SESSIONS_DOMAIN` is a multisite setting — configure it per-server so unrelated tenants hosted on the same BunkerWeb instance never receive a cross-tenant `Domain` attribute.
+
 **Examples:**
 
 - `ANTIBOT_IGNORE_URI: "^/api/ ^/webhook/ ^/assets/"`

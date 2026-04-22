@@ -12,6 +12,7 @@ from logger import getLogger  # type: ignore
 class Controller(Config):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._reverse_proxy_suffix_start = 1
         self._loaded = False
         self._instances = []
         self._services = []
@@ -37,7 +38,10 @@ class Controller(Config):
                 sleep(wait_time)
                 continue
 
-            self._instances = self.get_instances()
+            try:
+                self._instances = self.get_instances()
+            except Exception:
+                self._instances = []
             if not self._instances:
                 self._logger.warning(f"No instance found, waiting {wait_time}s ...")
                 sleep(wait_time)

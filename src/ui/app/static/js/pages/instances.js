@@ -219,7 +219,8 @@ $(document).ready(function () {
     if (instanceNumber > 25) menu.push(25);
     if (instanceNumber > 50) menu.push(50);
     if (instanceNumber > 100) menu.push(100);
-    menu.push({ label: t("datatable.length_all", "All"), value: -1 }); // Translate "All"
+    if (instanceNumber > 500) menu.push(500);
+    if (instanceNumber > 1000) menu.push(1000);
     layout.bottomStart = {
       pageLength: { menu: menu },
       info: true,
