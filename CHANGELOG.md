@@ -17,6 +17,7 @@
 - [UI] Add import/export for custom configurations, with an opt-in `.zip` bundle that lets a service export include its attached custom configurations and re-import them in one shot.
 - [CONTRIBUTION] Thank you [harshadkhetpal](https://github.com/harshadkhetpal) for your contribution regarding exception handling in the `autoconf` entrypoint. (#3421)
 - [CONTRIBUTION] Thank you [Simonmiz](https://github.com/Simonmiz) for your contribution regarding the `German` translation of the web UI. (#3422)
+- [CONTRIBUTION] Thank you [daemon-byte](https://github.com/daemon-byte) for your contribution adding the [Cap.js](https://capjs.js.org/) self-hosted proof-of-work antibot mode. (#3454)
 
 ## v1.6.10~rc3 - 2026/04/11
 
