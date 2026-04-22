@@ -252,6 +252,7 @@ BunkerWeb allows you to specify certain users, IPs, or requests that should bypa
     !!! note "Operator requirements"
         - Use HTTPS for `ANTIBOT_CAPJS_FRONTEND_URL` in production. The browser worker requires `crypto.subtle` in a secure context, and HTTPS prevents MITM changes to the widget.
         - Configure CORS on the Cap.js sitekey to allow the protected origin.
+        - Set both `ANTIBOT_CAPJS_FRONTEND_URL` and `ANTIBOT_CAPJS_BACKEND_URL` to origins only: scheme, host, and optional port, with no path.
 
     Refer to the [Common Settings](#common-settings) for additional configuration options.
 

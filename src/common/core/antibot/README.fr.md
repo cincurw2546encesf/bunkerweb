@@ -240,6 +240,7 @@ Exemples :
     !!! note "Exigences d’exploitation"
         - Utilisez HTTPS pour `ANTIBOT_CAPJS_FRONTEND_URL` en production. Le worker du navigateur exige `crypto.subtle` dans un contexte sécurisé, et HTTPS empêche les modifications MITM du widget.
         - Configurez CORS sur la clé de site Cap.js pour autoriser l’origine protégée.
+        - Définissez `ANTIBOT_CAPJS_FRONTEND_URL` et `ANTIBOT_CAPJS_BACKEND_URL` uniquement sur des origines : schéma, hôte et port optionnel, sans chemin.
 
     Reportez‑vous aux Paramètres communs pour les options supplémentaires.
 
