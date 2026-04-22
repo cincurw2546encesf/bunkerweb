@@ -127,8 +127,8 @@ def reports_fetch():
 
     # Extract DataTables parameters
     draw = int(request.form.get("draw", 1))
-    start = int(request.form.get("start", 0))
-    length = int(request.form.get("length", 10))
+    start = max(0, int(request.form.get("start", 0)))
+    length = max(1, min(int(request.form.get("length", 10)), 1000))
     search_value = request.form.get("search[value]", "").lower()
 
     # DataTables includes two leading non-data columns (details-control and select)

@@ -124,11 +124,12 @@ Passer en mode `detect` aide à identifier et corriger les faux positifs sans im
 
 === "Paramètres des workers"
 
-    | Paramètre              | Valeur par défaut | Contexte | Multiple | Description                                                                             |
-    | ---------------------- | ----------------- | -------- | -------- | --------------------------------------------------------------------------------------- |
-    | `WORKER_PROCESSES`     | `auto`            | global   | Non      | **Processus workers :** Nombre de processus workers. `auto` utilise le nombre de cœurs. |
-    | `WORKER_CONNECTIONS`   | `1024`            | global   | Non      | **Connexions par worker :** Nombre maximal de connexions par worker.                    |
-    | `WORKER_RLIMIT_NOFILE` | `2048`            | global   | Non      | **Limite descripteurs :** Nombre maximal de fichiers ouverts par worker.                |
+    | Paramètre                 | Valeur par défaut | Contexte | Multiple | Description                                                                                                                                                         |
+    | ------------------------- | ----------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `WORKER_PROCESSES`        | `auto`            | global   | Non      | **Processus workers :** Nombre de processus workers. `auto` utilise le nombre de cœurs.                                                                             |
+    | `WORKER_CONNECTIONS`      | `1024`            | global   | Non      | **Connexions par worker :** Nombre maximal de connexions par worker.                                                                                                |
+    | `WORKER_RLIMIT_NOFILE`    | `2048`            | global   | Non      | **Limite descripteurs :** Nombre maximal de fichiers ouverts par worker.                                                                                            |
+    | `WORKER_SHUTDOWN_TIMEOUT` | `30s`             | global   | Non      | **Délai d'arrêt des workers :** Délai pour l'arrêt gracieux des processus workers. Les anciens workers sont arrêtés de force après ce délai lors d'un rechargement. |
 
 === "Paramètres mémoire"
 
@@ -223,6 +224,74 @@ Passer en mode `detect` aide à identifier et corriger les faux positifs sans im
     USE_UDP: "no"
     ```
 
+=== "Désactiver les modes d'écoute"
+
+    Vous pouvez désactiver certains modes d'écoute en laissant les paramètres de port vides :
+
+    ```yaml
+    # Désactiver l'écoute HTTP (HTTPS uniquement)
+    HTTP_PORT: ""
+    HTTPS_PORT: "8443"
+
+    # Désactiver l'écoute HTTPS (HTTP uniquement)
+    HTTP_PORT: "8080"
+    HTTPS_PORT: ""
+
+    # Stream : désactiver l'écoute non SSL (SSL uniquement)
+    LISTEN_STREAM_PORT: ""
+    LISTEN_STREAM_PORT_SSL: "4242"
+
+    # Stream : désactiver l'écoute SSL (non SSL uniquement)
+    LISTEN_STREAM_PORT: "1337"
+    LISTEN_STREAM_PORT_SSL: ""
+    ```
+
+## ACME <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
+
+
+Prise en charge STREAM :white_check_mark:
+
+Advanced ACME certificate management with custom CA support, certificate monitoring dashboard, expiry alerting, CT log monitoring, and enhanced OCSP stapling. Complements the built-in Let's Encrypt plugin.
+
+| Paramètre                           | Valeur par défaut | Contexte  | Multiple | Description                                                                                                                                                              |
+| ----------------------------------- | ----------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `USE_ACME`                          | `no`              | multisite | non      | Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.                                                                |
+| `ACME_PASSTHROUGH`                  | `no`              | multisite | non      | Pass through ACME HTTP-01 challenge requests to the upstream server.                                                                                                     |
+| `ACME_DIRECTORY_URL`                |                   | multisite | non      | ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI). |
+| `ACME_EMAIL`                        |                   | multisite | non      | Email address for ACME account registration and notifications.                                                                                                           |
+| `ACME_EAB_KID`                      |                   | multisite | non      | External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).                                                                              |
+| `ACME_EAB_HMAC_KEY`                 |                   | multisite | non      | External Account Binding HMAC key (base64-encoded, required when EAB Key ID is set).                                                                                     |
+| `ACME_CA_CERT_PATH`                 |                   | multisite | non      | File path to the root CA certificate for private ACME servers (Step CA, Vault PKI). Required when the CA root is not in the system trust store.                          |
+| `ACME_CHALLENGE`                    | `http`            | multisite | non      | ACME challenge type. HTTP-01 is simplest; DNS-01 is required for wildcard certificates; TLS-ALPN-01 works when port 80 is unavailable.                                   |
+| `ACME_DNS_PROVIDER`                 |                   | multisite | non      | DNS provider for DNS-01 challenges.                                                                                                                                      |
+| `ACME_DNS_CREDENTIAL_ITEM`          |                   | multisite | oui      | Configuration item for the DNS provider credentials (e.g. 'cloudflare_api_token 123456'). Values can be base64 encoded.                                                  |
+| `ACME_DNS_CREDENTIAL_DECODE_BASE64` | `yes`             | multisite | oui      | Automatically decode base64 encoded DNS provider credentials.                                                                                                            |
+| `ACME_DNS_PROPAGATION`              | `default`         | multisite | non      | Time to wait for DNS propagation in seconds for DNS challenges.                                                                                                          |
+| `ACME_KEY_TYPE`                     | `ecdsa`           | multisite | non      | Key type for the certificate. ECDSA is smaller and faster; RSA has broader compatibility.                                                                                |
+| `ACME_KEY_SIZE`                     | `256`             | multisite | non      | Key size in bits. For ECDSA: 256 or 384. For RSA: 2048 or 4096.                                                                                                          |
+| `ACME_PREFERRED_CHAIN`              |                   | multisite | non      | Preferred certificate chain issuer CN. Selects the preferred chain when the CA provides multiple.                                                                        |
+| `ACME_RENEWAL_DAYS`                 | `30`              | multisite | non      | Renew the certificate when it has fewer than this many days until expiry.                                                                                                |
+| `ACME_SSL_VERIFY`                   | `yes`             | multisite | non      | Verify SSL certificates when communicating with the ACME server. Disable only for testing with self-signed CA certs.                                                     |
+| `ACME_WILDCARD`                     | `no`              | multisite | non      | Request wildcard certificate (requires DNS-01 challenge).                                                                                                                |
+| `ACME_MUST_STAPLE`                  | `no`              | multisite | non      | Request the OCSP Must-Staple extension in the certificate.                                                                                                               |
+| `ACME_MAX_RETRIES`                  | `3`               | multisite | non      | Number of times to retry certificate generation on failure (0 disables retries).                                                                                         |
+| `USE_ACME_MONITORING`               | `yes`             | global    | non      | Enable certificate expiry monitoring and status tracking for all managed certificates (including OSS Let's Encrypt certificates).                                        |
+| `ACME_ALERT_DAYS`                   | `30 14 7 1`       | global    | non      | Space-separated list of day thresholds that trigger expiry alerts.                                                                                                       |
+| `USE_ACME_ALERT_WEBHOOK`            | `no`              | global    | non      | Send certificate alerts via webhook.                                                                                                                                     |
+| `ACME_ALERT_WEBHOOK_URLS`           |                   | global    | non      | Space-separated list of webhook URLs for certificate alerts.                                                                                                             |
+| `USE_ACME_ALERT_EMAIL`              | `no`              | global    | non      | Send certificate alerts via email.                                                                                                                                       |
+| `ACME_ALERT_SMTP_EMAILS`            |                   | global    | non      | Space-separated list of email recipients for certificate alerts.                                                                                                         |
+| `ACME_ALERT_SMTP_HOST`              |                   | global    | non      | SMTP host for certificate alert emails.                                                                                                                                  |
+| `ACME_ALERT_SMTP_PORT`              | `465`             | global    | non      | SMTP port for certificate alert emails (SSL=465, TLS=587).                                                                                                               |
+| `ACME_ALERT_SMTP_FROM_EMAIL`        |                   | global    | non      | Sender email address for certificate alerts.                                                                                                                             |
+| `ACME_ALERT_SMTP_FROM_USER`         |                   | global    | non      | SMTP authentication user for certificate alert emails.                                                                                                                   |
+| `ACME_ALERT_SMTP_FROM_PASSWORD`     |                   | global    | non      | SMTP authentication password for certificate alert emails.                                                                                                               |
+| `ACME_ALERT_SMTP_SSL`               | `SSL`             | global    | non      | Connection type for certificate alert SMTP.                                                                                                                              |
+| `USE_ACME_CT_MONITORING`            | `no`              | global    | non      | Enable Certificate Transparency log monitoring. Queries crt.sh to detect unauthorized certificate issuance for your domains.                                             |
+| `ACME_CT_MONITORED_DOMAINS`         |                   | global    | non      | Space-separated list of domains to monitor in CT logs. Leave empty to auto-detect from configured services.                                                              |
+| `USE_ACME_OCSP_STAPLING`            | `no`              | multisite | non      | Enable enhanced OCSP stapling with proactive response fetching and caching.                                                                                              |
+| `ACME_OCSP_CACHE_SIZE`              | `1m`              | global    | non      | Size of the shared dictionary for OCSP response caching.                                                                                                                 |
+
 ## Anti DDoS <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
@@ -295,6 +364,9 @@ BunkerWeb permet d’indiquer certains utilisateurs, IP ou requêtes qui doivent
 !!! note "Comportement des paramètres basés sur le pays"
       - Lorsque `ANTIBOT_IGNORE_COUNTRY` et `ANTIBOT_ONLY_COUNTRY` sont définis, la liste d’exclusion est prioritaire : un pays présent dans les deux listes contourne le défi.
       - Les adresses IP privées ou inconnues contournent le défi lorsque `ANTIBOT_ONLY_COUNTRY` est défini, car aucun code pays ne peut être déterminé.
+
+!!! tip "Partager l’état du défi entre sous-domaines"
+    L’état antibot (y compris `turnstile`, `hcaptcha`, `recaptcha`, `mcaptcha`, `captcha`, `javascript` et `cookie`) est conservé dans le [cookie de session](#sessions) de BunkerWeb. Par défaut, ce cookie est limité à l’hôte exact qui l’a émis. Ainsi, un utilisateur qui résout le défi sur `a.example.com` devra le résoudre à nouveau sur `b.example.com`. Pour résoudre le défi une seule fois pour tous les sous-domaines frères d’un même domaine enregistrable, définissez [`SESSIONS_DOMAIN`](#sessions) sur le domaine parent (par exemple `example.com`) **pour chaque serveur concerné**. `SESSIONS_DOMAIN` est un paramètre multisite : configurez-le par serveur afin que des tenants non liés hébergés sur la même instance BunkerWeb ne reçoivent jamais un attribut `Domain` partagé entre tenants.
 
 Exemples :
 
@@ -1203,12 +1275,12 @@ Comment ça marche :
 
 ### Paramètres
 
-| Paramètre                 | Défaut                     | Contexte  | Multiple | Description                                                  |
-| ------------------------- | -------------------------- | --------- | -------- | ------------------------------------------------------------ | --- |
-| `USE_CLIENT_CACHE`        | `no`                       | multisite | non      | Activer la mise en cache côté client des fichiers statiques. |
-| `CLIENT_CACHE_EXTENSIONS` | `jpg                       | jpeg      | png      | bmp                                                          | ico | svg | tif | css | js | otf | ttf | eot | woff | woff2` | global | non | Extensions mises en cache (séparées par ` | `). |
-| `CLIENT_CACHE_CONTROL`    | `public, max-age=15552000` | multisite | non      | Valeur de l’en‑tête HTTP Cache-Control.                      |
-| `CLIENT_CACHE_ETAG`       | `yes`                      | multisite | non      | Envoi d’un ETag pour les ressources statiques.               |
+| Paramètre                 | Défaut                                                                    | Contexte  | Multiple | Description                                                  |
+| ------------------------- | ------------------------------------------------------------------------- | --------- | -------- | ------------------------------------------------------------ | --- |
+| `USE_CLIENT_CACHE`        | `no`                                                                      | multisite | non      | Activer la mise en cache côté client des fichiers statiques. |
+| `CLIENT_CACHE_EXTENSIONS` | `jpg\|jpeg\|png\|bmp\|ico\|svg\|tif\|css\|js\|otf\|ttf\|eot\|woff\|woff2` | global    | non      | Extensions mises en cache (séparées par `                    | `). |
+| `CLIENT_CACHE_CONTROL`    | `public, max-age=15552000`                                                | multisite | non      | Valeur de l’en‑tête HTTP Cache-Control.                      |
+| `CLIENT_CACHE_ETAG`       | `yes`                                                                     | multisite | non      | Envoi d’un ETag pour les ressources statiques.               |
 
 !!! tip "Optimiser le cache"
     Contenu fréquemment mis à jour : durée plus courte. Contenu versionné ou peu changeant : durée plus longue. La valeur par défaut (180 jours) convient souvent.
@@ -1543,7 +1615,7 @@ Les sections suivantes détaillent chacune de ces étapes.
     services:
       bunkerweb:
         # C'est le nom qui sera utilisé pour identifier l'instance dans le planificateur
-        image: bunkerity/bunkerweb:1.6.9
+        image: bunkerity/bunkerweb:1.6.10-rc3
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1560,7 +1632,7 @@ Les sections suivantes détaillent chacune de ces étapes.
             syslog-address: "udp://10.20.30.254:514" # L'adresse IP du service syslog
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.9
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Assurez-vous de définir le nom correct de l'instance
@@ -1594,7 +1666,7 @@ Les sections suivantes détaillent chacune de ces étapes.
           - bw-db
 
       crowdsec:
-        image: crowdsecurity/crowdsec:v1.7.6 # Utilisez la dernière version mais épinglez toujours la version pour une meilleure stabilité/sécurité
+        image: crowdsecurity/crowdsec:v1.7.7 # Utilisez la dernière version mais épinglez toujours la version pour une meilleure stabilité/sécurité
         volumes:
           - cs-data:/var/lib/crowdsec/data # Pour persister les données de CrowdSec
           - bw-logs:/var/log:ro # Les journaux de BunkerWeb à analyser par CrowdSec
@@ -2625,6 +2697,47 @@ Comment ça marche :
     INJECT_BODY: '<div id="cookie-banner" class="cookie-banner">This website uses cookies to ensure you get the best experience. <button onclick="acceptCookies()">Accept</button></div><script>function acceptCookies() { document.getElementById(''cookie-banner'').style.display = ''none''; localStorage.setItem(''cookies-accepted'', ''true''); } if(localStorage.getItem(''cookies-accepted'') === ''true'') { document.getElementById(''cookie-banner'').style.display = ''none''; }</script>'
     ```
 
+## LDAP SSO <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
+
+
+Prise en charge STREAM :x:
+
+LDAP-based single sign-on plugin with session-backed authentication.
+
+| Paramètre                         | Valeur par défaut                                                                                                       | Contexte  | Multiple | Description                                                                        |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------- | -------- | ---------------------------------------------------------------------------------- |
+| `USE_LDAP`                        | `no`                                                                                                                    | multisite | non      | Enable or disable LDAP SSO authentication.                                         |
+| `LDAP_HOST`                       |                                                                                                                         | multisite | non      | LDAP server hostname or IP address.                                                |
+| `LDAP_PORT`                       | `389`                                                                                                                   | multisite | non      | LDAP server port (389 for LDAP/STARTTLS, 636 for LDAPS).                           |
+| `LDAP_LDAPS`                      | `no`                                                                                                                    | multisite | non      | Use LDAPS (TLS from connection start).                                             |
+| `LDAP_STARTTLS`                   | `no`                                                                                                                    | multisite | non      | Use STARTTLS upgrade on LDAP connection.                                           |
+| `LDAP_SSL_VERIFY`                 | `yes`                                                                                                                   | multisite | non      | Verify server TLS certificate.                                                     |
+| `LDAP_TIMEOUT`                    | `10000`                                                                                                                 | multisite | non      | LDAP socket timeout in milliseconds.                                               |
+| `LDAP_KEEPALIVE_TIMEOUT`          | `60000`                                                                                                                 | multisite | non      | LDAP keepalive timeout in milliseconds.                                            |
+| `LDAP_KEEPALIVE_POOL_SIZE`        | `10`                                                                                                                    | multisite | non      | LDAP keepalive connection pool size.                                               |
+| `LDAP_KEEPALIVE_POOL_NAME`        |                                                                                                                         | multisite | non      | Optional custom LDAP keepalive pool name.                                          |
+| `LDAP_BIND_DN`                    |                                                                                                                         | multisite | non      | Optional service account DN used to perform LDAP user searches.                    |
+| `LDAP_BIND_PASSWORD`              |                                                                                                                         | multisite | non      | Password for LDAP Bind DN service account.                                         |
+| `LDAP_USER_SEARCH_BASE_DN`        |                                                                                                                         | multisite | non      | Base DN for user discovery search (enables enterprise search mode when set).       |
+| `LDAP_USER_SEARCH_FILTER`         | `(&(objectClass=person)(\|(uid={username})(mail={username})(sAMAccountName={username})(userPrincipalName={username})))` | multisite | non      | LDAP user search filter template. Use {username} placeholder.                      |
+| `LDAP_AUTHZ_FILTER`               |                                                                                                                         | multisite | non      | Optional extra LDAP authorization filter (AND-ed with user search filter).         |
+| `LDAP_USER_SEARCH_SCOPE`          | `subtree`                                                                                                               | multisite | non      | LDAP search scope for user lookup.                                                 |
+| `LDAP_USER_SEARCH_DEREF_ALIASES`  | `always`                                                                                                                | multisite | non      | LDAP alias dereferencing mode during user lookup.                                  |
+| `LDAP_USER_SEARCH_SIZE_LIMIT`     | `10`                                                                                                                    | multisite | non      | Maximum number of LDAP entries returned by user search.                            |
+| `LDAP_USER_SEARCH_TIME_LIMIT`     | `10`                                                                                                                    | multisite | non      | Maximum LDAP user search time in seconds.                                          |
+| `LDAP_USER_SEARCH_ATTRIBUTES`     | `dn`                                                                                                                    | multisite | non      | Attributes requested during user search (space separated).                         |
+| `LDAP_USER_SEARCH_DN_FIELD`       | `object_name`                                                                                                           | multisite | non      | Preferred field name in search response to extract user DN (e.g. object_name, dn). |
+| `LDAP_USER_SEARCH_REQUIRE_UNIQUE` | `yes`                                                                                                                   | multisite | non      | Require exactly one search result before authenticating user.                      |
+| `LDAP_USER_DN_TEMPLATE`           | `uid={username},ou=people,dc=example,dc=com`                                                                            | multisite | non      | User DN template used for direct bind fallback. Must include {username} when set.  |
+| `LDAP_USERNAME_REGEX`             | `^[A-Za-z0-9@._-]+$`                                                                                                    | multisite | non      | PCRE regex used to validate submitted usernames.                                   |
+| `LDAP_LOGIN_PATH`                 | `/ldap/login`                                                                                                           | multisite | non      | Login page path exposed by the LDAP plugin.                                        |
+| `LDAP_LOGOUT_PATH`                | `/ldap/logout`                                                                                                          | multisite | non      | Logout path exposed by the LDAP plugin.                                            |
+| `LDAP_SESSION_TTL`                | `3600`                                                                                                                  | multisite | non      | LDAP session validity duration in seconds.                                         |
+| `LDAP_REALM`                      | `LDAP SSO`                                                                                                              | multisite | non      | Authentication realm displayed on LDAP login form.                                 |
+| `LDAP_USER_HEADER`                | `X-User`                                                                                                                | multisite | non      | Header to pass authenticated username to upstream (empty to disable).              |
+| `LDAP_REDIRECT_AFTER_LOGIN`       | `/`                                                                                                                     | multisite | non      | Fallback relative path after successful login when no redirect target is provided. |
+| `LDAP_REDIRECT_AFTER_LOGOUT`      | `/`                                                                                                                     | multisite | non      | Relative path to redirect users to after logout.                                   |
+
 ## Let's Encrypt
 
 Prise en charge STREAM :white_check_mark:
@@ -2692,6 +2805,7 @@ Suivez ces étapes pour configurer et utiliser la fonctionnalité Let's Encrypt 
 | `LETS_ENCRYPT_PROFILE`                      | `classic`     | multisite | no       | **Profil de certificat :** Sélectionnez le profil à utiliser. Options : `classic` (général), `tlsserver` (optimisé TLS), ou `shortlived` (7 jours).                                                                                                                                                                          |
 | `LETS_ENCRYPT_CUSTOM_PROFILE`               |               | multisite | no       | **Profil de certificat personnalisé :** Saisissez un profil personnalisé si votre serveur ACME le supporte. Remplace `LETS_ENCRYPT_PROFILE` s'il est défini.                                                                                                                                                                 |
 | `LETS_ENCRYPT_MAX_RETRIES`                  | `3`           | multisite | no       | **Tentatives maximales :** Nombre de tentatives de génération de certificat en cas d'échec. `0` pour désactiver. Utile pour les problèmes réseau temporaires.                                                                                                                                                                |
+| `LETS_ENCRYPT_MAX_LOG_BACKUPS`              | `50`          | global    | no       | **Nombre maximal de sauvegardes de logs Certbot :** Nombre de sauvegardes rotatives de `letsencrypt.log` que Certbot conserve par job. La valeur par défaut de Certbot, `1000`, s'accumule vite ; `50` est une limite raisonnable. Définissez `0` pour ne conserver que le log actif.                                        |
 
 !!! info "Information et comportement"
     - Le paramètre `LETS_ENCRYPT_DNS_CREDENTIAL_ITEM` est un paramètre multiple et peut être utilisé pour définir plusieurs éléments pour le fournisseur DNS. Les éléments seront enregistrés dans un fichier de cache, et Certbot lira les informations d'identification à partir de celui-ci.
@@ -3021,38 +3135,120 @@ Provides load balancing feature to group of upstreams with optional healthchecks
 
 Prise en charge STREAM :warning:
 
-Le plugin Metrics offre une collecte/visualisation des indicateurs de votre instance BunkerWeb : performances, événements de sécurité, statistiques système…
+Le plugin Metrics fournit des capacités complètes de surveillance et de collecte de données pour votre instance BunkerWeb. Cette fonctionnalité vous permet de suivre divers indicateurs de performance, événements de sécurité et statistiques système, afin d'obtenir des informations précieuses sur le comportement et l'état de santé de vos sites et services protégés.
 
-Comment ça marche :
+**Comment ça marche :**
 
-1. BunkerWeb collecte des métriques lors du traitement des requêtes/réponses.
-2. Compteurs de requêtes bloquées, mesures de perfs et stats sécurité sont enregistrés.
-3. Stockage en mémoire avec limites configurables pour contenir l’usage de ressources.
-4. En multi‑instances, Redis permet d’agréger/centraliser les données.
-5. Accès via API ou [web UI](web-ui.md).
+1. BunkerWeb collecte des métriques clés pendant le traitement des requêtes et des réponses.
+2. Ces métriques incluent des compteurs de requêtes bloquées, des mesures de performance et diverses statistiques liées à la sécurité.
+3. Les données sont stockées efficacement en mémoire, avec des limites configurables pour éviter une consommation excessive de ressources.
+4. Pour les déploiements multi-instances, Redis peut être utilisé pour centraliser et agréger les données de métriques.
+5. Les métriques collectées sont accessibles via l'API ou visualisables dans l'[interface web](web-ui.md).
+6. Ces informations vous aident à identifier les menaces de sécurité, à résoudre les problèmes et à optimiser votre configuration.
 
-### Paramètres
+### Implémentation technique
 
-| Paramètre                            | Défaut   | Contexte  | Multiple | Description                                                        |
-| ------------------------------------ | -------- | --------- | -------- | ------------------------------------------------------------------ |
-| `USE_METRICS`                        | `yes`    | multisite | non      | Activer la collecte et l’accès aux métriques.                      |
-| `METRICS_MEMORY_SIZE`                | `16m`    | global    | non      | Taille du stockage interne (ex. `16m`, `32m`).                     |
-| `METRICS_MAX_BLOCKED_REQUESTS`       | `1000`   | global    | non      | Max de requêtes bloquées conservées par worker.                    |
-| `METRICS_MAX_BLOCKED_REQUESTS_REDIS` | `100000` | global    | non      | Max de requêtes bloquées conservées dans Redis.                    |
-| `METRICS_SAVE_TO_REDIS`              | `yes`    | global    | non      | Sauvegarder compteurs/tableaux dans Redis pour agrégation cluster. |
+Le plugin Metrics fonctionne en :
 
-!!! tip "Dimensionnement mémoire"
-    Ajustez `METRICS_MEMORY_SIZE` selon le trafic et le nombre d’instances.
+- utilisant des dictionnaires partagés dans NGINX, où `metrics_datastore` est utilisé pour HTTP et `metrics_datastore_stream` pour le trafic TCP/UDP ;
+- s'appuyant sur un cache LRU pour un stockage efficace en mémoire ;
+- synchronisant périodiquement les données entre les workers à l'aide de timers ;
+- stockant des informations détaillées sur les requêtes bloquées, notamment l'adresse IP du client, le pays, l'horodatage, les détails de la requête et le motif du blocage ;
+- prenant en charge des métriques spécifiques aux plugins via une interface commune de collecte de métriques ;
+- fournissant des points d'accès API pour interroger les métriques collectées.
+
+### Utilisation
+
+Suivez ces étapes pour configurer et utiliser la fonctionnalité Metrics :
+
+1. **Activez la fonctionnalité :** la collecte de métriques est activée par défaut. Vous pouvez la contrôler avec le paramètre `USE_METRICS`.
+2. **Configurez l'allocation mémoire :** définissez la quantité de mémoire allouée au stockage des métriques avec le paramètre `METRICS_MEMORY_SIZE`.
+3. **Définissez les limites de stockage :** indiquez combien de requêtes bloquées stocker par worker et dans Redis avec les paramètres correspondants.
+4. **Accédez aux données :** consultez les métriques collectées via l'[interface web](web-ui.md) ou les points d'accès API.
+5. **Analysez les informations :** utilisez les données recueillies pour identifier des tendances, détecter des problèmes de sécurité et optimiser votre configuration.
+
+### Métriques collectées
+
+Le plugin Metrics collecte les informations suivantes :
+
+1. **Requêtes bloquées** : pour chaque requête bloquée, les données suivantes sont stockées :
+    - identifiant de requête et horodatage ;
+    - adresse IP du client et pays (si disponible) ;
+    - méthode HTTP et URL ;
+    - code d'état HTTP ;
+    - agent utilisateur ;
+    - motif du blocage et mode de sécurité ;
+    - nom du serveur ;
+    - données supplémentaires liées au motif du blocage.
+
+2. **Compteurs de plugins** : divers compteurs spécifiques aux plugins qui suivent des activités et événements.
+
+### Accès API
+
+Les données de métriques sont accessibles via les points d'accès API internes de BunkerWeb :
+
+- **Point d'accès** : `/metrics/{filter}`
+- **Méthode** : GET
+- **Description** : récupère les données de métriques selon le filtre spécifié
+- **Format de réponse** : objet JSON contenant les métriques demandées
+
+Par exemple, `/metrics/requests` renvoie des informations sur les requêtes bloquées.
+
+!!! info "Configuration de l'accès API"
+    Pour accéder aux métriques via l'API, vous devez vous assurer que :
+
+    1. la fonctionnalité API est activée avec `USE_API: "yes"` (activée par défaut) ;
+    2. votre IP cliente est incluse dans le paramètre `API_WHITELIST_IP` (par défaut `127.0.0.0/8`) ;
+    3. vous accédez à l'API sur le port configuré (par défaut `5000` via le paramètre `API_HTTP_PORT`) ;
+    4. vous utilisez la bonne valeur `API_SERVER_NAME` dans l'en-tête Host (par défaut `bwapi`) ;
+    5. si `API_TOKEN` est configuré, vous incluez `Authorization: Bearer <token>` dans les en-têtes de la requête.
+
+    Requêtes typiques :
+
+    Sans jeton (lorsque `API_TOKEN` n'est pas défini) :
+    ```bash
+    curl -H "Host: bwapi" \
+         http://votre-instance-bunkerweb:5000/metrics/requests
+    ```
+
+    Avec jeton (lorsque `API_TOKEN` est défini) :
+    ```bash
+    curl -H "Host: bwapi" \
+         -H "Authorization: Bearer $API_TOKEN" \
+         http://votre-instance-bunkerweb:5000/metrics/requests
+    ```
+
+    Si vous avez personnalisé `API_SERVER_NAME` avec une valeur différente de `bwapi`, utilisez cette valeur dans l'en-tête Host.
+
+    Pour les environnements de production sécurisés, limitez l'accès à l'API à des IP de confiance et activez `API_TOKEN`.
+
+### Paramètres de configuration
+
+| Paramètre                            | Défaut   | Contexte  | Multiple | Description                                                                                                                              |
+| ------------------------------------ | -------- | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_METRICS`                        | `yes`    | multisite | non      | **Activer les métriques :** mettez `yes` pour activer la collecte et la récupération des métriques.                                      |
+| `METRICS_MEMORY_SIZE`                | `16m`    | global    | non      | **Taille mémoire :** taille du stockage interne des métriques (par exemple `8192`, `16m`, `32m`).                                        |
+| `METRICS_MAX_BLOCKED_REQUESTS`       | `1000`   | global    | non      | **Maximum de requêtes bloquées :** nombre maximal de requêtes bloquées à stocker par worker.                                             |
+| `METRICS_MAX_BLOCKED_REQUESTS_REDIS` | `100000` | global    | non      | **Maximum Redis de requêtes bloquées :** nombre maximal de requêtes bloquées à stocker dans Redis.                                       |
+| `METRICS_SAVE_TO_REDIS`              | `yes`    | global    | non      | **Enregistrer les métriques dans Redis :** mettez `yes` pour stocker les métriques (compteurs et tableaux) dans Redis pour l'agrégation. |
+
+!!! tip "Dimensionner l'allocation mémoire"
+    Le paramètre `METRICS_MEMORY_SIZE` doit être ajusté selon votre volume de trafic et le nombre d'instances. Les valeurs brutes en octets et les suffixes `k`/`m` sont pris en charge. Pour les sites à fort trafic, envisagez d'augmenter cette valeur afin de garantir la capture de toutes les métriques sans perte de données.
 
 !!! info "Intégration Redis"
-    Avec [Redis](#redis), les requêtes bloquées sont synchronisées pour une vue centralisée multi‑nœuds.
+    Lorsque BunkerWeb est configuré pour utiliser [Redis](#redis), le plugin Metrics synchronise automatiquement les données de requêtes bloquées avec le serveur Redis. Cela fournit une vue centralisée des événements de sécurité sur plusieurs instances de BunkerWeb.
 
-!!! warning "Performance"
-    Des valeurs trop élevées augmentent l’usage mémoire. Surveillez et ajustez.
+!!! warning "Considérations de performance"
+    Définir des valeurs très élevées pour `METRICS_MAX_BLOCKED_REQUESTS` ou `METRICS_MAX_BLOCKED_REQUESTS_REDIS` peut augmenter l'utilisation de la mémoire. Surveillez les ressources système et ajustez ces valeurs selon vos besoins réels et les ressources disponibles.
 
-### Exemples
+!!! note "Stockage spécifique aux workers"
+    Chaque worker NGINX maintient ses propres métriques en mémoire. Lors de l'accès aux métriques via l'API, les données de tous les workers sont automatiquement agrégées pour fournir une vue complète.
 
-=== "Configuration par défaut"
+### Exemples de configuration
+
+=== "Configuration de base"
+
+    Configuration par défaut adaptée à la plupart des déploiements :
 
     ```yaml
     USE_METRICS: "yes"
@@ -3062,7 +3258,9 @@ Comment ça marche :
     METRICS_SAVE_TO_REDIS: "yes"
     ```
 
-=== "Ressources limitées"
+=== "Environnement à faibles ressources"
+
+    Configuration optimisée pour les environnements disposant de ressources limitées :
 
     ```yaml
     USE_METRICS: "yes"
@@ -3072,7 +3270,9 @@ Comment ça marche :
     METRICS_SAVE_TO_REDIS: "no"
     ```
 
-=== "Fort trafic"
+=== "Environnement à fort trafic"
+
+    Configuration pour des sites à fort trafic qui doivent suivre davantage d'événements de sécurité :
 
     ```yaml
     USE_METRICS: "yes"
@@ -3082,7 +3282,9 @@ Comment ça marche :
     METRICS_SAVE_TO_REDIS: "yes"
     ```
 
-=== "Désactivation"
+=== "Métriques désactivées"
+
+    Configuration avec la collecte de métriques désactivée :
 
     ```yaml
     USE_METRICS: "no"
@@ -3175,16 +3377,16 @@ Que vous ayez besoin de restreindre les méthodes HTTP, de gérer la taille des 
 
     Cette fonctionnalité est configurée avec `ALLOWED_METHODS`, où les méthodes sont listées et séparées par un `|` (défaut : `GET|POST|HEAD`). Si un client tente une méthode non listée, le serveur répondra avec un statut **405 - Method Not Allowed**.
 
-    Pour la plupart des sites web, le défaut `GET|POST|HEAD` est suffisant. Si votre application utilise des API RESTful, vous devrez peut-être inclure `PUT` et `DELETE`.
+    Pour la plupart des sites web, le défaut `GET|POST|HEAD` est suffisant. Si votre application utilise des API RESTful, vous devrez peut-être inclure `PUT` et `DELETE`. Les méthodes personnalisées en majuscules peuvent également contenir des underscores et des tirets pour la compatibilité avec des protocoles non standards (ex. `CCM_POST`, `M-SEARCH`).
 
     !!! success "Avantages en matière de sécurité"
         - Empêche l'exploitation de méthodes HTTP inutilisées ou inutiles
         - Réduit la surface d'attaque en désactivant les méthodes potentiellement dangereuses
         - Bloque les techniques d'énumération de méthodes HTTP utilisées par les attaquants
 
-    | Paramètre         | Défaut | Contexte | Multiple | Description |
-    | ----------------- | ------ | -------- | -------- | ----------- |
-    | `ALLOWED_METHODS` | `GET   | POST     | HEAD`    | multisite   | no | **Méthodes HTTP :** Liste des méthodes HTTP autorisées, séparées par des barres verticales (` | `). |
+    | Paramètre         | Défaut            | Contexte  | Multiple | Description                                                                                   |
+    | ----------------- | ----------------- | --------- | -------- | --------------------------------------------------------------------------------------------- |
+    | `ALLOWED_METHODS` | `GET\|POST\|HEAD` | multisite | no       | **Méthodes HTTP :** Liste des méthodes HTTP autorisées, séparées par des barres verticales (` | `). Les méthodes personnalisées en majuscules peuvent contenir des underscores et des tirets. |
 
     !!! abstract "CORS et requêtes pre-flight"
         Si votre application prend en charge le [Cross-Origin Resource Sharing (CORS)](#cors), vous devriez inclure la méthode `OPTIONS` dans `ALLOWED_METHODS` pour gérer les requêtes pre-flight. Cela garantit le bon fonctionnement pour les navigateurs effectuant des requêtes inter-origines.
@@ -3449,8 +3651,8 @@ Suivez ces étapes pour configurer et utiliser ModSecurity :
 
 Sélectionnez une version du CRS pour répondre au mieux à vos besoins de sécurité :
 
-- **`3`** : Stable [v3.3.8](https://github.com/coreruleset/coreruleset/releases/tag/v3.3.8).
-- **`4`** : Stable [v4.24.1](https://github.com/coreruleset/coreruleset/releases/tag/v4.24.1) (**par défaut**).
+- **`3`** : Stable [v3.3.9](https://github.com/coreruleset/coreruleset/releases/tag/v3.3.9).
+- **`4`** : Stable [v4.25.0](https://github.com/coreruleset/coreruleset/releases/tag/v4.25.0) (**par défaut**).
 
 !!! warning "Version de nuit obsolète"
     L'option `nightly` pour `MODSECURITY_CRS_VERSION` est obsolète car le projet OWASP Core Rule Set a arrêté les versions de nuit. Si votre configuration utilise encore `nightly`, CRS v4 sera utilisé à la place. Veuillez mettre à jour votre configuration pour utiliser `MODSECURITY_CRS_VERSION=4`.
@@ -3737,43 +3939,48 @@ Prise en charge STREAM :x:
 
 OpenID Connect authentication plugin providing SSO capabilities with identity providers.
 
-| Paramètre                                 | Valeur par défaut      | Contexte  | Multiple | Description                                                                                                                                             |
-| ----------------------------------------- | ---------------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `USE_OPENIDC`                             | `no`                   | multisite | non      | Enable or disable OpenID Connect authentication.                                                                                                        |
-| `OPENIDC_DISCOVERY`                       |                        | multisite | non      | OpenID Connect discovery URL (e.g. https://idp.example.com/.well-known/openid-configuration).                                                           |
-| `OPENIDC_CLIENT_ID`                       |                        | multisite | non      | OAuth 2.0 client identifier registered with the IdP.                                                                                                    |
-| `OPENIDC_CLIENT_SECRET`                   |                        | multisite | non      | OAuth 2.0 client secret registered with the IdP.                                                                                                        |
-| `OPENIDC_TOKEN_ENDPOINT_AUTH_METHOD`      | `basic`                | multisite | non      | Token endpoint auth method: basic (recommended, HTTP Basic), post (POST body), secret_jwt (JWT with client secret), private_key_jwt (JWT with RSA key). |
-| `OPENIDC_CLIENT_RSA_PRIVATE_KEY`          |                        | multisite | non      | PEM-encoded RSA private key for private_key_jwt authentication.                                                                                         |
-| `OPENIDC_CLIENT_RSA_PRIVATE_KEY_ID`       |                        | multisite | non      | Optional key ID (kid) for private_key_jwt authentication.                                                                                               |
-| `OPENIDC_CLIENT_JWT_ASSERTION_EXPIRES_IN` |                        | multisite | non      | JWT assertion lifetime in seconds (empty to use library default).                                                                                       |
-| `OPENIDC_REDIRECT_URI`                    | `/callback`            | multisite | non      | URI path where the IdP redirects after authentication.                                                                                                  |
-| `OPENIDC_SCOPE`                           | `openid email profile` | multisite | non      | Space-separated list of OAuth 2.0 scopes to request.                                                                                                    |
-| `OPENIDC_AUTHORIZATION_PARAMS`            |                        | multisite | non      | Additional authorization params as comma-separated key=value pairs (e.g. audience=api,resource=xyz). URL-encode values if needed.                       |
-| `OPENIDC_USE_NONCE`                       | `yes`                  | multisite | non      | Use nonce in authentication requests to prevent replay attacks.                                                                                         |
-| `OPENIDC_USE_PKCE`                        | `no`                   | multisite | non      | Use PKCE (Proof Key for Code Exchange) for authorization code flow.                                                                                     |
-| `OPENIDC_FORCE_REAUTHORIZE`               | `no`                   | multisite | non      | Force re-authorization on every request (not recommended for production).                                                                               |
-| `OPENIDC_REFRESH_SESSION_INTERVAL`        |                        | multisite | non      | Interval in seconds to silently re-authenticate (empty to disable).                                                                                     |
-| `OPENIDC_IAT_SLACK`                       | `120`                  | multisite | non      | Allowed clock skew in seconds for token validation.                                                                                                     |
-| `OPENIDC_ACCESS_TOKEN_EXPIRES_IN`         | `3600`                 | multisite | non      | Default access token lifetime (seconds) if not provided by IdP.                                                                                         |
-| `OPENIDC_RENEW_ACCESS_TOKEN_ON_EXPIRY`    | `yes`                  | multisite | non      | Automatically renew access token using refresh token when expired.                                                                                      |
-| `OPENIDC_ACCEPT_UNSUPPORTED_ALG`          | `no`                   | multisite | non      | Accept tokens signed with unsupported algorithms (not recommended).                                                                                     |
-| `OPENIDC_LOGOUT_PATH`                     | `/logout`              | multisite | non      | URI path for logout requests.                                                                                                                           |
-| `OPENIDC_REVOKE_TOKENS_ON_LOGOUT`         | `no`                   | multisite | non      | Revoke tokens at the IdP when logging out.                                                                                                              |
-| `OPENIDC_REDIRECT_AFTER_LOGOUT_URI`       |                        | multisite | non      | URI to redirect after logout (leave empty for IdP default).                                                                                             |
-| `OPENIDC_POST_LOGOUT_REDIRECT_URI`        |                        | multisite | non      | URI to redirect after IdP logout is complete.                                                                                                           |
-| `OPENIDC_TIMEOUT_CONNECT`                 | `10000`                | multisite | non      | Connection timeout in milliseconds for IdP requests.                                                                                                    |
-| `OPENIDC_TIMEOUT_SEND`                    | `10000`                | multisite | non      | Send timeout in milliseconds for IdP requests.                                                                                                          |
-| `OPENIDC_TIMEOUT_READ`                    | `10000`                | multisite | non      | Read timeout in milliseconds for IdP requests.                                                                                                          |
-| `OPENIDC_SSL_VERIFY`                      | `yes`                  | multisite | non      | Verify SSL certificates when communicating with the IdP.                                                                                                |
-| `OPENIDC_KEEPALIVE`                       | `yes`                  | multisite | non      | Enable HTTP keepalive for connections to the IdP.                                                                                                       |
-| `OPENIDC_HTTP_PROXY`                      |                        | multisite | non      | HTTP proxy URL for IdP connections (e.g. http://proxy:8080).                                                                                            |
-| `OPENIDC_HTTPS_PROXY`                     |                        | multisite | non      | HTTPS proxy URL for IdP connections (e.g. http://proxy:8080).                                                                                           |
-| `OPENIDC_USER_HEADER`                     | `X-User`               | multisite | non      | Header to pass user info to upstream (empty to disable).                                                                                                |
-| `OPENIDC_USER_HEADER_CLAIM`               | `sub`                  | multisite | non      | ID token claim to use for the user header (e.g. sub, email, preferred_username).                                                                        |
-| `OPENIDC_DISPLAY_CLAIM`                   | `preferred_username`   | multisite | non      | Claim to use for display in logs and metrics (e.g. preferred_username, name, email). Falls back to User Header Claim if not found.                      |
-| `OPENIDC_DISCOVERY_DICT_SIZE`             | `1m`                   | global    | non      | Size of the shared dictionary to cache discovery data.                                                                                                  |
-| `OPENIDC_JWKS_DICT_SIZE`                  | `1m`                   | global    | non      | Size of the shared dictionary to cache JWKS data.                                                                                                       |
+| Paramètre                                 | Valeur par défaut      | Contexte  | Multiple | Description                                                                                                                                                 |
+| ----------------------------------------- | ---------------------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_OPENIDC`                             | `no`                   | multisite | non      | Enable or disable OpenID Connect authentication.                                                                                                            |
+| `OPENIDC_DISCOVERY`                       |                        | multisite | non      | OpenID Connect discovery URL (e.g. https://idp.example.com/.well-known/openid-configuration).                                                               |
+| `OPENIDC_CLIENT_ID`                       |                        | multisite | non      | OAuth 2.0 client identifier registered with the IdP.                                                                                                        |
+| `OPENIDC_CLIENT_SECRET`                   |                        | multisite | non      | OAuth 2.0 client secret registered with the IdP.                                                                                                            |
+| `OPENIDC_TOKEN_ENDPOINT_AUTH_METHOD`      | `basic`                | multisite | non      | Token endpoint auth method: basic (recommended, HTTP Basic), post (POST body), secret_jwt (JWT with client secret), private_key_jwt (JWT with RSA key).     |
+| `OPENIDC_CLIENT_RSA_PRIVATE_KEY`          |                        | multisite | non      | PEM-encoded RSA private key for private_key_jwt authentication.                                                                                             |
+| `OPENIDC_CLIENT_RSA_PRIVATE_KEY_ID`       |                        | multisite | non      | Optional key ID (kid) for private_key_jwt authentication.                                                                                                   |
+| `OPENIDC_CLIENT_JWT_ASSERTION_EXPIRES_IN` |                        | multisite | non      | JWT assertion lifetime in seconds (empty to use library default).                                                                                           |
+| `OPENIDC_REDIRECT_URI`                    | `/callback`            | multisite | non      | URI path where the IdP redirects after authentication.                                                                                                      |
+| `OPENIDC_SCOPE`                           | `openid email profile` | multisite | non      | Space-separated list of OAuth 2.0 scopes to request.                                                                                                        |
+| `OPENIDC_AUTHORIZATION_PARAMS`            |                        | multisite | non      | Additional authorization params as comma-separated key=value pairs (e.g. audience=api,resource=xyz). URL-encode values if needed.                           |
+| `OPENIDC_USE_NONCE`                       | `yes`                  | multisite | non      | Use nonce in authentication requests to prevent replay attacks.                                                                                             |
+| `OPENIDC_USE_PKCE`                        | `no`                   | multisite | non      | Use PKCE (Proof Key for Code Exchange) for authorization code flow.                                                                                         |
+| `OPENIDC_FORCE_REAUTHORIZE`               | `no`                   | multisite | non      | Force re-authorization on every request (not recommended for production).                                                                                   |
+| `OPENIDC_REFRESH_SESSION_INTERVAL`        |                        | multisite | non      | Interval in seconds to silently re-authenticate (empty to disable).                                                                                         |
+| `OPENIDC_IAT_SLACK`                       | `120`                  | multisite | non      | Allowed clock skew in seconds for token validation.                                                                                                         |
+| `OPENIDC_ACCESS_TOKEN_EXPIRES_IN`         | `3600`                 | multisite | non      | Default access token lifetime (seconds) if not provided by IdP.                                                                                             |
+| `OPENIDC_RENEW_ACCESS_TOKEN_ON_EXPIRY`    | `yes`                  | multisite | non      | Automatically renew access token using refresh token when expired.                                                                                          |
+| `OPENIDC_ACCEPT_UNSUPPORTED_ALG`          | `no`                   | multisite | non      | Accept tokens signed with unsupported algorithms (not recommended).                                                                                         |
+| `OPENIDC_LOGOUT_PATH`                     | `/logout`              | multisite | non      | URI path for logout requests.                                                                                                                               |
+| `OPENIDC_REVOKE_TOKENS_ON_LOGOUT`         | `no`                   | multisite | non      | Revoke tokens at the IdP when logging out.                                                                                                                  |
+| `OPENIDC_REDIRECT_AFTER_LOGOUT_URI`       |                        | multisite | non      | URI to redirect after logout (leave empty for IdP default).                                                                                                 |
+| `OPENIDC_POST_LOGOUT_REDIRECT_URI`        |                        | multisite | non      | URI to redirect after IdP logout is complete.                                                                                                               |
+| `OPENIDC_TIMEOUT_CONNECT`                 | `10000`                | multisite | non      | Connection timeout in milliseconds for IdP requests.                                                                                                        |
+| `OPENIDC_TIMEOUT_SEND`                    | `10000`                | multisite | non      | Send timeout in milliseconds for IdP requests.                                                                                                              |
+| `OPENIDC_TIMEOUT_READ`                    | `10000`                | multisite | non      | Read timeout in milliseconds for IdP requests.                                                                                                              |
+| `OPENIDC_SSL_VERIFY`                      | `yes`                  | multisite | non      | Verify SSL certificates when communicating with the IdP.                                                                                                    |
+| `OPENIDC_KEEPALIVE`                       | `yes`                  | multisite | non      | Enable HTTP keepalive for connections to the IdP.                                                                                                           |
+| `OPENIDC_HTTP_PROXY`                      |                        | multisite | non      | HTTP proxy URL for IdP connections (e.g. http://proxy:8080).                                                                                                |
+| `OPENIDC_HTTPS_PROXY`                     |                        | multisite | non      | HTTPS proxy URL for IdP connections (e.g. http://proxy:8080).                                                                                               |
+| `OPENIDC_USER_HEADER`                     | `X-User`               | multisite | non      | Header to pass user info to upstream (empty to disable).                                                                                                    |
+| `OPENIDC_USER_HEADER_CLAIM`               | `sub`                  | multisite | non      | ID token claim to use for the user header (e.g. sub, email, preferred_username).                                                                            |
+| `OPENIDC_DISPLAY_CLAIM`                   | `preferred_username`   | multisite | non      | Claim to use for display in logs and metrics (e.g. preferred_username, name, email). Falls back to User Header Claim if not found.                          |
+| `OPENIDC_DISCOVERY_DICT_SIZE`             | `1m`                   | global    | non      | Size of the shared dictionary to cache discovery data.                                                                                                      |
+| `OPENIDC_JWKS_DICT_SIZE`                  | `1m`                   | global    | non      | Size of the shared dictionary to cache JWKS data.                                                                                                           |
+| `OPENIDC_USE_ACL`                         | `no`                   | multisite | non      | Enable claim-based access control (ACL) after OIDC authentication. When enabled, only users whose claims match the configured rules will be granted access. |
+| `OPENIDC_ACL_MATCH_MODE`                  | `all`                  | multisite | non      | How multiple ACL rules are evaluated. 'all' means every rule must pass (AND logic). 'any' means at least one rule must pass (OR logic).                     |
+| `OPENIDC_ACL_DENIED_URL`                  |                        | multisite | non      | URL to redirect to when access is denied by ACL. If empty, returns a 403 Forbidden response.                                                                |
+| `OPENIDC_ACL_CLAIM`                       |                        | multisite | oui      | Name of the OIDC claim to check (e.g. groups, email, sub, preferred_username).                                                                              |
+| `OPENIDC_ACL_CLAIM_VALUE`                 |                        | multisite | oui      | Expected value for the claim. For array claims (e.g. groups), checks if this value is a member. For string claims, checks strict equality.                  |
 
 ## PHP
 
@@ -4893,43 +5100,61 @@ Comment ça marche :
 
 Prise en charge STREAM :white_check_mark:
 
-Le plugin Sessions fournit une gestion robuste des sessions HTTP dans BunkerWeb pour suivre de manière sécurisée l’état utilisateur entre requêtes. Indispensable pour la persistance d’authentification et des fonctionnalités comme la [protection antibot](#antibot).
+Le plugin Sessions fournit une gestion robuste des sessions HTTP dans BunkerWeb pour suivre de manière sécurisée et fiable les sessions utilisateur entre les requêtes. Cette fonctionnalité centrale est essentielle pour maintenir l’état utilisateur, la persistance d’authentification et les autres fonctions qui nécessitent une continuité d’identité, comme la protection [antibot](#antibot) et les systèmes d’authentification utilisateur.
 
-Comment ça marche :
+**Comment ça marche :**
 
-1. À la première interaction, BunkerWeb crée un identifiant de session unique.
-2. Il est stocké de manière sécurisée dans un cookie navigateur.
-3. Aux requêtes suivantes, l’identifiant permet d’accéder aux données de session.
-4. Le stockage peut être local ou dans [Redis](#redis) en environnement distribué.
-5. Les sessions sont gérées automatiquement avec des timeouts configurables.
-6. Un secret cryptographique signe les cookies de session.
+1. Lorsqu’un utilisateur interagit pour la première fois avec votre site, BunkerWeb crée un identifiant de session unique.
+2. Cet identifiant est stocké de manière sécurisée dans un cookie du navigateur de l’utilisateur.
+3. Lors des requêtes suivantes, BunkerWeb récupère l’identifiant de session depuis le cookie et l’utilise pour accéder aux données de session de l’utilisateur.
+4. Les données de session peuvent être stockées localement ou dans [Redis](#redis) pour les environnements distribués comportant plusieurs instances BunkerWeb.
+5. Les sessions sont gérées automatiquement avec des délais configurables, ce qui garantit la sécurité tout en conservant une bonne ergonomie.
+6. La sécurité cryptographique des sessions est assurée par une clé secrète utilisée pour signer les cookies de session.
 
 ### Comment l’utiliser
 
-1. Secret : définissez un `SESSIONS_SECRET` fort et unique.
-2. Nom : personnalisez `SESSIONS_NAME` si souhaité.
-3. Délais : ajustez `SESSIONS_IDLING_TIMEOUT`, `SESSIONS_ROLLING_TIMEOUT`, `SESSIONS_ABSOLUTE_TIMEOUT`.
-4. Cluster : activez `USE_REDIS: yes` et configurez Redis pour partager les sessions entre nœuds.
+Suivez ces étapes pour configurer et utiliser la fonctionnalité Sessions :
 
-### Paramètres
+1. **Configurer la sécurité des sessions :** définissez un `SESSIONS_SECRET` fort et unique pour empêcher la falsification des cookies de session. (La valeur par défaut est "random", ce qui amène BunkerWeb à générer une clé secrète aléatoire.)
+2. **Choisir un nom de session :** personnalisez éventuellement `SESSIONS_NAME` pour définir le nom du cookie de session dans le navigateur. (La valeur par défaut est "random", ce qui amène BunkerWeb à générer un nom aléatoire.)
+3. **Définir les délais d’expiration :** configurez la durée de validité des sessions avec les paramètres (`SESSIONS_IDLING_TIMEOUT`, `SESSIONS_ROLLING_TIMEOUT`, `SESSIONS_ABSOLUTE_TIMEOUT`).
+4. **Partager le cookie entre sous-domaines (optionnel, par serveur) :** par défaut, le cookie de session est limité à l’hôte. Si un serveur donné héberge plusieurs sous-domaines d’un même domaine enregistrable (par exemple `a.example.com` et `b.example.com`) et que vous voulez partager l’état antibot/défi, définissez `SESSIONS_DOMAIN` sur le domaine parent (`example.com`) **sur ce serveur uniquement**. `SESSIONS_DOMAIN` est un paramètre multisite : configurez-le par serveur afin que des tenants non liés sur une même instance BunkerWeb ne reçoivent jamais un attribut `Domain` partagé entre tenants.
+5. **Configurer l’intégration Redis :** pour les environnements distribués, définissez `USE_REDIS` sur "yes" et configurez votre [connexion Redis](#redis) afin de partager les données de session entre plusieurs nœuds BunkerWeb.
+6. **Laisser BunkerWeb gérer le reste :** une fois configurée, la gestion des sessions est assurée automatiquement pour votre site.
 
-| Paramètre                   | Défaut   | Contexte | Multiple | Description                                              |
-| --------------------------- | -------- | -------- | -------- | -------------------------------------------------------- |
-| `SESSIONS_SECRET`           | `random` | global   | non      | Clé de signature des cookies (forte, aléatoire, unique). |
-| `SESSIONS_NAME`             | `random` | global   | non      | Nom du cookie de session.                                |
-| `SESSIONS_IDLING_TIMEOUT`   | `1800`   | global   | non      | Inactivité max (secondes) avant invalidation.            |
-| `SESSIONS_ROLLING_TIMEOUT`  | `3600`   | global   | non      | Durée max (secondes) avant renouvellement obligatoire.   |
-| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`  | global   | non      | Durée max (secondes) avant destruction, activité ou non. |
-| `SESSIONS_CHECK_IP`         | `yes`    | global   | non      | Détruire la session si l’IP change.                      |
-| `SESSIONS_CHECK_USER_AGENT` | `yes`    | global   | non      | Détruire la session si l’User‑Agent change.              |
+### Paramètres de configuration
 
-!!! warning "Sécurité" - `SESSIONS_SECRET` doit être fort (≥32 caractères), confidentiel et identique sur toutes les instances. - Utilisez des variables d’environnement/secrets pour éviter le clair.
+| Paramètre                   | Défaut   | Contexte  | Multiple | Description                                                                                                                                                                                                                                                                                 |
+| --------------------------- | -------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SESSIONS_SECRET`           | `random` | global    | non      | **Secret de session :** clé cryptographique utilisée pour signer les cookies de session. Elle doit être une chaîne forte, aléatoire et propre à votre site.                                                                                                                                 |
+| `SESSIONS_NAME`             | `random` | global    | non      | **Nom du cookie :** nom du cookie qui stockera l’identifiant de session.                                                                                                                                                                                                                    |
+| `SESSIONS_DOMAIN`           |          | multisite | non      | **Domaine du cookie :** attribut `Domain` optionnel appliqué au cookie de session (par exemple `example.com`). Laissez vide pour conserver un cookie limité à l’hôte. Définissez-le par serveur pour partager l’état de session entre sous-domaines frères d’un même domaine enregistrable. |
+| `SESSIONS_IDLING_TIMEOUT`   | `1800`   | global    | non      | **Délai d’inactivité :** durée maximale (en secondes) d’inactivité avant invalidation de la session.                                                                                                                                                                                        |
+| `SESSIONS_ROLLING_TIMEOUT`  | `3600`   | global    | non      | **Délai glissant :** durée maximale (en secondes) avant qu’une session doive être renouvelée.                                                                                                                                                                                               |
+| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`  | global    | non      | **Délai absolu :** durée maximale (en secondes) avant qu’une session soit détruite quelle que soit l’activité.                                                                                                                                                                              |
+| `SESSIONS_CHECK_IP`         | `yes`    | global    | non      | **Vérification IP :** lorsqu’il vaut `yes`, détruit la session si l’adresse IP du client change.                                                                                                                                                                                            |
+| `SESSIONS_CHECK_USER_AGENT` | `yes`    | global    | non      | **Vérification User-Agent :** lorsqu’il vaut `yes`, détruit la session si le User-Agent du client change.                                                                                                                                                                                   |
 
-!!! tip "Clusters" - `USE_REDIS: yes` et même `SESSIONS_SECRET`/`SESSIONS_NAME` sur tous les nœuds.
+!!! warning "Considérations de sécurité"
+    Le paramètre `SESSIONS_SECRET` est critique pour la sécurité. En production :
 
-### Exemples
+    1. Utilisez une valeur forte et aléatoire (au moins 32 caractères)
+    2. Gardez cette valeur confidentielle
+    3. Utilisez exactement la même valeur sur toutes les instances BunkerWeb d’un cluster
+    4. Envisagez des variables d’environnement ou un gestionnaire de secrets pour éviter de stocker cette valeur en clair
 
-=== "Basique (instance unique)"
+!!! tip "Environnements en cluster"
+    Si vous exécutez plusieurs instances BunkerWeb derrière un répartiteur de charge :
+
+    1. Définissez `USE_REDIS` sur `yes` et configurez votre connexion Redis
+    2. Assurez-vous que toutes les instances utilisent exactement le même `SESSIONS_SECRET` et `SESSIONS_NAME`
+    3. Cela garantit que les utilisateurs conservent leur session quelle que soit l’instance BunkerWeb qui traite leurs requêtes
+
+### Exemples de configuration
+
+=== "Configuration de base"
+
+    Une configuration simple pour une instance BunkerWeb unique :
 
     ```yaml
     SESSIONS_SECRET: "your-strong-random-secret-key-here"
@@ -4941,17 +5166,21 @@ Comment ça marche :
 
 === "Sécurité renforcée"
 
+    Configuration avec des réglages de sécurité renforcés :
+
     ```yaml
     SESSIONS_SECRET: "your-very-strong-random-secret-key-here"
     SESSIONS_NAME: "securesession"
-    SESSIONS_IDLING_TIMEOUT: "900"
-    SESSIONS_ROLLING_TIMEOUT: "1800"
-    SESSIONS_ABSOLUTE_TIMEOUT: "43200"
+    SESSIONS_IDLING_TIMEOUT: "900"  # 15 minutes
+    SESSIONS_ROLLING_TIMEOUT: "1800"  # 30 minutes
+    SESSIONS_ABSOLUTE_TIMEOUT: "43200"  # 12 heures
     SESSIONS_CHECK_IP: "yes"
     SESSIONS_CHECK_USER_AGENT: "yes"
     ```
 
-=== "Cluster + Redis"
+=== "Environnement en cluster avec Redis"
+
+    Configuration pour plusieurs instances BunkerWeb partageant les données de session :
 
     ```yaml
     SESSIONS_SECRET: "your-strong-random-secret-key-here"
@@ -4960,18 +5189,53 @@ Comment ça marche :
     SESSIONS_ROLLING_TIMEOUT: "3600"
     SESSIONS_ABSOLUTE_TIMEOUT: "86400"
     USE_REDIS: "yes"
-    # Configurez la connexion Redis
+    # Assurez-vous que la connexion Redis est correctement configurée
     ```
 
 === "Sessions longue durée"
 
+    Configuration pour les applications nécessitant une persistance de session étendue :
+
     ```yaml
     SESSIONS_SECRET: "your-strong-random-secret-key-here"
     SESSIONS_NAME: "persistentsession"
-    SESSIONS_IDLING_TIMEOUT: "86400"
-    SESSIONS_ROLLING_TIMEOUT: "172800"
-    SESSIONS_ABSOLUTE_TIMEOUT: "604800"
+    SESSIONS_IDLING_TIMEOUT: "86400"  # 1 jour
+    SESSIONS_ROLLING_TIMEOUT: "172800"  # 2 jours
+    SESSIONS_ABSOLUTE_TIMEOUT: "604800"  # 7 jours
     ```
+
+=== "Sessions inter-sous-domaines (tenant unique)"
+
+    Partagez le cookie de session entre tous les sous-domaines de `example.com` afin que l’état antibot/défi ne doive être résolu qu’une seule fois pour tout le site :
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com shop.example.com"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "crossdomainsession"
+    # SESSIONS_DOMAIN est un paramètre multisite : préfixez-le avec le nom du serveur pour qu’il ne s’applique qu’aux hôtes correspondants
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    shop.example.com_SESSIONS_DOMAIN: "example.com"
+    USE_ANTIBOT: "turnstile"
+    ```
+
+=== "Sessions inter-sous-domaines (tenants mixtes)"
+
+    Lorsque la même instance BunkerWeb héberge plusieurs domaines enregistrables non liés, limitez `SESSIONS_DOMAIN` aux seuls serveurs qui doivent partager le cookie. Les serveurs non configurés conservent le cookie limité à l’hôte par défaut, de sorte que les tenants restent isolés :
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com billing.acme.org www.unrelated.io"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "tenantsession"
+    # Partagez le cookie uniquement entre les sous-domaines example.com
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    # billing.acme.org et www.unrelated.io restent volontairement limités à l’hôte
+    USE_ANTIBOT: "turnstile"
+    ```
+
+    !!! note
+        `SESSIONS_DOMAIN` doit toujours être un domaine parent du serveur auquel il s’applique. Par exemple, `example.com` est valide à la fois pour `example.com` et pour n’importe quel hôte `*.example.com`, et un point initial (`.example.com`) reste toléré pour compatibilité historique. Le définir sur un domaine enregistrable non lié fera rejeter le cookie par les navigateurs.
 
 ## SSL
 
@@ -5068,23 +5332,26 @@ Prise en charge STREAM :x:
 
 Enable SSO authentication for the BunkerWeb web interface by reading headers set by upstream authentication proxies (Authentik, Authelia, Keycloak, Traefik Forward Auth, etc.)
 
-| Paramètre                     | Valeur par défaut   | Contexte | Multiple | Description                                                                                      |
-| ----------------------------- | ------------------- | -------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `USE_UI_SSO`                  | `no`                | global   | non      | Enable or disable UI Single Sign-On authentication for the web interface                         |
-| `UI_SSO_HEADER_USERNAME`      | `X-User`            | global   | non      | HTTP header containing the authenticated username                                                |
-| `UI_SSO_HEADER_EMAIL`         | `X-Email`           | global   | non      | HTTP header containing the user's email address                                                  |
-| `UI_SSO_HEADER_GROUPS`        | `X-Groups`          | global   | non      | HTTP header containing the user's groups (comma or space separated)                              |
-| `UI_SSO_HEADER_NAME`          | `X-Name`            | global   | non      | HTTP header containing the user's display name                                                   |
-| `UI_SSO_TRUSTED_IPS`          | `127.0.0.1,::1`     | global   | non      | Comma-separated list of trusted IP addresses or CIDR ranges that are allowed to send SSO headers |
-| `UI_SSO_AUTO_CREATE_USERS`    | `yes`               | global   | non      | Automatically create new users when they authenticate via SSO for the first time                 |
-| `UI_SSO_DEFAULT_ROLE`         | `reader`            | global   | non      | Default role assigned to new SSO users when no group mapping matches                             |
-| `UI_SSO_GROUP_ADMIN`          |                     | global   | non      | Group name that grants admin role (highest priority)                                             |
-| `UI_SSO_GROUP_WRITER`         |                     | global   | non      | Group name that grants writer role                                                               |
-| `UI_SSO_GROUP_READER`         |                     | global   | non      | Group name that grants reader role                                                               |
-| `UI_SSO_FALLBACK_TO_LOGIN`    | `yes`               | global   | non      | Allow users to fall back to normal login when SSO headers are not present                        |
-| `UI_SSO_UPDATE_USER_ON_LOGIN` | `yes`               | global   | non      | Update user information (email, role) from SSO headers on each login                             |
-| `UI_SSO_ACCOUNT_LINKING`      | `username_or_email` | global   | non      | How to match incoming SSO users to local accounts                                                |
-| `UI_SSO_LOGOUT_REDIRECT_URL`  |                     | global   | non      | URL to redirect users to after logout (e.g., SSO provider logout endpoint)                       |
+| Paramètre                         | Valeur par défaut   | Contexte | Multiple | Description                                                                                                                                 |
+| --------------------------------- | ------------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_UI_SSO`                      | `no`                | global   | non      | Enable or disable UI Single Sign-On authentication for the web interface                                                                    |
+| `UI_SSO_PROVIDER`                 | `custom`            | global   | non      | Select your SSO provider to auto-configure headers and group parsing. Use 'Custom' for manual header configuration.                         |
+| `UI_SSO_HEADER_USERNAME`          | `X-User`            | global   | non      | HTTP header containing the authenticated username                                                                                           |
+| `UI_SSO_HEADER_EMAIL`             | `X-Email`           | global   | non      | HTTP header containing the user's email address                                                                                             |
+| `UI_SSO_HEADER_GROUPS`            | `X-Groups`          | global   | non      | HTTP header containing the user's groups (comma or space separated)                                                                         |
+| `UI_SSO_HEADER_NAME`              | `X-Name`            | global   | non      | HTTP header containing the user's display name                                                                                              |
+| `UI_SSO_TRUSTED_IPS`              | `127.0.0.1,::1`     | global   | non      | Comma-separated list of trusted IP addresses or CIDR ranges that are allowed to send SSO headers                                            |
+| `UI_SSO_AUTO_CREATE_USERS`        | `yes`               | global   | non      | Automatically create new users when they authenticate via SSO for the first time                                                            |
+| `UI_SSO_DEFAULT_ROLE`             | `reader`            | global   | non      | Default role assigned to new SSO users when no group mapping matches                                                                        |
+| `UI_SSO_GROUP_ADMIN`              |                     | global   | non      | Group name that grants admin role (highest priority)                                                                                        |
+| `UI_SSO_GROUP_WRITER`             |                     | global   | non      | Group name that grants writer role                                                                                                          |
+| `UI_SSO_GROUP_READER`             |                     | global   | non      | Group name that grants reader role                                                                                                          |
+| `UI_SSO_FALLBACK_TO_LOGIN`        | `yes`               | global   | non      | Allow users to fall back to normal login when SSO headers are not present                                                                   |
+| `UI_SSO_UPDATE_USER_ON_LOGIN`     | `yes`               | global   | non      | Update user information (email) from SSO headers on each login                                                                              |
+| `UI_SSO_SYNC_ROLES`               | `no`                | global   | non      | Synchronize user roles from SSO group mappings on each login when the groups header is present and at least one group mapping is configured |
+| `UI_SSO_SYNC_ROLES_PROTECT_ADMIN` | `yes`               | global   | non      | Prevent SSO role sync from downgrading users who currently have the admin role                                                              |
+| `UI_SSO_ACCOUNT_LINKING`          | `username_or_email` | global   | non      | How to match incoming SSO users to local accounts                                                                                           |
+| `UI_SSO_LOGOUT_REDIRECT_URL`      |                     | global   | non      | URL to redirect users to after logout (e.g., SSO provider logout endpoint)                                                                  |
 
 ## User Manager <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
@@ -5193,3 +5460,14 @@ Exemples de fichiers conformes :
 (?:^|\s)FriendlyScanner(?:\s|$)
 TrustedMonitor/\d+\.\d+
 ```
+
+## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
+
+
+Prise en charge STREAM :x:
+
+Adds wildcard server_name support (*.domain) for services.
+
+| Paramètre      | Valeur par défaut | Contexte  | Multiple | Description                                                                                       |
+| -------------- | ----------------- | --------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `USE_WILDCARD` | `no`              | multisite | non      | Enable wildcard server_name for this service (adds *.domain for the first domain in SERVER_NAME). |

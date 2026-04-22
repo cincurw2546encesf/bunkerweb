@@ -12,6 +12,8 @@ from pathlib import Path
 from random import choice
 from ssl import PROTOCOL_TLS_SERVER, SSLContext
 from string import ascii_letters, digits
+from re import search as re_search, escape as re_escape
+from subprocess import run
 from sys import path as sys_path
 from time import perf_counter
 from typing import Any, Dict, List, Optional, Type
@@ -30,12 +32,25 @@ logger = getLogger("TEMPLATOR")
 
 @lru_cache(maxsize=32)
 def _supports_tls_group(name: str) -> bool:
-    try:
+    with suppress(BaseException):
         ctx = SSLContext(PROTOCOL_TLS_SERVER)
         ctx.set_ecdh_curve(name)
         return True
+
+    # Fall through to subprocess probe below
+
+    # Python's ssl module doesn't recognize hybrid PQC groups (e.g. X25519MLKEM768)
+    # via set_ecdh_curve() even when OpenSSL supports them. Fall back to CLI probe.
+    try:
+        logger.debug(f"Python ssl module does not support TLS group '{name}', trying openssl CLI fallback")
+        result = run(["openssl", "list", "-kem-algorithms"], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0 and re_search(r"\b" + re_escape(name) + r"\b", result.stdout):
+            logger.debug(f"OpenSSL CLI confirms TLS group '{name}' is supported")
+            return True
     except BaseException:
-        return False
+        logger.debug(f"OpenSSL CLI fallback failed for TLS group '{name}'")
+
+    return False
 
 
 @lru_cache(maxsize=1)
@@ -65,8 +80,10 @@ def resolve_ssl_ecdh_curve(value: str, fallback: str = "X25519:prime256v1:secp38
 
     best_curve = _best_ssl_ecdh_curve()
     if best_curve:
+        logger.debug(f"Resolved ssl_ecdh_curve (auto-detect): {best_curve}")
         return best_curve
 
+    logger.warning(f"Resolved ssl_ecdh_curve (fallback): {fallback}")
     return fallback
 
 
@@ -351,6 +368,7 @@ class Templator:
             "read_lines": Templator.read_lines,
             "import": import_module,
             "resolve_ssl_ecdh_curve": resolve_ssl_ecdh_curve,
+            "normalize_memory_size": Templator._normalize_memory_size,
         }
 
         self._server_env_cache: Dict[str, Environment] = {}
@@ -413,6 +431,22 @@ class Templator:
                 if base in self._global_templates:
                     self._template_basename_map[template] = base
 
+    @staticmethod
+    def _normalize_memory_size(value: str) -> str:
+        """Convert g/G suffix to megabytes for NGINX lua_shared_dict compatibility.
+
+        NGINX's ngx_parse_size() only supports k/m suffixes. The g/G suffix is only
+        supported by ngx_parse_offset() (used for file/body sizes, not memory allocations).
+
+        Uses ``float()`` so the converter still works if the upstream regex is ever
+        relaxed to accept decimal values (e.g. ``1.5g``); the result is rounded down
+        to an integer megabyte count because NGINX's ``m`` suffix requires an integer.
+        """
+        value = value.strip()
+        if value.endswith(("g", "G")):
+            return f"{int(float(value[:-1]) * 1024)}m"
+        return value
+
     def _load_jinja_env(self) -> Environment:
         """Load the Jinja2 environment with the appropriate search paths.
 
@@ -421,7 +455,7 @@ class Templator:
         """
         searchpath = [self._templates]
         searchpath.extend(p.as_posix() for p in (*self._core.glob("*/confs"), *self._plugins.glob("*/confs"), *self._pro_plugins.glob("*/confs")) if p.is_dir())
-        return Environment(
+        return Environment(  # nosec B701 - rendering NGINX config files (not HTML); HTML autoescape would corrupt valid NGINX syntax.
             loader=FileSystemLoader(searchpath=searchpath),
             lstrip_blocks=True,
             trim_blocks=True,
@@ -611,15 +645,17 @@ class Templator:
             if custom_undefined:
                 cache_key = "server_env"
                 if cache_key not in self._server_env_cache:
-                    self._server_env_cache[cache_key] = Environment(
-                        loader=self._jinja_env.loader,
-                        lstrip_blocks=True,
-                        trim_blocks=True,
-                        keep_trailing_newline=True,
-                        bytecode_cache=self._jinja_env.bytecode_cache,
-                        auto_reload=False,
-                        cache_size=-1,
-                        undefined=custom_undefined,
+                    self._server_env_cache[cache_key] = (
+                        Environment(  # nosec B701 - rendering NGINX config files (not HTML); HTML autoescape would corrupt valid NGINX syntax.
+                            loader=self._jinja_env.loader,
+                            lstrip_blocks=True,
+                            trim_blocks=True,
+                            keep_trailing_newline=True,
+                            bytecode_cache=self._jinja_env.bytecode_cache,
+                            auto_reload=False,
+                            cache_size=-1,
+                            undefined=custom_undefined,
+                        )
                     )
                 jinja_template = self._server_env_cache[cache_key].get_template(template)
             else:

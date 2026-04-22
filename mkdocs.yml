@@ -168,3 +168,6 @@ plugins:
         color: "white"
   - mike:
       canonical_version: latest
+
+hooks:
+  - docs/hooks/llmstxt.py

@@ -456,7 +456,7 @@ $(document).ready(function () {
     },
     bottomStart: {
       pageLength: {
-        menu: [10, 25, 50, 100, { label: "All", value: -1 }],
+        menu: [10, 25, 50, 100, 500, 1000],
       },
       info: true,
     },
