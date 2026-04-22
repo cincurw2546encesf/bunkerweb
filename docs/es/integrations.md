@@ -1785,14 +1785,14 @@ El programador es el worker del plano de control que lee configuraciones, genera
 
 ##### Logging
 
-| Setting                         | Descripción                                                          | Valores aceptados                                   | Predeterminado                                                                  |
-| ------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `LOG_LEVEL`, `CUSTOM_LOG_LEVEL` | Nivel base / override                                                | `debug`, `info`, `warning`, `error`, `critical`     | `info`                                                                          |
-| `LOG_TYPES`                     | Destinos                                                             | `stderr`/`file`/`syslog` separados por espacios     | `stderr`                                                                        |
-| `SCHEDULER_LOG_TO_FILE`         | Opción heredada de compatibilidad: cuando se define, `LOG_FILE_PATH` toma por defecto `/var/log/bunkerweb/scheduler.log` si `LOG_TYPES` incluye `file` y no definiste `LOG_FILE_PATH` explícitamente. | `yes` o `no`                                        | `no`                                                                            |
-| `LOG_FILE_PATH`                 | Ruta de log personalizada (usada cuando `LOG_TYPES` incluye `file`)  | Ruta de archivo                                     | `/var/log/bunkerweb/scheduler.log` cuando `LOG_TYPES` contiene `file`, si no unset |
-| `LOG_SYSLOG_ADDRESS`            | Destino syslog (`udp://host:514`, `tcp://host:514` o ruta de socket) | Host:puerto, host con prefijo de protocolo o socket | unset                                                                           |
-| `LOG_SYSLOG_TAG`                | Ident/tag de syslog                                                  | Cadena                                              | `bw-scheduler`                                                                  |
+| Setting                         | Descripción                                                                                                                                                                                           | Valores aceptados                                   | Predeterminado                                                                     |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `LOG_LEVEL`, `CUSTOM_LOG_LEVEL` | Nivel base / override                                                                                                                                                                                 | `debug`, `info`, `warning`, `error`, `critical`     | `info`                                                                             |
+| `LOG_TYPES`                     | Destinos                                                                                                                                                                                              | `stderr`/`file`/`syslog` separados por espacios     | `stderr`                                                                           |
+| `SCHEDULER_LOG_TO_FILE`         | Opción heredada de compatibilidad: cuando se define, `LOG_FILE_PATH` toma por defecto `/var/log/bunkerweb/scheduler.log` si `LOG_TYPES` incluye `file` y no definiste `LOG_FILE_PATH` explícitamente. | `yes` o `no`                                        | `no`                                                                               |
+| `LOG_FILE_PATH`                 | Ruta de log personalizada (usada cuando `LOG_TYPES` incluye `file`)                                                                                                                                   | Ruta de archivo                                     | `/var/log/bunkerweb/scheduler.log` cuando `LOG_TYPES` contiene `file`, si no unset |
+| `LOG_SYSLOG_ADDRESS`            | Destino syslog (`udp://host:514`, `tcp://host:514` o ruta de socket)                                                                                                                                  | Host:puerto, host con prefijo de protocolo o socket | unset                                                                              |
+| `LOG_SYSLOG_TAG`                | Ident/tag de syslog                                                                                                                                                                                   | Cadena                                              | `bw-scheduler`                                                                     |
 
 ### Configuraciones del contenedor de UI
 
@@ -2036,7 +2036,7 @@ Para configuraciones no interactivas o automatizadas, el script se puede control
 
 | Opción                  | Descripción                                                                                       |
 | :---------------------- | :------------------------------------------------------------------------------------------------ |
-| `-v, --version VERSION` | Especifica la versión de BunkerWeb a instalar (p. ej., `1.6.10~rc3`).                                  |
+| `-v, --version VERSION` | Especifica la versión de BunkerWeb a instalar (p. ej., `1.6.10~rc3`).                             |
 | `-w, --enable-wizard`   | Habilita el asistente de configuración.                                                           |
 | `-n, --no-wizard`       | Deshabilita el asistente de configuración.                                                        |
 | `-y, --yes`             | Se ejecuta en modo no interactivo usando las respuestas predeterminadas para todas las preguntas. |
@@ -2600,16 +2600,17 @@ El controlador `bw-autoconf` vigila tu orquestador y escribe cambios en la base 
 
 ##### Modo y runtime
 
-| Setting                   | Descripción                                                   | Valores aceptados                      | Predeterminado                           |
-| ------------------------- | ------------------------------------------------------------- | -------------------------------------- | ---------------------------------------- |
-| `AUTOCONF_MODE`           | Habilitar el controlador de autoconf                          | `yes` o `no`                           | `no`                                     |
-| `SWARM_MODE`              | Observar servicios Swarm en lugar de contenedores Docker      | `yes` o `no`                           | `no`                                     |
-| `KUBERNETES_MODE`         | Observar ingress/pods de Kubernetes en lugar de Docker        | `yes` o `no`                           | `no`                                     |
-| `KUBERNETES_GATEWAY_MODE` | Usar el controlador de Gateway API para Kubernetes            | `yes` o `no`                           | `no`                                     |
-| `DOCKER_HOST`             | Socket Docker / URL de API remota                             | p. ej. `unix:///var/run/docker.sock`   | `unix:///var/run/docker.sock`            |
-| `WAIT_RETRY_INTERVAL`     | Segundos entre comprobaciones de disponibilidad de instancias | Segundos enteros                       | `5`                                      |
-| `LOG_SYSLOG_TAG`          | Tag syslog para logs de autoconf                              | Cadena                                 | `bw-autoconf`                            |
-| `TZ`                      | Zona horaria para logs de autoconf y marcas de tiempo         | Nombre en base TZ (ej. `Europe/Paris`) | unset (default de contenedor, suele UTC) |
+| Setting                    | Descripción                                                                                                                                                                                                                                | Valores aceptados                      | Predeterminado                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- | ---------------------------------------- |
+| `AUTOCONF_MODE`            | Habilitar el controlador de autoconf                                                                                                                                                                                                       | `yes` o `no`                           | `no`                                     |
+| `SWARM_MODE`               | Observar servicios Swarm en lugar de contenedores Docker                                                                                                                                                                                   | `yes` o `no`                           | `no`                                     |
+| `KUBERNETES_MODE`          | Observar ingress/pods de Kubernetes en lugar de Docker                                                                                                                                                                                     | `yes` o `no`                           | `no`                                     |
+| `KUBERNETES_GATEWAY_MODE`  | Usar el controlador de Gateway API para Kubernetes                                                                                                                                                                                         | `yes` o `no`                           | `no`                                     |
+| `DOCKER_HOST`              | Socket Docker / URL de API remota                                                                                                                                                                                                          | p. ej. `unix:///var/run/docker.sock`   | `unix:///var/run/docker.sock`            |
+| `WAIT_RETRY_INTERVAL`      | Segundos entre comprobaciones de disponibilidad de instancias                                                                                                                                                                              | Segundos enteros                       | `5`                                      |
+| `AUTOCONF_DISABLE_CLEANUP` | Cuando es `yes`, los servicios y configuraciones personalizadas eliminados del orquestador se convierten en borrador (draft) en lugar de eliminarse, por lo que sobreviven a eliminaciones transitorias y pueden borrarse desde la Web UI. | `yes` o `no`                           | `no`                                     |
+| `LOG_SYSLOG_TAG`           | Tag syslog para logs de autoconf                                                                                                                                                                                                           | Cadena                                 | `bw-autoconf`                            |
+| `TZ`                       | Zona horaria para logs de autoconf y marcas de tiempo                                                                                                                                                                                      | Nombre en base TZ (ej. `Europe/Paris`) | unset (default de contenedor, suele UTC) |
 
 ##### Base de datos y validación
 
@@ -2673,6 +2674,27 @@ networks:
   bw-services:
     external: true
     name: bw-services
+```
+
+#### Conservar servicios como borradores al eliminarlos {#autoconf-disable-cleanup}
+
+De forma predeterminada, cuando un contenedor, servicio Swarm o Ingress gestionado por autoconf desaparece del orquestador, su fila de servicio en BunkerWeb (y cualquier configuración personalizada asociada) se elimina inmediatamente de la base de datos compartida. Este comportamiento es destructivo: un fallo transitorio no puede distinguirse de un desmontaje intencional, y recuperar el servicio obliga a reconstruir la definición desde cero.
+
+Si se establece `AUTOCONF_DISABLE_CLEANUP=yes` en el contenedor `bw-autoconf`:
+
+- Los servicios eliminados del orquestador pasan a `is_draft = true` en lugar de borrarse. Sus filas `services_settings`, configuraciones personalizadas y cachés de trabajos se conservan.
+- Los servicios en borrador quedan excluidos de la configuración NGINX renderizada (no se sirven), por lo que el sitio sigue saliendo de línea al retirar el objeto; solo se conserva el estado.
+- Si autoconf vuelve a registrar el mismo servicio (mismo nombre de servidor / host de Ingress), se vuelve a poner automáticamente en línea y se republica; las configuraciones personalizadas existentes se reutilizan.
+- Mientras un servicio está en ese estado "draft por autoconf", puede eliminarse desde la página **Servicios** de la Web UI — normalmente los servicios gestionados por autoconf no son eliminables desde la UI, pero el botón **Eliminar** se habilita para los servicios autoconf en borrador, permitiendo limpiar entradas obsoletas. Los servicios autoconf en línea siguen sin poder eliminarse desde la UI.
+
+```yaml
+services:
+  bw-autoconf:
+    image: bunkerity/bunkerweb-autoconf:1.6.10-rc3
+    environment:
+      AUTOCONF_MODE: "yes"
+      AUTOCONF_DISABLE_CLEANUP: "yes" # conservar como borradores los servicios eliminados
+      DATABASE_URI: "mariadb+pymysql://bunkerweb:secret@bw-db:3306/db"
 ```
 
 ### Espacios de nombres {#namespaces}

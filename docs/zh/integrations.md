@@ -1784,14 +1784,14 @@ volumes:
 
 ##### 日志
 
-| Setting                         | 描述                                                             | 接受的值                                        | 默认值                                                                          |
-| ------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
-| `LOG_LEVEL`, `CUSTOM_LOG_LEVEL` | 基础/覆盖日志级别                                                | `debug`, `info`, `warning`, `error`, `critical` | `info`                                                                          |
-| `LOG_TYPES`                     | 目标                                                             | 空格分隔 `stderr`/`file`/`syslog`               | `stderr`                                                                        |
-| `SCHEDULER_LOG_TO_FILE`         | 兼容旧配置的便捷选项：设置后，如果 `LOG_TYPES` 包含 `file` 且您没有显式设置 `LOG_FILE_PATH`，则 `LOG_FILE_PATH` 默认使用 `/var/log/bunkerweb/scheduler.log`。 | `yes` 或 `no`                                   | `no`                                                                            |
-| `LOG_FILE_PATH`                 | 自定义日志路径（当 `LOG_TYPES` 包含 `file` 时使用）              | 文件路径                                        | 当 `LOG_TYPES` 包含 `file` 时为 `/var/log/bunkerweb/scheduler.log`，否则 unset |
-| `LOG_SYSLOG_ADDRESS`            | Syslog 目标（`udp://host:514`、`tcp://host:514` 或 socket 路径） | Host:port、带协议前缀的主机或 socket            | unset                                                                           |
-| `LOG_SYSLOG_TAG`                | Syslog 标识/tag                                                  | 字符串                                          | `bw-scheduler`                                                                  |
+| Setting                         | 描述                                                                                                                                                          | 接受的值                                        | 默认值                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| `LOG_LEVEL`, `CUSTOM_LOG_LEVEL` | 基础/覆盖日志级别                                                                                                                                             | `debug`, `info`, `warning`, `error`, `critical` | `info`                                                                         |
+| `LOG_TYPES`                     | 目标                                                                                                                                                          | 空格分隔 `stderr`/`file`/`syslog`               | `stderr`                                                                       |
+| `SCHEDULER_LOG_TO_FILE`         | 兼容旧配置的便捷选项：设置后，如果 `LOG_TYPES` 包含 `file` 且您没有显式设置 `LOG_FILE_PATH`，则 `LOG_FILE_PATH` 默认使用 `/var/log/bunkerweb/scheduler.log`。 | `yes` 或 `no`                                   | `no`                                                                           |
+| `LOG_FILE_PATH`                 | 自定义日志路径（当 `LOG_TYPES` 包含 `file` 时使用）                                                                                                           | 文件路径                                        | 当 `LOG_TYPES` 包含 `file` 时为 `/var/log/bunkerweb/scheduler.log`，否则 unset |
+| `LOG_SYSLOG_ADDRESS`            | Syslog 目标（`udp://host:514`、`tcp://host:514` 或 socket 路径）                                                                                              | Host:port、带协议前缀的主机或 socket            | unset                                                                          |
+| `LOG_SYSLOG_TAG`                | Syslog 标识/tag                                                                                                                                               | 字符串                                          | `bw-scheduler`                                                                 |
 
 ### UI 容器设置
 
@@ -2033,18 +2033,18 @@ sudo ./install-bunkerweb.sh
 
 **通用选项：**
 
-| 选项                    | 描述                                             |
-| ----------------------- | ------------------------------------------------ |
-| `-v, --version VERSION` | 指定要安装的 BunkerWeb 版本（例如 `1.6.10~rc3`）。    |
-| `-w, --enable-wizard`   | 启用设置向导。                                   |
-| `-n, --no-wizard`       | 禁用设置向导。                                   |
-| `-y, --yes`             | 以非交互模式运行，对所有提示使用默认答案。       |
-| `-f, --force`           | 即使在不受支持的操作系统版本上，也强制继续安装。 |
-| `-q, --quiet`           | 静默安装（抑制输出）。                           |
-| `--api`, `--enable-api` | 启用 API (FastAPI) systemd 服务（默认禁用）。    |
-| `--no-api`              | 明确禁用 API 服务。                              |
-| `-h, --help`            | 显示包含所有可用选项的帮助信息。                 |
-| `--dry-run`             | 显示将要安装的内容，但不实际执行。               |
+| 选项                    | 描述                                               |
+| ----------------------- | -------------------------------------------------- |
+| `-v, --version VERSION` | 指定要安装的 BunkerWeb 版本（例如 `1.6.10~rc3`）。 |
+| `-w, --enable-wizard`   | 启用设置向导。                                     |
+| `-n, --no-wizard`       | 禁用设置向导。                                     |
+| `-y, --yes`             | 以非交互模式运行，对所有提示使用默认答案。         |
+| `-f, --force`           | 即使在不受支持的操作系统版本上，也强制继续安装。   |
+| `-q, --quiet`           | 静默安装（抑制输出）。                             |
+| `--api`, `--enable-api` | 启用 API (FastAPI) systemd 服务（默认禁用）。      |
+| `--no-api`              | 明确禁用 API 服务。                                |
+| `-h, --help`            | 显示包含所有可用选项的帮助信息。                   |
+| `--dry-run`             | 显示将要安装的内容，但不实际执行。                 |
 
 **安装类型：**
 
@@ -2599,16 +2599,17 @@ networks:
 
 ##### 模式与运行时
 
-| Setting                   | 描述                                    | 接受的值                           | 默认值                        |
-| ------------------------- | --------------------------------------- | ---------------------------------- | ----------------------------- |
-| `AUTOCONF_MODE`           | 启用 autoconf 控制器                    | `yes` 或 `no`                      | `no`                          |
-| `SWARM_MODE`              | 监控 Swarm 服务而非 Docker 容器         | `yes` 或 `no`                      | `no`                          |
-| `KUBERNETES_MODE`         | 监控 Kubernetes ingress/pod 而非 Docker | `yes` 或 `no`                      | `no`                          |
-| `KUBERNETES_GATEWAY_MODE` | 启用 Kubernetes Gateway API 控制器      | `yes` 或 `no`                      | `no`                          |
-| `DOCKER_HOST`             | Docker 套接字 / 远程 API URL            | 例如 `unix:///var/run/docker.sock` | `unix:///var/run/docker.sock` |
-| `WAIT_RETRY_INTERVAL`     | 实例就绪检查之间的秒数                  | 整秒                               | `5`                           |
-| `LOG_SYSLOG_TAG`          | Autoconf 日志的 syslog tag              | 字符串                             | `bw-autoconf`                 |
-| `TZ`                      | Autoconf 日志和时间戳使用的时区         | TZ 数据库名（如 `Europe/Paris`）   | unset（容器默认，通常为 UTC） |
+| Setting                    | 描述                                                                                                                                   | 接受的值                           | 默认值                        |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------- |
+| `AUTOCONF_MODE`            | 启用 autoconf 控制器                                                                                                                   | `yes` 或 `no`                      | `no`                          |
+| `SWARM_MODE`               | 监控 Swarm 服务而非 Docker 容器                                                                                                        | `yes` 或 `no`                      | `no`                          |
+| `KUBERNETES_MODE`          | 监控 Kubernetes ingress/pod 而非 Docker                                                                                                | `yes` 或 `no`                      | `no`                          |
+| `KUBERNETES_GATEWAY_MODE`  | 启用 Kubernetes Gateway API 控制器                                                                                                     | `yes` 或 `no`                      | `no`                          |
+| `DOCKER_HOST`              | Docker 套接字 / 远程 API URL                                                                                                           | 例如 `unix:///var/run/docker.sock` | `unix:///var/run/docker.sock` |
+| `WAIT_RETRY_INTERVAL`      | 实例就绪检查之间的秒数                                                                                                                 | 整秒                               | `5`                           |
+| `AUTOCONF_DISABLE_CLEANUP` | 设为 `yes` 时，从编排器中移除的服务及自定义配置将被转换为草稿（draft），而不是硬删除，因而可以在瞬时移除后保留，并可通过 Web UI 删除。 | `yes` 或 `no`                      | `no`                          |
+| `LOG_SYSLOG_TAG`           | Autoconf 日志的 syslog tag                                                                                                             | 字符串                             | `bw-autoconf`                 |
+| `TZ`                       | Autoconf 日志和时间戳使用的时区                                                                                                        | TZ 数据库名（如 `Europe/Paris`）   | unset（容器默认，通常为 UTC） |
 
 ##### 数据库与校验
 
@@ -2672,6 +2673,27 @@ networks:
   bw-services:
     external: true
     name: bw-services
+```
+
+#### 在移除时将服务保留为草稿 {#autoconf-disable-cleanup}
+
+默认情况下，当 autoconf 管理的容器、Swarm 服务或 Ingress 从编排器中消失时，其在 BunkerWeb 共享数据库中的服务条目（以及任何关联的自定义配置）会被立即删除。这种行为具有破坏性：操作者无法区分临时性移除和有意下线，恢复服务需要从零重新定义。
+
+在 `bw-autoconf` 容器上设置 `AUTOCONF_DISABLE_CLEANUP=yes` 后：
+
+- 从编排器中移除的服务不再被删除，而是被翻转为 `is_draft = true`。其 `services_settings` 记录、自定义配置和任务缓存都会被保留。
+- 草稿状态的服务会从生成的 NGINX 配置中排除（不会对外提供服务），因此移除编排对象仍然会让站点下线，只是状态被保留下来。
+- 若该服务之后被 autoconf 再次登记（相同的 server name / Ingress host），它会自动被重新置为在线并重新发布；已有的自定义配置会被复用。
+- 当服务处于此"由 autoconf 转为草稿"状态时，可以通过 Web UI 的 **Services** 页面将其删除——通常 autoconf 所属的服务在 UI 中不可删除，但对 autoconf 草稿服务的 **Delete** 按钮会启用，方便操作者清理失效条目。在线状态的 autoconf 服务仍然无法从 UI 中删除。
+
+```yaml
+services:
+  bw-autoconf:
+    image: bunkerity/bunkerweb-autoconf:1.6.10-rc3
+    environment:
+      AUTOCONF_MODE: "yes"
+      AUTOCONF_DISABLE_CLEANUP: "yes" # 将被移除的服务保留为草稿
+      DATABASE_URI: "mariadb+pymysql://bunkerweb:secret@bw-db:3306/db"
 ```
 
 ### 命名空间 {#namespaces}

@@ -18,6 +18,7 @@
 - [UI] Add import/export for custom configurations, with an opt-in `.zip` bundle that lets a service export include its attached custom configurations and re-import them in one shot.
 - [AUTOCONF] Fix Kubernetes ingress rules being silently dropped and never recovering when a backend Service isn't visible to a GET at apply time (apiserver watch-vs-GET race seen on AKS). A background worker retries missing backends with exponential backoff and re-triggers the apply once they appear.
 - [AUTOCONF] Relax the empty `SERVER_NAME` guard in `Database.save_config` for `autoconf`: if every existing service is autoconf/scheduler-owned, treat the empty list as a legitimate full-teardown and clear the services instead of aborting. Mixed-ownership DBs still abort.
+- [AUTOCONF] Add `AUTOCONF_DISABLE_CLEANUP` (default `no`): convert services removed from the orchestrator to draft instead of deleting them, and let the Web UI delete drafted autoconf services.
 - [CONTRIBUTION] Thank you [harshadkhetpal](https://github.com/harshadkhetpal) for your contribution regarding exception handling in the `autoconf` entrypoint. (#3421)
 - [CONTRIBUTION] Thank you [Simonmiz](https://github.com/Simonmiz) for your contribution regarding the `German` translation of the web UI. (#3422)
 - [CONTRIBUTION] Thank you [daemon-byte](https://github.com/daemon-byte) for your contribution adding the [Cap.js](https://capjs.js.org/) self-hosted proof-of-work antibot mode. (#3454)

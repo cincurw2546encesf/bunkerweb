@@ -52,6 +52,7 @@ from app.utils import (
     get_blacklisted_settings,
     get_filtered_settings,
     get_latest_stable_release,
+    can_delete_service,
     get_multiples,
     handle_stop,
     human_readable_number,
@@ -725,6 +726,7 @@ with app.app_context():
         url_for=custom_url_for,
         is_plugin_active=is_plugin_active,
         is_ui_api_method=is_ui_api_method,
+        can_delete_service=can_delete_service,
     )
 
     app.config.update({hook_info["key"]: [] for hook_info in HOOKS.values()})
