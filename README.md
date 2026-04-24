@@ -10,11 +10,11 @@
 	<img src="https://img.shields.io/github/issues/bunkerity/bunkerweb">
 	<img src="https://img.shields.io/github/issues-pr/bunkerity/bunkerweb">
 	<br />
-	<img src="https://img.shields.io/github/actions/workflow/status/bunkerity/bunkerweb/1.6.10~rc4.yml?branch=1.6.10~rc4&label=CI%2FCD%201.6.10~rc4" />
+	<img src="https://img.shields.io/github/actions/workflow/status/bunkerity/bunkerweb/dev.yml?branch=dev&label=CI%2FCD%20dev" />
 	<img src="https://img.shields.io/github/actions/workflow/status/bunkerity/bunkerweb/staging.yml?branch=staging&label=CI%2FCD%20staging" />
 	<br />
-	<a href="https://www.bestpractices.1.6.10~rc4/projects/8001">
-		<img src="https://www.bestpractices.1.6.10~rc4/projects/8001/badge">
+	<a href="https://www.bestpractices.dev/projects/8001">
+		<img src="https://www.bestpractices.dev/projects/8001/badge">
 	</a>
 	<a href="https://gitrated.com/bunkerity/bunkerweb"><img src="https://gitrated.com/bunkerity/bunkerweb/badge" alt="GitRated rating" /></a>
 </p>
@@ -71,7 +71,7 @@ https://github.com/user-attachments/assets/c3fed740-28d8-4335-ab05-113a9e815b4f
 - **Awesome web UI**: Take control of BunkerWeb more efficiently with the exceptional web user interface (UI). Navigate settings and configurations effortlessly through a user-friendly graphical interface, eliminating the need for the command-line interface (CLI).
 - **Plugin system**: Extend the capabilities of BunkerWeb to meet your own use cases. Seamlessly integrate additional security measures and customize the functionality of BunkerWeb according to your specific requirements.
 - **Free as in "freedom"**: BunkerWeb is licensed under the free [AGPLv3 license](https://www.gnu.org/licenses/agpl-3.0.en.html), embracing the principles of freedom and openness. Enjoy the freedom to use, modify, and distribute the software, backed by a supportive community.
-- **Professional services**: Get technical support, tailored consulting, and custom 1.6.10~rc4elopment directly from the maintainers of BunkerWeb. Visit the [Bunker Panel](https://panel.bunkerweb.io/?utm_campaign=self&utm_source=github) for more information.
+- **Professional services**: Get technical support, tailored consulting, and custom development directly from the maintainers of BunkerWeb. Visit the [Bunker Panel](https://panel.bunkerweb.io/?utm_campaign=self&utm_source=github) for more information.
 
 ## Security features
 
@@ -133,7 +133,7 @@ Do not hesitate to visit the [BunkerWeb panel](https://panel.bunkerweb.io/knowle
 
 ## Professional services
 
-Get the most out of BunkerWeb by getting professional services directly from the maintainers of the project. From technical support to tailored consulting and 1.6.10~rc4elopment, we are here to assist you in the security of your web services.
+Get the most out of BunkerWeb by getting professional services directly from the maintainers of the project. From technical support to tailored consulting and development, we are here to assist you in the security of your web services.
 
 You will find more information by visiting the [BunkerWeb Panel](https://panel.bunkerweb.io/?utm_campaign=self&utm_source=doc), our dedicated platform for professional services.
 
