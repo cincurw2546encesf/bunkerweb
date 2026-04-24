@@ -367,6 +367,11 @@ def letsencrypt_delete():
     cmd_env = {"PATH": getenv("PATH", ""), "PYTHONPATH": getenv("PYTHONPATH", "")}
     cmd_env["PYTHONPATH"] = cmd_env["PYTHONPATH"] + (f":{DEPS_PATH}" if DEPS_PATH not in cmd_env["PYTHONPATH"] else "")
 
+    try:
+        max_log_backups = max(0, int(getenv("LETS_ENCRYPT_MAX_LOG_BACKUPS", "50").strip()))
+    except ValueError:
+        max_log_backups = 50
+
     delete_proc = run(
         [
             CERTBOT_BIN,
@@ -377,6 +382,8 @@ def letsencrypt_delete():
             WORK_DIR,
             "--logs-dir",
             LOGS_DIR,
+            "--max-log-backups",
+            str(max_log_backups),
             "--cert-name",
             cert_name,
             "-n",  # non-interactive

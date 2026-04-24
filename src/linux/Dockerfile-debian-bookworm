@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim@sha256:4724b8cc51e33e398f0e2e15e18d5ec2851ff0c2280647e1310bc1642182655d AS builder
+FROM debian:bookworm-slim@sha256:f9c6a2fd2ddbc23e336b6257a5245e31f996953ef06cd13a59fa0a1df2d5c252 AS builder
 
 # Install Nginx and dependencies
 RUN apt update && \
@@ -43,6 +43,13 @@ RUN export MAKEFLAGS="-j$(nproc)" && \
     mkdir -p deps/python && \
     python3.11 -m pip install --break-system-packages --no-cache-dir --require-hashes --ignore-installed -r /tmp/requirements-deps.txt && \
     python3.11 -m pip install --break-system-packages --no-cache-dir --require-hashes --force-reinstall --target deps/python $(for file in $(ls /tmp/req/requirements*.txt) ; do echo "-r ${file}" ; done | xargs)
+
+# Apply BunkerWeb patches to vendored Python deps before they are tarballed (DNS alias / CNAME delegation for certbot).
+COPY src/deps/misc/certbot-dns-alias.patch /tmp/certbot-dns-alias.patch
+RUN patch -p1 -F0 --dry-run -d /usr/share/bunkerweb/deps/python < /tmp/certbot-dns-alias.patch && \
+    patch -p1 -F0 --no-backup-if-mismatch -d /usr/share/bunkerweb/deps/python < /tmp/certbot-dns-alias.patch && \
+    grep -q '_load_domain_aliases' /usr/share/bunkerweb/deps/python/certbot/plugins/dns_common.py && \
+    rm -f /tmp/certbot-dns-alias.patch
 
 RUN apt-get install -y pigz && \
     tar --use-compress-program="pigz -1 -p$(nproc)" -cf deps.tar.gz deps && \
@@ -119,7 +126,7 @@ RUN if [ "$SKIP_MINIFY" != "yes" ] && [ "$SKIP_MINIFY_HTML" != "yes" ]; then \
     echo "Skipping HTML minification"; \
     fi
 
-FROM debian:bookworm-slim@sha256:4724b8cc51e33e398f0e2e15e18d5ec2851ff0c2280647e1310bc1642182655d
+FROM debian:bookworm-slim@sha256:f9c6a2fd2ddbc23e336b6257a5245e31f996953ef06cd13a59fa0a1df2d5c252
 
 # Set default umask to prevent huge recursive chmod increasing the final image size
 RUN umask 027

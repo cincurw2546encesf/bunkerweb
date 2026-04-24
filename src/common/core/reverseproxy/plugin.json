@@ -232,6 +232,16 @@
       "type": "check",
       "multiple": "reverse-proxy"
     },
+    "REVERSE_PROXY_MODSECURITY": {
+      "context": "multisite",
+      "default": "yes",
+      "help": "Enable or disable ModSecurity for this reverse proxy location. Set to no for endpoints that accept very large uploads (e.g. video, backup, object storage) — the ModSecurity-nginx connector buffers the full request body in memory regardless of SecRequestBodyLimit and can trigger OOM on multi-GB uploads. Emits 'modsecurity off;' inside the location block.",
+      "id": "reverse-proxy-modsecurity",
+      "label": "Reverse proxy ModSecurity",
+      "regex": "^(yes|no)$",
+      "type": "check",
+      "multiple": "reverse-proxy"
+    },
     "USE_PROXY_CACHE": {
       "context": "multisite",
       "default": "no",

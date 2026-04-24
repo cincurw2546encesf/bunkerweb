@@ -1,10 +1,10 @@
-FROM python:3.13-alpine@sha256:6211bbd14e69346ea481ee00717ee0123ada89d9f1a53bc45e683ede6e3d23c8 AS builder
+FROM python:3.13-alpine@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc AS builder
 
 # Export var for specific actions on linux/arm/v7
 ARG TARGETPLATFORM
 
 # Install python dependencies
-RUN apk add --no-cache build-base libffi-dev postgresql-dev cargo
+RUN apk add --no-cache build-base libffi-dev postgresql-dev cargo patch
 
 # Copy python requirements
 COPY src/deps/requirements.txt /tmp/requirements-deps.txt
@@ -22,6 +22,16 @@ RUN export MAKEFLAGS="-j$(nproc)" && \
   pip install --no-cache-dir --require-hashes --break-system-packages -r /tmp/requirements-deps.txt && \
   pip install --no-cache-dir --require-hashes --target deps/python $(for file in $(ls /tmp/req/requirements*.txt) ; do echo "-r ${file}" ; done | xargs)
 
+# Apply BunkerWeb patches to vendored Python deps (DNS alias / CNAME delegation for certbot).
+# -F0 + --dry-run first so any context drift from a future certbot bump fails the build loudly
+# instead of fuzzing onto the wrong code; the post-patch grep is a positive assertion that the
+# expected marker landed in the patched file.
+COPY src/deps/misc/certbot-dns-alias.patch /tmp/certbot-dns-alias.patch
+RUN patch -p1 -F0 --dry-run -d /usr/share/bunkerweb/deps/python < /tmp/certbot-dns-alias.patch && \
+  patch -p1 -F0 --no-backup-if-mismatch -d /usr/share/bunkerweb/deps/python < /tmp/certbot-dns-alias.patch && \
+  grep -q '_load_domain_aliases' /usr/share/bunkerweb/deps/python/certbot/plugins/dns_common.py && \
+  rm -f /tmp/certbot-dns-alias.patch
+
 # Copy files
 # can't exclude specific files/dir from . so we are copying everything by hand
 COPY src/common/api api
@@ -36,7 +46,7 @@ COPY src/common/utils utils
 COPY src/scheduler scheduler
 COPY src/VERSION VERSION
 
-FROM python:3.13-alpine@sha256:6211bbd14e69346ea481ee00717ee0123ada89d9f1a53bc45e683ede6e3d23c8
+FROM python:3.13-alpine@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc
 
 # Set default umask to prevent huge recursive chmod increasing the final image size
 RUN umask 027
@@ -77,7 +87,7 @@ COPY --chown=root:scheduler --chmod=770 src/bw/misc/asn.mmdb /var/tmp/bunkerweb/
 COPY --chown=root:scheduler --chmod=770 src/bw/misc/country.mmdb /var/tmp/bunkerweb/country.mmdb
 
 LABEL maintainer="Bunkerity <contact@bunkerity.com>"
-LABEL version="1.6.10~rc3"
+LABEL version="1.6.10~rc4"
 LABEL url="https://www.bunkerweb.io"
 LABEL bunkerweb.type="scheduler"
 

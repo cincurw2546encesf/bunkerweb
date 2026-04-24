@@ -67,7 +67,7 @@ try:
         LOGGER.info("Docker mode detected")
         controller = DockerController(docker_host)
 
-    # Wait for instances
+    # Wait for DB init + instances to be ready.
     LOGGER.info("Waiting for BunkerWeb instances ...")
     instances = controller.wait(wait_retry_interval)
     LOGGER.info("BunkerWeb instances are ready 🚀")
@@ -76,7 +76,8 @@ try:
         LOGGER.info(f"Instance #{i} : {instance['name']}")
         i += 1
 
-    controller.wait_applying(True)
+    # Push a first config so the scheduler's next reload picks it up.
+    controller.initial_apply()
 
     # Process events
     Path(sep, "var", "tmp", "bunkerweb", "autoconf.healthy").write_text("ok")

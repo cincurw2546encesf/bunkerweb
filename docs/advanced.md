@@ -1,8 +1,8 @@
 # Advanced usages
 
-Many real-world use case examples are available in the [examples](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc3/examples) folder of the GitHub repository.
+Many real-world use case examples are available in the [examples](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc4/examples) folder of the GitHub repository.
 
-We also provide numerous boilerplates, such as YAML files for various integrations and database types. These are available in the [misc/integrations](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc3/misc/integrations) folder.
+We also provide numerous boilerplates, such as YAML files for various integrations and database types. These are available in the [misc/integrations](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc4/misc/integrations) folder.
 
 This section only focuses on advanced usages and security tuning, see the [features section](features.md) of the documentation to see all the available settings.
 
@@ -85,7 +85,7 @@ You will find more settings about real IP in the [features section](features.md#
             -p 80:8080/tcp \
             -p 443:8443/tcp \
             -p 443:8443/udp \
-            bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+            bunkerity/bunkerweb-all-in-one:1.6.10-rc4
         ```
 
         Please note that if your container is already created, you will need to delete it and recreate it so the new environment variables will be updated.
@@ -96,7 +96,7 @@ You will find more settings about real IP in the [features section](features.md#
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -104,7 +104,7 @@ You will find more settings about real IP in the [features section](features.md#
             REAL_IP_HEADER: "X-Forwarded-For"
           ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -121,7 +121,7 @@ You will find more settings about real IP in the [features section](features.md#
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -129,7 +129,7 @@ You will find more settings about real IP in the [features section](features.md#
             REAL_IP_HEADER: "X-Forwarded-For"
           ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -176,7 +176,7 @@ You will find more settings about real IP in the [features section](features.md#
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -184,7 +184,7 @@ You will find more settings about real IP in the [features section](features.md#
             REAL_IP_HEADER: "X-Forwarded-For"
           ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -249,7 +249,7 @@ You will find more settings about real IP in the [features section](features.md#
             -p 80:8080/tcp \
             -p 443:8443/tcp \
             -p 443:8443/udp \
-            bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+            bunkerity/bunkerweb-all-in-one:1.6.10-rc4
         ```
 
         Please note that if your container is already created, you will need to delete it and recreate it so the new environment variables will be updated.
@@ -260,7 +260,7 @@ You will find more settings about real IP in the [features section](features.md#
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -270,7 +270,7 @@ You will find more settings about real IP in the [features section](features.md#
           ...
         ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -288,7 +288,7 @@ You will find more settings about real IP in the [features section](features.md#
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -298,7 +298,7 @@ You will find more settings about real IP in the [features section](features.md#
           ...
         ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -350,7 +350,7 @@ You will find more settings about real IP in the [features section](features.md#
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -360,7 +360,7 @@ You will find more settings about real IP in the [features section](features.md#
           ...
         ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -485,8 +485,8 @@ The Manager is the brain of the cluster. It runs the Scheduler, Database, and op
 
         ```bash
         # Download script and checksum
-        curl -fsSL -O https://github.com/bunkerity/bunkerweb/releases/download/v1.6.10-rc3/install-bunkerweb.sh
-        curl -fsSL -O https://github.com/bunkerity/bunkerweb/releases/download/v1.6.10-rc3/install-bunkerweb.sh.sha256
+        curl -fsSL -O https://github.com/bunkerity/bunkerweb/releases/download/v1.6.10-rc4/install-bunkerweb.sh
+        curl -fsSL -O https://github.com/bunkerity/bunkerweb/releases/download/v1.6.10-rc4/install-bunkerweb.sh.sha256
 
         # Verify checksum
         sha256sum -c install-bunkerweb.sh.sha256
@@ -585,7 +585,7 @@ The Manager is the brain of the cluster. It runs the Scheduler, Database, and op
 
     services:
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-ui-env
           BUNKERWEB_INSTANCES: "192.168.1.11 192.168.1.12" # Replace with your worker IPs
@@ -604,7 +604,7 @@ The Manager is the brain of the cluster. It runs the Scheduler, Database, and op
           - bw-redis
 
       bw-ui:
-        image: bunkerity/bunkerweb-ui:1.6.10-rc3
+        image: bunkerity/bunkerweb-ui:1.6.10-rc4
         ports:
           - "7000:7000" # Expose the Web UI port
         environment:
@@ -687,7 +687,7 @@ Workers are the nodes that process incoming traffic.
     ```yaml title="docker-compose.yml"
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -992,7 +992,7 @@ To enable systemd-resolved as your DNS resolver in BunkerWeb, set the `DNS_RESOL
         -p 80:8080/tcp \
         -p 443:8443/tcp \
         -p 443:8443/udp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
 === "Docker"
@@ -1020,7 +1020,7 @@ To enable systemd-resolved as your DNS resolver in BunkerWeb, set the `DNS_RESOL
           - bw-dns
 
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ...
         environment:
           DNS_RESOLVERS: "dnsmasq"
@@ -1031,7 +1031,7 @@ To enable systemd-resolved as your DNS resolver in BunkerWeb, set the `DNS_RESOL
           - bw-dns
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         ...
         environment:
           DNS_RESOLVERS: "dnsmasq"
@@ -1145,7 +1145,7 @@ Some integrations provide more convenient ways to apply configurations, such as 
           }" \
         -p 80:8080/tcp \
         -p 443:8443/tcp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
     Please note that if your container is already created, you will need to delete it and recreate it for the new environment variables to be applied.
@@ -1185,7 +1185,7 @@ Some integrations provide more convenient ways to apply configurations, such as 
         -p 80:8080/tcp \
         -p 443:8443/tcp \
         -p 443:8443/udp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
 === "Docker"
@@ -1208,7 +1208,7 @@ Some integrations provide more convenient ways to apply configurations, such as 
     ```yaml
     ...
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       environment:
         - |
           CUSTOM_CONF_SERVER_HTTP_hello-world=
@@ -1251,7 +1251,7 @@ Some integrations provide more convenient ways to apply configurations, such as 
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       volumes:
         - ./bw-data:/data
       ...
@@ -1321,7 +1321,7 @@ Some integrations provide more convenient ways to apply configurations, such as 
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       volumes:
         - ./bw-data:/data
       ...
@@ -1551,7 +1551,7 @@ For complete list of settings regarding `stream` mode, please refer to the [feat
         -p 443:8443/udp \
         -p 10000:10000/tcp \
         -p 20000:20000/tcp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
     Please note that if your container is already created, you will need to delete it and recreate it for the new environment variables to be applied.
@@ -1574,7 +1574,7 @@ For complete list of settings regarding `stream` mode, please refer to the [feat
 
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080" # Keep it if you want to use Let's Encrypt automation when using http challenge type
           - "10000:10000" # app1
@@ -1589,7 +1589,7 @@ For complete list of settings regarding `stream` mode, please refer to the [feat
           - bw-services
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-api-env
           BUNKERWEB_INSTANCES: "bunkerweb" # This setting is mandatory to specify the BunkerWeb instance
@@ -1640,7 +1640,7 @@ For complete list of settings regarding `stream` mode, please refer to the [feat
     ```yaml
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080" # Keep it if you want to use Let's Encrypt automation when using http challenge type
           - "10000:10000" # app1
@@ -1870,7 +1870,7 @@ For complete list of settings regarding `stream` mode, please refer to the [feat
     ```yaml
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           # Keep it if you want to use Let's Encrypt automation when using http challenge type
           - published: 80
@@ -2000,7 +2000,7 @@ BunkerWeb supports PHP using external or remote [PHP-FPM](https://www.php.net/ma
         -p 80:8080/tcp \
         -p 443:8443/tcp \
         -p 443:8443/udp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
     Please note that if your container is already created, you will need to delete it and recreate it for the new environment variables to be applied.
@@ -2044,7 +2044,7 @@ BunkerWeb supports PHP using external or remote [PHP-FPM](https://www.php.net/ma
 
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -2059,7 +2059,7 @@ BunkerWeb supports PHP using external or remote [PHP-FPM](https://www.php.net/ma
           - bw-services
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-api-env
           BUNKERWEB_INSTANCES: "bunkerweb" # This setting is mandatory to specify the BunkerWeb instance
@@ -2153,7 +2153,7 @@ BunkerWeb supports PHP using external or remote [PHP-FPM](https://www.php.net/ma
 
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         labels:
           - "bunkerweb.INSTANCE=yes"
         environment:
@@ -2166,7 +2166,7 @@ BunkerWeb supports PHP using external or remote [PHP-FPM](https://www.php.net/ma
           - bw-services
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-api-env
           BUNKERWEB_INSTANCES: "" # We don't need to specify the BunkerWeb instance here as they are automatically detected by the autoconf service
@@ -2181,7 +2181,7 @@ BunkerWeb supports PHP using external or remote [PHP-FPM](https://www.php.net/ma
           - bw-db
 
       bw-autoconf:
-        image: bunkerity/bunkerweb-autoconf:1.6.10-rc3
+        image: bunkerity/bunkerweb-autoconf:1.6.10-rc4
         depends_on:
           - bunkerweb
           - bw-docker
@@ -2421,7 +2421,7 @@ BunkerWeb supports PHP using external or remote [PHP-FPM](https://www.php.net/ma
     ```yaml
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         volumes:
           - /shared/www:/var/www/html
     ...
@@ -2520,7 +2520,7 @@ By default, BunkerWeb will only listen on IPv4 addresses and won't use IPv6 for 
     ```yaml
     services:
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           USE_IPv6: "yes"
 
@@ -2581,15 +2581,18 @@ Service logs are controlled by the `LOG_TYPES` setting, which can accept multipl
 
 | Value    | Description                                                                             |
 | :------- | :-------------------------------------------------------------------------------------- |
-| `file`   | Writes logs to a file. Required for the Web UI log viewer.                              |
+| `file`   | Writes logs to a plain file. External rotation is handled by `logrotate` on Linux installs or by your container logging driver on Docker. Required for the Web UI log viewer. |
 | `stderr` | Writes logs to standard error. Standard for containerized environments (`docker logs`). |
 | `syslog` | Sends logs to a syslog server. Requires `LOG_SYSLOG_ADDRESS` to be set.                 |
+
+When using `file`, you should also configure:
+
+- `LOG_FILE_PATH`: Path where log files are written when `LOG_TYPES` contains `file`.
 
 When using `syslog`, you should also configure:
 
 - `LOG_SYSLOG_ADDRESS`: The address of the syslog server (e.g., `udp://bw-syslog:514` or `/dev/log`).
 - `LOG_SYSLOG_TAG`: A unique tag for the service (e.g., `bw-scheduler`) to distinguish its entries.
-- `LOG_FILE_PATH`: Path for file output when `LOG_TYPES` includes `file` (for example, `/var/log/bunkerweb/scheduler.log`).
 
 ### Access and Error Logs
 
@@ -2618,7 +2621,7 @@ LOG_LEVEL_1=error
 
 === "Linux"
 
-    **Default behavior**: `LOG_TYPES="file"`. Logs are written to `/var/log/bunkerweb/*.log`.
+    **Default behavior**: `LOG_TYPES="file"`. Logs are written to `/var/log/bunkerweb/*.log`. Rotation is handled by the system `logrotate` config installed at `/etc/logrotate.d/bunkerweb` (daily, 7-day retention, compressed via `copytruncate`).
 
     **Example**: Keep local files (for Web UI) and also mirror to the system syslog.
 
@@ -2660,7 +2663,7 @@ LOG_LEVEL_1=error
     services:
       bunkerweb:
         # This is the name that will be used to identify the instance in the Scheduler
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -2673,7 +2676,7 @@ LOG_LEVEL_1=error
           - bw-services
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Make sure to set the correct instance name
@@ -2690,7 +2693,7 @@ LOG_LEVEL_1=error
           - bw-db
 
       bw-ui:
-        image: bunkerity/bunkerweb-ui:1.6.10-rc3
+        image: bunkerity/bunkerweb-ui:1.6.10-rc4
         environment:
           <<: *bw-env
         volumes:
@@ -2854,7 +2857,7 @@ You can configure the logging driver for your services in your `docker-compose.y
 ```yaml
 services:
   bunkerweb:
-    image: bunkerity/bunkerweb:1.6.10-rc3
+    image: bunkerity/bunkerweb:1.6.10-rc4
     logging:
       driver: "json-file"
       options:
@@ -2963,7 +2966,7 @@ The commonly used variables are:
         -p 80:8080/tcp \
         -p 443:8443/tcp \
         -p 443:8443/udp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
     If the container already exists, recreate it to apply the new environment.
@@ -2974,7 +2977,7 @@ The commonly used variables are:
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       ...
       environment:
         HTTP_PROXY: "http://proxy.example.local:3128"
@@ -2993,7 +2996,7 @@ The commonly used variables are:
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       ...
       environment:
         HTTP_PROXY: "http://proxy.example.local:3128"
@@ -3036,7 +3039,7 @@ The commonly used variables are:
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       ...
       environment:
         HTTP_PROXY: "http://proxy.example.local:3128"
@@ -3335,12 +3338,12 @@ The **BunkerWeb MCP server** enables AI assistants like **Claude Code** and **Cl
 
 ### Docker Compose Example
 
-A complete example is available in [`examples/mcp-stack/`](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc3/examples/mcp-stack):
+A complete example is available in [`examples/mcp-stack/`](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc4/examples/mcp-stack):
 
 ```yaml
 services:
   bw-api:
-    image: bunkerity/bunkerweb-api:1.6.10-rc3
+    image: bunkerity/bunkerweb-api:1.6.10-rc4
     environment:
       API_TOKEN: "my-bearer-token-for-mcp"
       DATABASE_URI: "mariadb+pymysql://bunkerweb:changeme@bw-db:3306/db"
@@ -3787,7 +3790,7 @@ The Custom Pages plugin lets you replace BunkerWeb's built-in pages (error pages
 
 ### Features
 
-- **Per-service custom error pages** and **antibot challenge pages** (captcha, JavaScript check, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).
+- **Per-service custom error pages** and **antibot challenge pages** (captcha, JavaScript check, reCAPTCHA, hCaptcha, Turnstile, mCaptcha, Cap.js).
 - **Global custom default server page** for the fallback/default vhost.
 - **HTML parsing and Lua template tag balance checks** before a template is accepted.
 - **Automatic caching** to `/var/cache/bunkerweb/custom_pages` with change detection to trigger reloads.
@@ -3812,6 +3815,7 @@ The Custom Pages plugin lets you replace BunkerWeb's built-in pages (error pages
 | `CUSTOM_ANTIBOT_HCAPTCHA_PAGE`   |         | multisite | Absolute path to the custom antibot hCaptcha page.          |
 | `CUSTOM_ANTIBOT_TURNSTILE_PAGE`  |         | multisite | Absolute path to the custom antibot Turnstile page.         |
 | `CUSTOM_ANTIBOT_MCAPTCHA_PAGE`   |         | multisite | Absolute path to the custom antibot mCaptcha page.          |
+| `CUSTOM_ANTIBOT_CAPJS_PAGE`      |         | multisite | Absolute path to the custom antibot Cap.js page.            |
 
 ### Template Variables Reference
 
@@ -3892,6 +3896,13 @@ These variables are available in antibot challenge page templates:
 | ------------------ | ------ | ---------------------- |
 | `mcaptcha_sitekey` | string | Your mCaptcha site key |
 | `mcaptcha_url`     | string | Your mCaptcha URL      |
+
+**Cap.js (`CUSTOM_ANTIBOT_CAPJS_PAGE`):**
+
+| Variable        | Type   | Description                  |
+| --------------- | ------ | ---------------------------- |
+| `capjs_sitekey` | string | Your Cap.js site key         |
+| `capjs_url`     | string | Your Cap.js frontend base URL |
 
 ### Template Syntax
 
@@ -4183,11 +4194,11 @@ Templates use Lua template syntax with the following delimiters:
         ```yaml
         services:
           bunkerweb:
-            image: bunkerity/bunkerweb:1.6.10-rc3
+            image: bunkerity/bunkerweb:1.6.10-rc4
             # ... other settings (no environment variables needed here for custom pages)
 
           bw-scheduler:
-            image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+            image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
             volumes:
               - ./templates:/custom_templates:ro
             environment:
@@ -4270,7 +4281,7 @@ Templates use Lua template syntax with the following delimiters:
             spec:
               containers:
                 - name: bunkerweb-scheduler
-                  image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+                  image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
                   env:
                     - name: CUSTOM_ERROR_PAGE
                       value: "/custom_templates/error.html"
@@ -4810,22 +4821,22 @@ External/PRO plugins not listed in `PLUGINS_ORDER_*` settings are appended alpha
 
 **Core ACME settings**
 
-| Setting                | Default | Context   | Multiple | Description                                                                      |
-| ---------------------- | ------- | --------- | -------- | -------------------------------------------------------------------------------- |
-| `USE_ACME`             | `no`    | multisite | no       | Enable ACME certificate management for this service.                             |
+| Setting                | Default | Context   | Multiple | Description                                                                                         |
+| ---------------------- | ------- | --------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `USE_ACME`             | `no`    | multisite | no       | Enable ACME certificate management for this service.                                                |
 | `ACME_PASSTHROUGH`     | `no`    | multisite | no       | Pass through HTTP-01 challenge requests to the upstream server (upstream runs its own ACME client). |
-| `ACME_DIRECTORY_URL`   |         | multisite | no       | ACME directory URL of the Certificate Authority.                                 |
-| `ACME_EMAIL`           |         | multisite | no       | Email address for ACME account registration and notifications.                   |
-| `ACME_CHALLENGE`       | `http`  | multisite | no       | ACME challenge type: `http`, `dns`, or `alpn`.                                   |
-| `ACME_KEY_TYPE`        | `ecdsa` | multisite | no       | Key type for the certificate: `ecdsa` or `rsa`.                                  |
-| `ACME_KEY_SIZE`        | `256`   | multisite | no       | Key size in bits. ECDSA: `256` or `384`. RSA: `2048` or `4096`.                  |
-| `ACME_RENEWAL_DAYS`    | `30`    | multisite | no       | Renew the certificate when it has fewer than this many days until expiry.        |
-| `ACME_SSL_VERIFY`      | `yes`   | multisite | no       | Verify SSL certificates when communicating with the ACME server.                 |
-| `ACME_WILDCARD`        | `no`    | multisite | no       | Request wildcard certificate (requires DNS-01 challenge).                        |
-| `ACME_MUST_STAPLE`     | `no`    | multisite | no       | Request the OCSP Must-Staple extension in the certificate.                       |
-| `ACME_MAX_RETRIES`     | `3`     | multisite | no       | Number of times to retry certificate generation on failure (0 disables retries). |
-| `ACME_PREFERRED_CHAIN` |         | multisite | no       | Preferred certificate chain issuer CN when the CA provides multiple chains.      |
-| `ACME_CA_CERT_PATH`    |         | multisite | no       | File path to the root CA certificate for private ACME servers.                   |
+| `ACME_DIRECTORY_URL`   |         | multisite | no       | ACME directory URL of the Certificate Authority.                                                    |
+| `ACME_EMAIL`           |         | multisite | no       | Email address for ACME account registration and notifications.                                      |
+| `ACME_CHALLENGE`       | `http`  | multisite | no       | ACME challenge type: `http`, `dns`, or `alpn`.                                                      |
+| `ACME_KEY_TYPE`        | `ecdsa` | multisite | no       | Key type for the certificate: `ecdsa` or `rsa`.                                                     |
+| `ACME_KEY_SIZE`        | `256`   | multisite | no       | Key size in bits. ECDSA: `256` or `384`. RSA: `2048` or `4096`.                                     |
+| `ACME_RENEWAL_DAYS`    | `30`    | multisite | no       | Renew the certificate when it has fewer than this many days until expiry.                           |
+| `ACME_SSL_VERIFY`      | `yes`   | multisite | no       | Verify SSL certificates when communicating with the ACME server.                                    |
+| `ACME_WILDCARD`        | `no`    | multisite | no       | Request wildcard certificate (requires DNS-01 challenge).                                           |
+| `ACME_MUST_STAPLE`     | `no`    | multisite | no       | Request the OCSP Must-Staple extension in the certificate.                                          |
+| `ACME_MAX_RETRIES`     | `3`     | multisite | no       | Number of times to retry certificate generation on failure (0 disables retries).                    |
+| `ACME_PREFERRED_CHAIN` |         | multisite | no       | Preferred certificate chain issuer CN when the CA provides multiple chains.                         |
+| `ACME_CA_CERT_PATH`    |         | multisite | no       | File path to the root CA certificate for private ACME servers.                                      |
 
 **External Account Binding (EAB)**
 
@@ -4934,3 +4945,208 @@ app2.example.com_AUTO_LETS_ENCRYPT: "yes"
 - **TLS-ALPN-01 challenge failing**: ensure port 443 is accessible from the ACME server and that no other plugin is serving a certificate before ACME in the `ssl_certificate` phase. Check `PLUGINS_ORDER_SSL_CERTIFICATE` if in doubt.
 - **DNS-01 challenge failing**: verify the DNS provider credentials in `ACME_DNS_CREDENTIAL_ITEM` and adjust `ACME_DNS_PROPAGATION` if your provider is slow to propagate records.
 - **Certificate not renewing**: check `ACME_RENEWAL_DAYS` and scheduler logs. The `acme-renew` job runs daily and renews certificates that are within the configured threshold.
+
+## Wildcard <img src="../assets/img/pro-icon.svg" alt="crown pro icon" height="24px" width="24px" style="transform: translateY(3px);"> (PRO)
+
+STREAM support :x:
+
+The **Wildcard** plugin lets a single BunkerWeb service respond to:
+
+* its exact hostname
+* any **direct subdomain** of that hostname
+
+When enabled, the plugin takes the **first entry** from `SERVER_NAME` and adds a wildcard `server_name` to the generated NGINX configuration.
+
+For example, if the first entry is `example.com`, the plugin adds:
+
+```nginx
+server_name *.example.com;
+```
+
+This makes the service respond to:
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+
+This is a minimal, config-only plugin:
+
+* no jobs
+* no Lua
+* no UI
+
+---
+
+### How it works
+
+The plugin derives the wildcard hostname from the **first value** in `SERVER_NAME` and injects a standard NGINX wildcard server name during config generation.
+
+It does not change request handling logic beyond hostname matching.
+
+!!! info "Wildcard hosts are not wildcard certificates"
+    This plugin only affects **HTTP routing**. It tells NGINX which hostnames the service should accept.
+
+    It does **not** provision a wildcard TLS certificate.
+
+    To serve `*.example.com` over HTTPS, you still need a matching wildcard certificate, typically with one of these options:
+
+    - `USE_LETS_ENCRYPT_WILDCARD=yes` with the built-in Let's Encrypt plugin
+    - `ACME_WILDCARD=yes` with the [ACME PRO](#acme) plugin using a DNS-01 challenge
+
+---
+
+### Features
+
+* **Simple activation**: enable wildcard routing with `USE_WILDCARD=yes`
+* **Automatic derivation**: the wildcard host is built from the first entry in `SERVER_NAME`
+* **Native NGINX semantics**: matching follows standard `server_name` behavior
+* **Multisite-aware**: each service can enable or disable wildcard routing independently
+
+---
+
+### Configuration
+
+| Setting        | Default | Context   | Multiple | Description                                                                                           |
+| -------------- | ------- | --------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| `USE_WILDCARD` | `no`    | multisite | no       | Enable wildcard `server_name` for the service by adding `*.domain` for the first `SERVER_NAME` entry. |
+
+---
+
+### Quick start
+
+1. Put the domain you want to wildcard **first** in `SERVER_NAME`
+2. Set `USE_WILDCARD=yes`
+3. Point the wildcard DNS record to BunkerWeb, usually with a wildcard `A` or `AAAA` record
+4. If you need HTTPS, provision a wildcard certificate separately
+5. Reload or restart BunkerWeb
+
+---
+
+### Examples
+
+#### Single-site
+
+```yaml
+SERVER_NAME: "example.com"
+USE_WILDCARD: "yes"
+```
+
+This service will answer:
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+* any other `*.example.com` hostname that resolves to BunkerWeb
+
+#### Multisite
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "app.example.com docs.example.org"
+
+# Only app.example.com gets wildcard routing
+app.example.com_USE_WILDCARD: "yes"
+```
+
+In this setup:
+
+* `app.example.com` and `*.app.example.com` go to the first service
+* `docs.example.org` keeps exact-match routing only
+
+---
+
+### Important behavior
+
+!!! warning "Only the first domain is wildcarded"
+    If `SERVER_NAME` is:
+
+    ```yaml
+    SERVER_NAME: "example.com example.org"
+    ```
+
+    only `*.example.com` is added.
+
+    Put the domain you want to wildcard first.
+
+!!! note "Existing wildcard entries are preserved"
+    If the first domain already starts with `*.`, for example:
+
+    ```yaml
+    SERVER_NAME: "*.example.com"
+    ```
+
+    the plugin emits nothing.
+
+!!! note "Wildcard matching is single-label only"
+    `*.example.com` matches `foo.example.com`, but not `a.b.example.com`.
+
+    For deeper subdomains, use an explicit `SERVER_NAME` entry or a separate service.
+
+!!! note "Exact matches take precedence"
+    If another service explicitly defines `foo.example.com`, NGINX routes that hostname to the exact match first.
+
+---
+
+### Recommended with Let's Encrypt wildcard certificates
+
+If you use this plugin together with `USE_LETS_ENCRYPT_WILDCARD=yes`, use this pattern:
+
+```yaml
+SERVER_NAME: "<root_domain> <any_app>.<root_domain>"
+```
+
+The **root domain must come first**.
+
+Example:
+
+```yaml
+SERVER_NAME: "example.com app.example.com"
+USE_WILDCARD: "yes"
+AUTO_LETS_ENCRYPT: "yes"
+EMAIL_LETS_ENCRYPT: "admin@example.com"
+LETS_ENCRYPT_CHALLENGE: "dns"
+LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+USE_LETS_ENCRYPT_WILDCARD: "yes"
+```
+
+!!! tip "Why this pattern matters"
+    - **Only the first `SERVER_NAME` entry is wildcarded**
+
+    If `example.com` comes first, the plugin emits `*.example.com`.
+
+    If `app.example.com` comes first, it emits `*.app.example.com`, which is usually the wrong wildcard level.
+
+    - **The second entry helps Let's Encrypt detect the correct base domain**
+      With only a bare apex domain, wildcard certificate detection can fail on some public-suffix domains such as `example.co.uk`.
+
+    - **The second hostname does not need a real backend**
+      Use any stable value such as `app.example.com` or `www.example.com`.
+
+#### Multisite with Let's Encrypt wildcard
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "example.com app.example.com"
+example.com_USE_WILDCARD: "yes"
+example.com_USE_LETS_ENCRYPT_WILDCARD: "yes"
+example.com_LETS_ENCRYPT_CHALLENGE: "dns"
+example.com_LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+example.com_LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+```
+
+---
+
+### Usage tips
+
+* **Plan TLS separately**
+  Wildcard routing is not enough for HTTPS. You still need certificate coverage for subdomains.
+
+* **Keep `SERVER_NAME` ordering stable**
+  Reordering entries changes which domain becomes the wildcard target.
+
+* **Works well with `REVERSE_PROXY_HOST`**
+  This is useful when many subdomains are routed through a shared upstream such as a tenant router.
+
+* **Be careful with overlapping services**
+  NGINX always prefers the most specific `server_name` match.

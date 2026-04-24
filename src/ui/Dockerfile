@@ -1,4 +1,4 @@
-FROM python:3.13-alpine@sha256:6211bbd14e69346ea481ee00717ee0123ada89d9f1a53bc45e683ede6e3d23c8 AS builder
+FROM python:3.13-alpine@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc AS builder
 
 # Export var for specific actions on linux/arm/v7
 ARG TARGETPLATFORM
@@ -66,7 +66,7 @@ RUN if [ "$SKIP_MINIFY" != "yes" ] && [ "$SKIP_MINIFY_CSS" != "yes" ]; then \
   echo "Skipping CSS minification"; \
   fi
 
-FROM python:3.13-alpine@sha256:6211bbd14e69346ea481ee00717ee0123ada89d9f1a53bc45e683ede6e3d23c8
+FROM python:3.13-alpine@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc
 
 # Set default umask to prevent huge recursive chmod increasing the final image size
 RUN umask 027
@@ -106,7 +106,7 @@ RUN echo "Docker" > INTEGRATION && \
   chmod 660 INTEGRATION
 
 LABEL maintainer="Bunkerity <contact@bunkerity.com>"
-LABEL version="1.6.10~rc3"
+LABEL version="1.6.10~rc4"
 LABEL url="https://www.bunkerweb.io"
 LABEL bunkerweb.type="ui"
 

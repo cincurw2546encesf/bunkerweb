@@ -54,6 +54,7 @@ from common_utils import bytes_hash, create_plugin_tar_gz  # type: ignore
 from pymysql import install_as_MySQLdb
 from sqlalchemy import case, create_engine, event, MetaData as sql_metadata, func, join, select as db_select, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.exc import (
     ArgumentError,
     DatabaseError,
@@ -195,13 +196,22 @@ class Database:
                     path.parent.mkdir(parents=True, exist_ok=True)
                 return db_string, match
 
-            # Add recommended drivers for MySQL/MariaDB and PostgreSQL
-            if db_type.startswith("m") and not db_type.endswith("+pymysql"):
-                return db_string.replace(db_type, f"{db_type}+pymysql"), match
-            elif db_type.startswith("postgresql") and not db_type.endswith("+psycopg"):
-                return db_string.replace(db_type, f"{db_type}+psycopg"), match
-            elif db_type.startswith("oracle") and not db_type.endswith("+oracledb"):
-                return db_string.replace(db_type, f"{db_type}+oracledb"), match
+            # Inject the recommended driver via SQLAlchemy's URL parser so only the drivername component is rewritten.
+            recommended_driver = {
+                "postgresql": "psycopg",
+                "mysql": "pymysql",
+                "mariadb": "pymysql",
+                "oracle": "oracledb",
+            }.get(db_type)
+            if recommended_driver is not None:
+                try:
+                    url = make_url(db_string)
+                except ArgumentError:
+                    self.logger.error(f"Invalid database string provided: {db_string}, exiting...")
+                    _exit(1)
+                if "+" not in url.drivername:
+                    url = url.set(drivername=f"{url.drivername}+{recommended_driver}")
+                    return url.render_as_string(hide_password=False), match
 
             return db_string, match
 
@@ -632,7 +642,7 @@ class Database:
                 metadata = session.query(Metadata).with_entities(Metadata.version).filter_by(id=1).first()
                 if metadata:
                     return metadata.version
-                return "1.6.10~rc3"
+                return "1.6.10~rc4"
             except BaseException as e:
                 return f"Error: {e}"
 
@@ -666,7 +676,7 @@ class Database:
             "last_instances_change": None,
             "reload_ui_plugins": False,
             "integration": "unknown",
-            "version": "1.6.10~rc3",
+            "version": "1.6.10~rc4",
             "database_version": "Unknown",  # ? Extracted from the database
             "default": True,  # ? Extra field to know if the returned data is the default one
         }
@@ -1593,15 +1603,28 @@ class Database:
         return True, ""
 
     def save_config(
-        self, config: Dict[str, Any], method: str, changed: Optional[bool] = True, file_names: Optional[Dict[str, str]] = None, global_only: bool = False
+        self,
+        config: Dict[str, Any],
+        method: str,
+        changed: Optional[bool] = True,
+        file_names: Optional[Dict[str, str]] = None,
+        *,
+        skip_service_management: bool = False,
+        disable_cleanup: bool = False,
     ) -> Union[str, Set[str]]:
         """Save the config in the database.
 
         Args:
-            global_only: When True, only global settings are processed — service management,
-                         service settings cleanup, and multisite logic are skipped entirely.
-                         This prevents accidental deletion of services when the caller only
-                         intends to update global settings.
+            skip_service_management: When True, the entire service-management block is
+                                     skipped — service settings cleanup, the SERVER_NAME
+                                     reconciliation that adds/draftifies/deletes Services
+                                     rows, and the multisite per-service settings pass.
+                                     Use this when the caller only intends to update
+                                     global settings and must not touch any service rows.
+                                     The historical name was ``global_only`` which was
+                                     misleading: it does not restrict input to global
+                                     settings, it only disables the service-management
+                                     side-effects.
         """
         to_put = []
         to_update = []
@@ -1674,6 +1697,22 @@ class Database:
 
             self.logger.debug(f"Saving config for method {method}")
 
+            # When the autoconf disable_cleanup flag is on, precompute the set of existing
+            # autoconf services missing from the incoming SERVER_NAME so the services_settings
+            # cleanup pass below leaves their rows in place (the service itself will be flipped
+            # to is_draft=True further down instead of being deleted).
+            drafted_service_ids: Set[str] = set()
+            if disable_cleanup and method == "autoconf" and not skip_service_management:
+                server_name_value = config.get("SERVER_NAME", "")
+                if isinstance(server_name_value, str):
+                    incoming_service_ids = {s for s in server_name_value.strip().split() if s}
+                elif isinstance(server_name_value, list):
+                    incoming_service_ids = {s for s in server_name_value if s}
+                else:
+                    incoming_service_ids = set()
+                existing_autoconf_services = session.query(Services.id).filter_by(method="autoconf").all()
+                drafted_service_ids = {row.id for row in existing_autoconf_services if row.id not in incoming_service_ids}
+
             self.logger.debug(f"Cleaning up {method} old global settings")
             # Collect global settings to delete
             global_settings_to_delete = []
@@ -1721,9 +1760,13 @@ class Database:
                 return changed_plugins
 
             self.logger.debug(f"Cleaning up {method} old services settings")
-            # Collect service settings to delete (skip entirely when global_only to avoid deleting service settings)
+            # Collect service settings to delete (skip entirely when skip_service_management to avoid deleting service settings)
             service_settings_to_delete = []
-            for db_service_config in [] if global_only else session.query(Services_settings).filter_by(method=method).all():
+            for db_service_config in [] if skip_service_management else session.query(Services_settings).filter_by(method=method).all():
+                # Preserve settings of services about to be drafted by the autoconf disable_cleanup path
+                # so they can be re-published when the orchestration object returns.
+                if db_service_config.service_id in drafted_service_ids:
+                    continue
                 key = f"{db_service_config.service_id}_{db_service_config.setting_id}"
                 if db_service_config.suffix:
                     key = f"{key}_{db_service_config.suffix}"
@@ -1755,7 +1798,7 @@ class Database:
 
                 template = config.get("USE_TEMPLATE", "")
 
-                if not global_only:
+                if not skip_service_management:
                     self.logger.debug("Checking if the services have changed")
                     db_services = session.query(Services).with_entities(Services.id, Services.method, Services.is_draft).all()
                     db_ids: Dict[str, dict] = {service.id: {"method": service.method, "is_draft": service.is_draft} for service in db_services}
@@ -1767,19 +1810,41 @@ class Database:
 
                     services = [service for service in services if service]  # Clean up empty strings
 
+                    # Only meaningful for the autoconf method.
+                    disable_cleanup = disable_cleanup and method == "autoconf"
+
                     if db_services:
                         # Guard: if an empty services list is received but DB has services for this method,
                         # abort the entire save_config to prevent catastrophic data loss.
-                        # For autoconf: protects against transient Docker API failures.
+                        # For autoconf: only guard when existing DB services were created by a *different*
+                        # method (ui/api/manual). If every existing service was itself created by autoconf,
+                        # an empty SERVER_NAME is a legitimate "all ingresses removed" signal and clearing
+                        # those services is the correct behaviour. Without this relaxation, tearing down
+                        # the last Ingress and re-applying a new one gets stuck with stale services in the DB.
                         # For other methods: protects against callers that omit SERVER_NAME entirely
-                        # (e.g. a global-only config update that forgot to set global_only=True).
+                        # (e.g. a global-only config update that forgot to set skip_service_management=True).
                         method_services = [s for s in db_services if s.method == method or (s.method in ("ui", "api") and method in ("ui", "api"))]
                         if not services and method_services and (method == "autoconf" or "SERVER_NAME" not in config):
-                            self.logger.warning(
-                                f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
-                                "skipping entire config save to prevent data loss"
-                            )
-                            return changed_plugins
+                            if method == "autoconf":
+                                foreign_services = [s for s in db_services if s.method not in ("autoconf", "scheduler")]
+                                if not foreign_services:
+                                    self.logger.debug(
+                                        f"Received empty SERVER_NAME for autoconf and all {len(method_services)} existing service(s) are autoconf-owned; "
+                                        "proceeding with removal"
+                                    )
+                                    missing_ids = [service.id for service in method_services]
+                                else:
+                                    self.logger.warning(
+                                        f"Received empty SERVER_NAME for method 'autoconf' but database has {len(foreign_services)} non-autoconf service(s), "
+                                        "skipping entire config save to prevent data loss"
+                                    )
+                                    return changed_plugins
+                            else:
+                                self.logger.warning(
+                                    f"Received empty SERVER_NAME for method '{method}' but database has {len(method_services)} existing service(s), "
+                                    "skipping entire config save to prevent data loss"
+                                )
+                                return changed_plugins
                         else:
                             missing_ids = [
                                 service.id
@@ -1788,18 +1853,43 @@ class Database:
                             ]
 
                         if missing_ids:
-                            self.logger.debug(f"Removing {len(missing_ids)} services that are no longer in the list")
-                            # Remove services that are no longer in the list
-                            session.query(Services).filter(Services.id.in_(missing_ids)).delete(synchronize_session=False)
-                            session.query(Services_settings).filter(Services_settings.service_id.in_(missing_ids)).delete(synchronize_session=False)
-                            session.query(Custom_configs).filter(Custom_configs.service_id.in_(missing_ids)).delete(synchronize_session=False)
-                            session.query(Jobs_cache).filter(Jobs_cache.service_id.in_(missing_ids)).delete(synchronize_session=False)
-                            session.query(Metadata).filter_by(id=1).update(
-                                {Metadata.custom_configs_changed: True, Metadata.last_custom_configs_change: datetime.now().astimezone()}
-                            )
-                            changed_services = True
-                            if any(config.get(f"{sid}_USE_TEMPLATE", "") for sid in missing_ids):
-                                service_template_change = True
+                            # When AUTOCONF_DISABLE_CLEANUP is on, convert removed autoconf services to draft
+                            # instead of hard-deleting them so that settings / custom configs / job caches
+                            # survive and the service can be republished by bringing the orchestration object
+                            # back. Services owned by other methods (shouldn't happen when method=autoconf but
+                            # kept defensively) still follow the legacy cascade-delete path.
+                            draftable_ids = [sid for sid in missing_ids if db_ids.get(sid, {}).get("method") == "autoconf"] if disable_cleanup else []
+                            hard_delete_ids = [sid for sid in missing_ids if sid not in draftable_ids]
+
+                            if draftable_ids:
+                                self.logger.debug(f"Converting {len(draftable_ids)} autoconf services to draft instead of deleting them")
+                                session.query(Services).filter(Services.id.in_(draftable_ids)).update(
+                                    {Services.is_draft: True, Services.last_update: datetime.now().astimezone()},
+                                    synchronize_session=False,
+                                )
+                                session.query(Custom_configs).filter(Custom_configs.service_id.in_(draftable_ids)).update(
+                                    {Custom_configs.is_draft: True}, synchronize_session=False
+                                )
+                                session.query(Metadata).filter_by(id=1).update(
+                                    {Metadata.custom_configs_changed: True, Metadata.last_custom_configs_change: datetime.now().astimezone()}
+                                )
+                                changed_services = True
+                                if any(config.get(f"{sid}_USE_TEMPLATE", "") for sid in draftable_ids):
+                                    service_template_change = True
+
+                            if hard_delete_ids:
+                                self.logger.debug(f"Removing {len(hard_delete_ids)} services that are no longer in the list")
+                                # Remove services that are no longer in the list
+                                session.query(Services).filter(Services.id.in_(hard_delete_ids)).delete(synchronize_session=False)
+                                session.query(Services_settings).filter(Services_settings.service_id.in_(hard_delete_ids)).delete(synchronize_session=False)
+                                session.query(Custom_configs).filter(Custom_configs.service_id.in_(hard_delete_ids)).delete(synchronize_session=False)
+                                session.query(Jobs_cache).filter(Jobs_cache.service_id.in_(hard_delete_ids)).delete(synchronize_session=False)
+                                session.query(Metadata).filter_by(id=1).update(
+                                    {Metadata.custom_configs_changed: True, Metadata.last_custom_configs_change: datetime.now().astimezone()}
+                                )
+                                changed_services = True
+                                if any(config.get(f"{sid}_USE_TEMPLATE", "") for sid in hard_delete_ids):
+                                    service_template_change = True
 
                     self.logger.debug("Checking if the drafts have changed")
                     drafts = {service for service in services if config.pop(f"{service}_IS_DRAFT", "no") == "yes"}
@@ -1832,7 +1922,7 @@ class Database:
                                 to_update.append({"model": Services, "filter": {"id": draft}, "values": {"is_draft": True, "last_update": current_time}})
                                 changed_services = True
 
-                if not global_only and config.get("MULTISITE", "no") == "yes":
+                if not skip_service_management and config.get("MULTISITE", "no") == "yes":
                     self.logger.debug("Checking if the multisite settings have changed")
 
                     service_configs = defaultdict(dict)
@@ -2094,7 +2184,7 @@ class Database:
                     # Non-multisite configuration
                     self.logger.debug("Checking if non-multisite settings have changed")
 
-                    if not global_only:
+                    if not skip_service_management:
                         server_name = config.get("SERVER_NAME", None)
                         if template and server_name is None:
                             server_name = (
@@ -2253,6 +2343,8 @@ class Database:
         ],
         method: str,
         changed: Optional[bool] = True,
+        *,
+        disable_cleanup: bool = False,
     ) -> str:
         """Save the custom configs in the database"""
         message = ""
@@ -2260,8 +2352,14 @@ class Database:
             if self.readonly:
                 return "The database is read-only, the changes will not be saved"
 
-            # Delete all the old config
-            session.query(Custom_configs).filter(Custom_configs.method == method).delete()
+            # Only meaningful for the autoconf method.
+            disable_cleanup = disable_cleanup and method == "autoconf"
+
+            if not disable_cleanup:
+                # Delete all the old config
+                session.query(Custom_configs).filter(Custom_configs.method == method).delete()
+
+            expected_keys: Set[Tuple[str, str, Optional[str]]] = set()
 
             to_put = []
             endl = "\n"
@@ -2301,6 +2399,7 @@ class Database:
                     "name": custom_config["name"],
                     "service_id": service_id,
                 }
+                expected_keys.add((custom_config["type"], custom_config["name"], service_id))
 
                 custom_conf = session.query(Custom_configs).filter_by(**filters).first()
 
@@ -2322,6 +2421,15 @@ class Database:
                         custom_conf.is_draft = custom_config["is_draft"]
                         custom_conf.method = method
                     custom_conf.is_draft = custom_config["is_draft"]
+
+            if disable_cleanup:
+                # Mark autoconf custom configs that are no longer emitted by the orchestrator as draft
+                # so they survive the removal and follow the service they belong to.
+                orphan_configs = session.query(Custom_configs).filter(Custom_configs.method == "autoconf", Custom_configs.is_draft.is_(False)).all()
+                for orphan in orphan_configs:
+                    if (orphan.type, orphan.name, orphan.service_id) not in expected_keys:
+                        orphan.is_draft = True
+
             if changed:
                 with suppress(ProgrammingError, OperationalError):
                     metadata = session.query(Metadata).get(1)
@@ -3015,6 +3123,38 @@ class Database:
             )
 
         return services
+
+    @retry_on_transient_db_errors
+    def delete_services(self, service_ids: List[str]) -> str:
+        """Hard-delete services and all their related rows (settings, custom configs, job caches).
+
+        Bypasses the method-based protection in ``save_config`` and is intended for callers
+        that have already authorised the deletion (e.g. the UI deleting a drafted autoconf
+        service). Returns an empty string on success, or an error message.
+        """
+        if not service_ids:
+            return ""
+        with self._db_session() as session:
+            if self.readonly:
+                return "The database is read-only, the changes will not be saved"
+
+            session.query(Services_settings).filter(Services_settings.service_id.in_(service_ids)).delete(synchronize_session=False)
+            session.query(Custom_configs).filter(Custom_configs.service_id.in_(service_ids)).delete(synchronize_session=False)
+            session.query(Jobs_cache).filter(Jobs_cache.service_id.in_(service_ids)).delete(synchronize_session=False)
+            session.query(Services).filter(Services.id.in_(service_ids)).delete(synchronize_session=False)
+
+            with suppress(ProgrammingError, OperationalError):
+                metadata = session.query(Metadata).get(1)
+                if metadata is not None:
+                    now = datetime.now().astimezone()
+                    metadata.custom_configs_changed = True
+                    metadata.last_custom_configs_change = now
+
+            try:
+                session.commit()
+            except BaseException as e:
+                return str(e)
+        return ""
 
     def add_job_run(self, job_name: str, success: bool, start_date: datetime, end_date: Optional[datetime] = None) -> str:
         """Add a job run."""

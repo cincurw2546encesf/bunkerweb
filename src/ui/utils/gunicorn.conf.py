@@ -50,7 +50,9 @@ BISCUIT_PRIVATE_KEY_HASH_FILE = BISCUIT_PRIVATE_KEY_FILE.with_suffix(".hash")  #
 
 MAX_WORKERS = int(getenv("MAX_WORKERS", max(effective_cpu_count() - 1, 1)))
 LOG_LEVEL = getenv("CUSTOM_LOG_LEVEL", getenv("LOG_LEVEL", "info"))
-LISTEN_ADDR = getenv("UI_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0"))
+LISTEN_ADDR = getenv(
+    "UI_LISTEN_ADDR", getenv("LISTEN_ADDR", "0.0.0.0")
+)  # nosec B104 - 0.0.0.0 is the documented containerized default; operators override via UI_LISTEN_ADDR / LISTEN_ADDR.
 LISTEN_PORT = getenv("UI_LISTEN_PORT", getenv("LISTEN_PORT", "7000"))
 FORWARDED_ALLOW_IPS = getenv(
     "UI_FORWARDED_ALLOW_IPS",

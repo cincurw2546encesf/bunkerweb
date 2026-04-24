@@ -312,7 +312,6 @@ class SwarmController(Controller):
                     sleep(10)
 
     def process_events(self):
-        self._set_autoconf_load_db()
         event_types = ("service", "config")
         threads = [Thread(target=self.__event, args=(event_type,)) for event_type in event_types]
         for thread in threads:

@@ -232,9 +232,11 @@ class Configurator:
         # Supplement server list from database Services table.
         # This ensures autoconf-managed services are recognized even when
         # SERVER_NAME in the variables hasn't been updated yet (startup timing).
+        # Drafts are excluded so a half-configured service can never leak into
+        # the generated config and produce a server block.
         if db and self.__multisite:
             with suppress(Exception):
-                for service in db.get_services(with_drafts=True):
+                for service in db.get_services(with_drafts=False):
                     server_id = service.get("id", "")
                     if server_id and server_id not in self.__servers:
                         self.__servers[server_id] = [server_id]

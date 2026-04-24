@@ -45,6 +45,11 @@ Siga estos pasos para configurar y usar ModSecurity:
 
     El equipo de CRS mantiene activamente una lista de exclusiones para aplicaciones populares como WordPress, Nextcloud, Drupal y Cpanel, lo que facilita la integración sin afectar la funcionalidad. Los beneficios de seguridad superan con creces el mínimo esfuerzo de configuración necesario para solucionar los falsos positivos.
 
+!!! warning "Recomendación de seguridad para cargas grandes"
+    ModSecurity almacena en memoria el cuerpo completo de la solicitud y no puede limitarlo para cargas de varios GB, lo que puede provocar OOM en el worker. Si — **y solo si** — una URL de proxy inverso se usa *exclusivamente* para cargas de archivos (por ejemplo, un endpoint `/upload` dedicado), establezca `REVERSE_PROXY_MODSECURITY_N: "no"` en esa URL para emitir `modsecurity off;` en su bloque `location`. No lo deshabilite en URL de uso mixto: perdería la cobertura del WAF en todo lo servido por esa ubicación.
+
+    Para mantener protegidas las cargas después de omitir ModSecurity, combínelo con un plugin de análisis de archivos como [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) o [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal); inspeccionan el archivo cargado en sí en lugar del cuerpo bruto de la solicitud.
+
 ### Versiones de CRS Disponibles
 
 Seleccione una versión de CRS que se ajuste mejor a sus necesidades de seguridad:

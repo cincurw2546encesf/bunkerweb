@@ -1,8 +1,8 @@
 # Fortgeschrittene Nutzungen
 
-Viele Beispiele für reale Anwendungsfälle sind im Ordner [examples](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc3/examples) des GitHub-Repositorys verfügbar.
+Viele Beispiele für reale Anwendungsfälle sind im Ordner [examples](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc4/examples) des GitHub-Repositorys verfügbar.
 
-Wir stellen auch zahlreiche Boilerplates zur Verfügung, wie z. B. YAML-Dateien für verschiedene Integrationen und Datenbanktypen. Diese sind im Ordner [misc/integrations](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc3/misc/integrations) verfügbar.
+Wir stellen auch zahlreiche Boilerplates zur Verfügung, wie z. B. YAML-Dateien für verschiedene Integrationen und Datenbanktypen. Diese sind im Ordner [misc/integrations](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc4/misc/integrations) verfügbar.
 
 Dieser Abschnitt konzentriert sich nur auf fortgeschrittene Nutzungen und Sicherheits-Tuning. Informationen zu allen verfügbaren Einstellungen finden Sie im [Features-Abschnitt](features.md) der Dokumentation.
 
@@ -85,7 +85,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
             -p 80:8080/tcp \
             -p 443:8443/tcp \
             -p 443:8443/udp \
-            bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+            bunkerity/bunkerweb-all-in-one:1.6.10-rc4
         ```
 
         Bitte beachten Sie, dass Sie, wenn Ihr Container bereits erstellt wurde, ihn löschen und neu erstellen müssen, damit die neuen Umgebungsvariablen aktualisiert werden.
@@ -96,7 +96,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -104,7 +104,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
             REAL_IP_HEADER: "X-Forwarded-For"
           ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -121,7 +121,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -129,7 +129,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
             REAL_IP_HEADER: "X-Forwarded-For"
           ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -176,7 +176,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -184,7 +184,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
             REAL_IP_HEADER: "X-Forwarded-For"
           ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -249,7 +249,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
             -p 80:8080/tcp \
             -p 443:8443/tcp \
             -p 443:8443/udp \
-            bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+            bunkerity/bunkerweb-all-in-one:1.6.10-rc4
         ```
 
         Bitte beachten Sie, dass Sie, wenn Ihr Container bereits erstellt wurde, ihn löschen und neu erstellen müssen, damit die neuen Umgebungsvariablen aktualisiert werden.
@@ -260,7 +260,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -270,7 +270,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
           ...
         ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -288,7 +288,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -298,7 +298,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
           ...
         ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -350,7 +350,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
 
         ```yaml
         bunkerweb:
-          image: bunkerity/bunkerweb:1.6.10-rc3
+          image: bunkerity/bunkerweb:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -360,7 +360,7 @@ Weitere Einstellungen zur echten IP finden Sie im [Features-Abschnitt](features.
           ...
         ...
         bw-scheduler:
-          image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+          image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
           ...
           environment:
             USE_REAL_IP: "yes"
@@ -485,8 +485,8 @@ Der Manager ist das Gehirn des Clusters. Er führt den Scheduler, die Datenbank 
 
         ```bash
         # Skript und Checksumme laden
-        curl -fsSL -O https://github.com/bunkerity/bunkerweb/releases/download/v1.6.10-rc3/install-bunkerweb.sh
-        curl -fsSL -O https://github.com/bunkerity/bunkerweb/releases/download/v1.6.10-rc3/install-bunkerweb.sh.sha256
+        curl -fsSL -O https://github.com/bunkerity/bunkerweb/releases/download/v1.6.10-rc4/install-bunkerweb.sh
+        curl -fsSL -O https://github.com/bunkerity/bunkerweb/releases/download/v1.6.10-rc4/install-bunkerweb.sh.sha256
 
         # Prüfsumme verifizieren
         sha256sum -c install-bunkerweb.sh.sha256
@@ -585,7 +585,7 @@ Der Manager ist das Gehirn des Clusters. Er führt den Scheduler, die Datenbank 
 
     services:
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-ui-env
           BUNKERWEB_INSTANCES: "192.168.1.11 192.168.1.12" # Ersetzen durch die IPs Ihrer Worker
@@ -604,7 +604,7 @@ Der Manager ist das Gehirn des Clusters. Er führt den Scheduler, die Datenbank 
           - bw-redis
 
       bw-ui:
-        image: bunkerity/bunkerweb-ui:1.6.10-rc3
+        image: bunkerity/bunkerweb-ui:1.6.10-rc4
         ports:
           - "7000:7000" # UI-Port veröffentlichen
         environment:
@@ -687,7 +687,7 @@ Worker sind die Knoten, die den eingehenden Verkehr verarbeiten.
     ```yaml title="docker-compose.yml"
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -992,7 +992,7 @@ Um systemd-resolved als Ihren DNS-Resolver in BunkerWeb zu aktivieren, setzen Si
         -p 80:8080/tcp \
         -p 443:8443/tcp \
         -p 443:8443/udp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
 === "Docker"
@@ -1020,7 +1020,7 @@ Um systemd-resolved als Ihren DNS-Resolver in BunkerWeb zu aktivieren, setzen Si
           - bw-dns
 
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ...
         environment:
           DNS_RESOLVERS: "dnsmasq"
@@ -1031,7 +1031,7 @@ Um systemd-resolved als Ihren DNS-Resolver in BunkerWeb zu aktivieren, setzen Si
           - bw-dns
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         ...
         environment:
           DNS_RESOLVERS: "dnsmasq"
@@ -1145,7 +1145,7 @@ Einige Integrationen bieten bequemere Möglichkeiten zum Anwenden von Konfigurat
           }" \
         -p 80:8080/tcp \
         -p 443:8443/tcp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
     Bitte beachten Sie, dass Sie, wenn Ihr Container bereits erstellt wurde, ihn löschen und neu erstellen müssen, damit die neuen Umgebungsvariablen angewendet werden.
@@ -1185,7 +1185,7 @@ Einige Integrationen bieten bequemere Möglichkeiten zum Anwenden von Konfigurat
         -p 80:8080/tcp \
         -p 443:8443/tcp \
         -p 443:8443/udp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
 === "Docker"
@@ -1208,7 +1208,7 @@ Einige Integrationen bieten bequemere Möglichkeiten zum Anwenden von Konfigurat
     ```yaml
     ...
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       environment:
         - |
           CUSTOM_CONF_SERVER_HTTP_hello-world=
@@ -1251,7 +1251,7 @@ Einige Integrationen bieten bequemere Möglichkeiten zum Anwenden von Konfigurat
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       volumes:
         - ./bw-data:/data
       ...
@@ -1321,7 +1321,7 @@ Einige Integrationen bieten bequemere Möglichkeiten zum Anwenden von Konfigurat
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       volumes:
         - ./bw-data:/data
       ...
@@ -1552,7 +1552,7 @@ Eine vollständige Liste der Einstellungen für den `stream`-Modus finden Sie im
         -p 443:8443/udp \
         -p 10000:10000/tcp \
         -p 20000:20000/tcp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
     Bitte beachten Sie, dass Sie, wenn Ihr Container bereits erstellt wurde, ihn löschen und neu erstellen müssen, damit die neuen Umgebungsvariablen angewendet werden.
@@ -1575,7 +1575,7 @@ Eine vollständige Liste der Einstellungen für den `stream`-Modus finden Sie im
 
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080" # Behalten, wenn Sie die Let's Encrypt-Automatisierung mit dem http-Challenge-Typ verwenden möchten
           - "10000:10000" # app1
@@ -1590,7 +1590,7 @@ Eine vollständige Liste der Einstellungen für den `stream`-Modus finden Sie im
           - bw-services
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-api-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Diese Einstellung ist obligatorisch, um die BunkerWeb-Instanz anzugeben
@@ -1641,7 +1641,7 @@ Eine vollständige Liste der Einstellungen für den `stream`-Modus finden Sie im
     ```yaml
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080" # Behalten, wenn Sie die Let's Encrypt-Automatisierung mit dem http-Challenge-Typ verwenden möchten
           - "10000:10000" # app1
@@ -1871,7 +1871,7 @@ Eine vollständige Liste der Einstellungen für den `stream`-Modus finden Sie im
     ```yaml
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           # Behalten, wenn Sie die Let's Encrypt-Automatisierung mit dem http-Challenge-Typ verwenden möchten
           - published: 80
@@ -2001,7 +2001,7 @@ BunkerWeb unterstützt PHP über externe oder entfernte [PHP-FPM](https://www.ph
         -p 80:8080/tcp \
         -p 443:8443/tcp \
         -p 443:8443/udp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
     Bitte beachten Sie, dass Sie, wenn Ihr Container bereits erstellt wurde, ihn löschen und neu erstellen müssen, damit die neuen Umgebungsvariablen angewendet werden.
@@ -2045,7 +2045,7 @@ BunkerWeb unterstützt PHP über externe oder entfernte [PHP-FPM](https://www.ph
 
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -2060,7 +2060,7 @@ BunkerWeb unterstützt PHP über externe oder entfernte [PHP-FPM](https://www.ph
           - bw-services
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-api-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Diese Einstellung ist obligatorisch, um die BunkerWeb-Instanz anzugeben
@@ -2154,7 +2154,7 @@ BunkerWeb unterstützt PHP über externe oder entfernte [PHP-FPM](https://www.ph
 
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         labels:
           - "bunkerweb.INSTANCE=yes"
         environment:
@@ -2167,7 +2167,7 @@ BunkerWeb unterstützt PHP über externe oder entfernte [PHP-FPM](https://www.ph
           - bw-services
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-api-env
           BUNKERWEB_INSTANCES: "" # Wir müssen die BunkerWeb-Instanz hier nicht angeben, da sie automatisch vom Autoconf-Dienst erkannt werden
@@ -2182,7 +2182,7 @@ BunkerWeb unterstützt PHP über externe oder entfernte [PHP-FPM](https://www.ph
           - bw-db
 
       bw-autoconf:
-        image: bunkerity/bunkerweb-autoconf:1.6.10-rc3
+        image: bunkerity/bunkerweb-autoconf:1.6.10-rc4
         depends_on:
           - bunkerweb
           - bw-docker
@@ -2422,7 +2422,7 @@ BunkerWeb unterstützt PHP über externe oder entfernte [PHP-FPM](https://www.ph
     ```yaml
     services:
       bunkerweb:
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         volumes:
           - /shared/www:/var/www/html
     ...
@@ -2521,7 +2521,7 @@ Standardmäßig lauscht BunkerWeb nur auf IPv4-Adressen und verwendet kein IPv6 
     ```yaml
     services:
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           USE_IPv6: "yes"
 
@@ -2582,15 +2582,18 @@ Service-Protokolle werden durch die Einstellung `LOG_TYPES` gesteuert, die mehre
 
 | Wert     | Beschreibung                                                                                            |
 | :------- | :------------------------------------------------------------------------------------------------------ |
-| `file`   | Schreibt Protokolle in eine Datei. Erforderlich für den Protokollanzeiger der Web-UI.                   |
+| `file`   | Schreibt Protokolle in eine einfache Datei. Die externe Rotation wird bei Linux-Installationen von `logrotate` und unter Docker von Ihrem Container-Logging-Treiber übernommen. Erforderlich für den Protokollanzeiger der Web-UI. |
 | `stderr` | Schreibt Protokolle in Standardfehlerausgabe. Standard für containerisierte Umgebungen (`docker logs`). |
 | `syslog` | Sendet Protokolle an einen Syslog-Server. Erfordert, dass `LOG_SYSLOG_ADDRESS` gesetzt ist.             |
+
+Wenn Sie `file` verwenden, sollten Sie zusätzlich konfigurieren:
+
+- `LOG_FILE_PATH`: Pfad, in den Logdateien geschrieben werden, wenn `LOG_TYPES` `file` enthält.
 
 Wenn Sie `syslog` verwenden, sollten Sie zusätzlich konfigurieren:
 
 - `LOG_SYSLOG_ADDRESS`: Adresse des Syslog-Servers (z. B. `udp://bw-syslog:514` oder `/dev/log`).
 - `LOG_SYSLOG_TAG`: Ein eindeutiger Tag für den Dienst (z. B. `bw-scheduler`), damit Einträge unterschieden werden können.
-- `LOG_FILE_PATH`: Pfad für die Dateiausgabe, wenn `LOG_TYPES` `file` enthält (z. B. `/var/log/bunkerweb/scheduler.log`).
 
 ### Zugriffs- und Fehlerprotokolle
 
@@ -2619,7 +2622,7 @@ LOG_LEVEL_1=error
 
 === "Linux"
 
-    **Standardverhalten**: `LOG_TYPES="file"`. Protokolle werden unter `/var/log/bunkerweb/*.log` geschrieben.
+    **Standardverhalten**: `LOG_TYPES="file"`. Protokolle werden unter `/var/log/bunkerweb/*.log` geschrieben. Die Rotation übernimmt die installierte System-`logrotate`-Konfiguration unter `/etc/logrotate.d/bunkerweb` (täglich, 7 Tage Aufbewahrung, Komprimierung per `copytruncate`).
 
     **Beispiel**: Lokale Dateien behalten (für die Web-UI) und zusätzlich an den System-Syslog spiegeln.
 
@@ -2661,7 +2664,7 @@ LOG_LEVEL_1=error
     services:
       bunkerweb:
         # Dies ist der Name, der zur Identifikation der Instanz im Scheduler verwendet wird
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -2674,7 +2677,7 @@ LOG_LEVEL_1=error
           - bw-services
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Stellen Sie sicher, dass Sie den richtigen Instanznamen setzen
@@ -2691,7 +2694,7 @@ LOG_LEVEL_1=error
           - bw-db
 
       bw-ui:
-        image: bunkerity/bunkerweb-ui:1.6.10-rc3
+        image: bunkerity/bunkerweb-ui:1.6.10-rc4
         environment:
           <<: *bw-env
         volumes:
@@ -2855,7 +2858,7 @@ Sie können den Protokollierungstreiber für Ihre Dienste in Ihrer `docker-compo
 ```yaml
 services:
   bunkerweb:
-    image: bunkerity/bunkerweb:1.6.10-rc3
+    image: bunkerity/bunkerweb:1.6.10-rc4
     logging:
       driver: "json-file"
       options:
@@ -2964,7 +2967,7 @@ Die üblichen Variablen sind:
         -p 80:8080/tcp \
         -p 443:8443/tcp \
         -p 443:8443/udp \
-        bunkerity/bunkerweb-all-in-one:1.6.10-rc3
+        bunkerity/bunkerweb-all-in-one:1.6.10-rc4
     ```
 
     Wenn der Container bereits existiert, erstellen Sie ihn neu, um die neue Umgebung anzuwenden.
@@ -2975,7 +2978,7 @@ Die üblichen Variablen sind:
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       ...
       environment:
         HTTP_PROXY: "http://proxy.example.local:3128"
@@ -2994,7 +2997,7 @@ Die üblichen Variablen sind:
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       ...
       environment:
         HTTP_PROXY: "http://proxy.example.local:3128"
@@ -3037,7 +3040,7 @@ Die üblichen Variablen sind:
 
     ```yaml
     bw-scheduler:
-      image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+      image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
       ...
       environment:
         HTTP_PROXY: "http://proxy.example.local:3128"
@@ -3336,12 +3339,12 @@ Der **BunkerWeb MCP-Server** ermöglicht es KI-Assistenten wie **Claude Code** u
 
 ### Docker Compose Beispiel
 
-Ein vollständiges Beispiel ist in [`examples/mcp-stack/`](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc3/examples/mcp-stack) verfügbar:
+Ein vollständiges Beispiel ist in [`examples/mcp-stack/`](https://github.com/bunkerity/bunkerweb/tree/v1.6.10-rc4/examples/mcp-stack) verfügbar:
 
 ```yaml
 services:
   bw-api:
-    image: bunkerity/bunkerweb-api:1.6.10-rc3
+    image: bunkerity/bunkerweb-api:1.6.10-rc4
     environment:
       API_TOKEN: "my-bearer-token-for-mcp"
       DATABASE_URI: "mariadb+pymysql://bunkerweb:changeme@bw-db:3306/db"
@@ -3799,7 +3802,7 @@ Das Custom Pages Plugin ermöglicht es Ihnen, die eingebauten Seiten von BunkerW
 
 ### Funktionen
 
-- **Benutzerdefinierte Fehlerseiten pro Service** und **Antibot-Challenge-Seiten** (Captcha, JavaScript-Prüfung, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).
+- **Benutzerdefinierte Fehlerseiten pro Service** und **Antibot-Challenge-Seiten** (Captcha, JavaScript-Prüfung, reCAPTCHA, hCaptcha, Turnstile, mCaptcha, Cap.js).
 - **Globale benutzerdefinierte Standard-Server-Seite** für den Fallback/Standard-vhost.
 - **HTML-Parsing und Lua-Vorlagen-Tag-Balanceprüfungen** bevor eine Vorlage akzeptiert wird.
 - **Automatisches Caching** nach `/var/cache/bunkerweb/custom_pages` mit Änderungserkennung für Neuladen.
@@ -3824,6 +3827,7 @@ Das Custom Pages Plugin ermöglicht es Ihnen, die eingebauten Seiten von BunkerW
 | `CUSTOM_ANTIBOT_HCAPTCHA_PAGE`   |          | multisite | Absoluter Pfad zur benutzerdefinierten Antibot-hCaptcha-Seite.          |
 | `CUSTOM_ANTIBOT_TURNSTILE_PAGE`  |          | multisite | Absoluter Pfad zur benutzerdefinierten Antibot-Turnstile-Seite.         |
 | `CUSTOM_ANTIBOT_MCAPTCHA_PAGE`   |          | multisite | Absoluter Pfad zur benutzerdefinierten Antibot-mCaptcha-Seite.          |
+| `CUSTOM_ANTIBOT_CAPJS_PAGE`      |          | multisite | Absoluter Pfad zur benutzerdefinierten Antibot-Cap.js-Seite.            |
 
 ### Vorlagenvariablen-Referenz
 
@@ -3904,6 +3908,13 @@ Diese Variablen sind in Antibot-Challenge-Seiten-Vorlagen verfügbar:
 | ------------------ | ------ | --------------------- |
 | `mcaptcha_sitekey` | string | Ihr mCaptcha-Site-Key |
 | `mcaptcha_url`     | string | Ihre mCaptcha-URL     |
+
+**Cap.js (`CUSTOM_ANTIBOT_CAPJS_PAGE`):**
+
+| Variable        | Typ    | Beschreibung                   |
+| --------------- | ------ | ------------------------------ |
+| `capjs_sitekey` | string | Ihr Cap.js-Site-Key            |
+| `capjs_url`     | string | Ihre Cap.js-Frontend-Basis-URL |
 
 ### Vorlagensyntax
 
@@ -4195,11 +4206,11 @@ Vorlagen verwenden Lua-Vorlagensyntax mit den folgenden Trennzeichen:
         ```yaml
         services:
           bunkerweb:
-            image: bunkerity/bunkerweb:1.6.10-rc3
+            image: bunkerity/bunkerweb:1.6.10-rc4
             # ... andere Einstellungen (keine Umgebungsvariablen für Custom Pages hier benötigt)
 
           bw-scheduler:
-            image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+            image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
             volumes:
               - ./templates:/custom_templates:ro
             environment:
@@ -4282,7 +4293,7 @@ Vorlagen verwenden Lua-Vorlagensyntax mit den folgenden Trennzeichen:
             spec:
               containers:
                 - name: bunkerweb-scheduler
-                  image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+                  image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
                   env:
                     - name: CUSTOM_ERROR_PAGE
                       value: "/custom_templates/error.html"
@@ -4822,22 +4833,22 @@ Externe/PRO-Plugins, die nicht in den `PLUGINS_ORDER_*`-Einstellungen aufgeführ
 
 **Grundlegende ACME-Einstellungen**
 
-| Einstellung            | Standard | Kontext   | Mehrfach | Beschreibung                                                                                                 |
-| ---------------------- | -------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------ |
-| `USE_ACME`             | `no`     | multisite | nein     | ACME-Zertifikatsverwaltung für diesen Service aktivieren.                                                    |
+| Einstellung            | Standard | Kontext   | Mehrfach | Beschreibung                                                                                                  |
+| ---------------------- | -------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `USE_ACME`             | `no`     | multisite | nein     | ACME-Zertifikatsverwaltung für diesen Service aktivieren.                                                     |
 | `ACME_PASSTHROUGH`     | `no`     | multisite | nein     | HTTP-01-Challenge-Anfragen an den Upstream-Server durchreichen (Upstream betreibt einen eigenen ACME-Client). |
-| `ACME_DIRECTORY_URL`   |          | multisite | nein     | ACME-Directory-URL der Certificate Authority.                                                                |
-| `ACME_EMAIL`           |          | multisite | nein     | E-Mail-Adresse für die ACME-Kontoregistrierung und Benachrichtigungen.                                       |
-| `ACME_CHALLENGE`       | `http`   | multisite | nein     | ACME-Challenge-Typ: `http`, `dns` oder `alpn`.                                                               |
-| `ACME_KEY_TYPE`        | `ecdsa`  | multisite | nein     | Schlüsseltyp für das Zertifikat: `ecdsa` oder `rsa`.                                                         |
-| `ACME_KEY_SIZE`        | `256`    | multisite | nein     | Schlüsselgröße in Bit. ECDSA: `256` oder `384`. RSA: `2048` oder `4096`.                                     |
-| `ACME_RENEWAL_DAYS`    | `30`     | multisite | nein     | Zertifikat erneuern, wenn es weniger als diese Anzahl an Tagen bis zum Ablauf hat.                           |
-| `ACME_SSL_VERIFY`      | `yes`    | multisite | nein     | SSL-Zertifikate bei der Kommunikation mit dem ACME-Server überprüfen.                                        |
-| `ACME_WILDCARD`        | `no`     | multisite | nein     | Wildcard-Zertifikat anfordern (erfordert DNS-01-Challenge).                                                  |
-| `ACME_MUST_STAPLE`     | `no`     | multisite | nein     | OCSP Must-Staple-Erweiterung im Zertifikat anfordern.                                                        |
-| `ACME_MAX_RETRIES`     | `3`      | multisite | nein     | Anzahl der Wiederholungsversuche bei fehlgeschlagener Zertifikatsgenerierung (0 deaktiviert Wiederholungen). |
-| `ACME_PREFERRED_CHAIN` |          | multisite | nein     | Bevorzugter Zertifikatsketten-Issuer-CN, wenn die CA mehrere Ketten anbietet.                                |
-| `ACME_CA_CERT_PATH`    |          | multisite | nein     | Dateipfad zum Root-CA-Zertifikat für private ACME-Server.                                                    |
+| `ACME_DIRECTORY_URL`   |          | multisite | nein     | ACME-Directory-URL der Certificate Authority.                                                                 |
+| `ACME_EMAIL`           |          | multisite | nein     | E-Mail-Adresse für die ACME-Kontoregistrierung und Benachrichtigungen.                                        |
+| `ACME_CHALLENGE`       | `http`   | multisite | nein     | ACME-Challenge-Typ: `http`, `dns` oder `alpn`.                                                                |
+| `ACME_KEY_TYPE`        | `ecdsa`  | multisite | nein     | Schlüsseltyp für das Zertifikat: `ecdsa` oder `rsa`.                                                          |
+| `ACME_KEY_SIZE`        | `256`    | multisite | nein     | Schlüsselgröße in Bit. ECDSA: `256` oder `384`. RSA: `2048` oder `4096`.                                      |
+| `ACME_RENEWAL_DAYS`    | `30`     | multisite | nein     | Zertifikat erneuern, wenn es weniger als diese Anzahl an Tagen bis zum Ablauf hat.                            |
+| `ACME_SSL_VERIFY`      | `yes`    | multisite | nein     | SSL-Zertifikate bei der Kommunikation mit dem ACME-Server überprüfen.                                         |
+| `ACME_WILDCARD`        | `no`     | multisite | nein     | Wildcard-Zertifikat anfordern (erfordert DNS-01-Challenge).                                                   |
+| `ACME_MUST_STAPLE`     | `no`     | multisite | nein     | OCSP Must-Staple-Erweiterung im Zertifikat anfordern.                                                         |
+| `ACME_MAX_RETRIES`     | `3`      | multisite | nein     | Anzahl der Wiederholungsversuche bei fehlgeschlagener Zertifikatsgenerierung (0 deaktiviert Wiederholungen).  |
+| `ACME_PREFERRED_CHAIN` |          | multisite | nein     | Bevorzugter Zertifikatsketten-Issuer-CN, wenn die CA mehrere Ketten anbietet.                                 |
+| `ACME_CA_CERT_PATH`    |          | multisite | nein     | Dateipfad zum Root-CA-Zertifikat für private ACME-Server.                                                     |
 
 **External Account Binding (EAB)**
 
@@ -4946,3 +4957,208 @@ app2.example.com_AUTO_LETS_ENCRYPT: "yes"
 - **TLS-ALPN-01-Challenge schlägt fehl**: Stellen Sie sicher, dass Port 443 vom ACME-Server erreichbar ist und kein anderes Plugin vor ACME in der `ssl_certificate`-Phase ein Zertifikat bereitstellt. Überprüfen Sie bei Zweifeln `PLUGINS_ORDER_SSL_CERTIFICATE`.
 - **DNS-01-Challenge schlägt fehl**: Überprüfen Sie die DNS-Provider-Anmeldedaten in `ACME_DNS_CREDENTIAL_ITEM` und passen Sie `ACME_DNS_PROPAGATION` an, wenn Ihr Provider langsam bei der Propagation ist.
 - **Zertifikat wird nicht erneuert**: Überprüfen Sie `ACME_RENEWAL_DAYS` und die Scheduler-Logs. Der Job `acme-renew` läuft täglich und erneuert Zertifikate, die innerhalb des konfigurierten Schwellenwerts liegen.
+
+## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+
+STREAM-Unterstützung :x:
+
+Das **Wildcard**-Plugin ermöglicht es einem einzelnen BunkerWeb-Dienst, auf Folgendes zu antworten:
+
+* seinen exakten Hostnamen
+* jede **direkte Subdomain** dieses Hostnamens
+
+Wenn es aktiviert ist, nimmt das Plugin den **ersten Eintrag** aus `SERVER_NAME` und fügt der generierten NGINX-Konfiguration ein Wildcard-`server_name` hinzu.
+
+Wenn der erste Eintrag zum Beispiel `example.com` ist, fügt das Plugin Folgendes hinzu:
+
+```nginx
+server_name *.example.com;
+```
+
+Dadurch antwortet der Dienst auf:
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+
+Dies ist ein minimales, rein konfigurationsbasiertes Plugin:
+
+* keine Jobs
+* kein Lua
+* keine UI
+
+---
+
+### Wie es funktioniert
+
+Das Plugin leitet den Wildcard-Hostnamen aus dem **ersten Wert** in `SERVER_NAME` ab und fügt während der Konfigurationsgenerierung einen normalen NGINX-Wildcard-Servernamen ein.
+
+Es verändert die Request-Verarbeitung über das Hostname-Matching hinaus nicht.
+
+!!! info "Wildcard-Hosts sind keine Wildcard-Zertifikate"
+    Dieses Plugin beeinflusst nur das **HTTP-Routing**. Es legt fest, welche Hostnamen der Dienst in NGINX akzeptiert.
+
+    Es stellt **kein** Wildcard-TLS-Zertifikat bereit.
+
+    Um `*.example.com` per HTTPS bereitzustellen, benötigen Sie weiterhin ein passendes Wildcard-Zertifikat, typischerweise mit einer der folgenden Optionen:
+
+    - `USE_LETS_ENCRYPT_WILDCARD=yes` mit dem integrierten Let's Encrypt Plugin
+    - `ACME_WILDCARD=yes` mit dem [ACME PRO](#acme)-Plugin unter Verwendung einer DNS-01-Challenge
+
+---
+
+### Funktionen
+
+* **Einfache Aktivierung**: Aktivieren Sie Wildcard-Routing mit `USE_WILDCARD=yes`
+* **Automatische Ableitung**: Der Wildcard-Host wird aus dem ersten Eintrag in `SERVER_NAME` gebildet
+* **Native NGINX-Semantik**: Das Matching folgt dem Standardverhalten von `server_name`
+* **Multisite-fähig**: Jeder Dienst kann Wildcard-Routing unabhängig aktivieren oder deaktivieren
+
+---
+
+### Konfiguration
+
+| Einstellung    | Standardwert | Kontext   | Mehrfach | Beschreibung                                                                                                                      |
+| -------------- | ------------ | --------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_WILDCARD` | `no`         | multisite | nein     | Aktiviert einen Wildcard-`server_name` für den Dienst, indem `*.domain` für den ersten Eintrag in `SERVER_NAME` hinzugefügt wird. |
+
+---
+
+### Schnellstart
+
+1. Platzieren Sie die Domain, die als Wildcard verwendet werden soll, **an erster Stelle** in `SERVER_NAME`
+2. Setzen Sie `USE_WILDCARD=yes`
+3. Lassen Sie den Wildcard-DNS-Eintrag auf BunkerWeb zeigen, üblicherweise über einen Wildcard-`A`- oder `AAAA`-Record
+4. Wenn Sie HTTPS benötigen, stellen Sie separat ein Wildcard-Zertifikat bereit
+5. Laden Sie BunkerWeb neu oder starten Sie es neu
+
+---
+
+### Beispiele
+
+#### Single-site
+
+```yaml
+SERVER_NAME: "example.com"
+USE_WILDCARD: "yes"
+```
+
+Dieser Dienst antwortet auf:
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+* jeden anderen `*.example.com`-Hostnamen, der zu BunkerWeb aufgelöst wird
+
+#### Multisite
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "app.example.com docs.example.org"
+
+# Nur app.example.com erhält Wildcard-Routing
+app.example.com_USE_WILDCARD: "yes"
+```
+
+In diesem Setup gilt:
+
+* `app.example.com` und `*.app.example.com` gehen an den ersten Dienst
+* `docs.example.org` behält ausschließlich exaktes Hostname-Matching
+
+---
+
+### Wichtiges Verhalten
+
+!!! warning "Nur die erste Domain wird als Wildcard behandelt"
+    Wenn `SERVER_NAME` so gesetzt ist:
+
+    ```yaml
+    SERVER_NAME: "example.com example.org"
+    ```
+
+    wird nur `*.example.com` hinzugefügt.
+
+    Platzieren Sie die Domain, die als Wildcard verwendet werden soll, an erster Stelle.
+
+!!! note "Vorhandene Wildcard-Einträge bleiben erhalten"
+    Wenn die erste Domain bereits mit `*.` beginnt, zum Beispiel:
+
+    ```yaml
+    SERVER_NAME: "*.example.com"
+    ```
+
+    erzeugt das Plugin nichts.
+
+!!! note "Wildcard-Matching gilt nur für eine Ebene"
+    `*.example.com` passt zu `foo.example.com`, aber nicht zu `a.b.example.com`.
+
+    Für tiefere Subdomains verwenden Sie einen expliziten `SERVER_NAME`-Eintrag oder einen separaten Dienst.
+
+!!! note "Exakte Treffer haben Vorrang"
+    Wenn ein anderer Dienst `foo.example.com` explizit definiert, leitet NGINX diesen Hostnamen zuerst an den exakten Treffer weiter.
+
+---
+
+### Empfohlen mit Let's Encrypt Wildcard-Zertifikaten
+
+Wenn Sie dieses Plugin zusammen mit `USE_LETS_ENCRYPT_WILDCARD=yes` verwenden, nutzen Sie dieses Muster:
+
+```yaml
+SERVER_NAME: "<root_domain> <any_app>.<root_domain>"
+```
+
+Die **Root-Domain muss an erster Stelle stehen**.
+
+Beispiel:
+
+```yaml
+SERVER_NAME: "example.com app.example.com"
+USE_WILDCARD: "yes"
+AUTO_LETS_ENCRYPT: "yes"
+EMAIL_LETS_ENCRYPT: "admin@example.com"
+LETS_ENCRYPT_CHALLENGE: "dns"
+LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+USE_LETS_ENCRYPT_WILDCARD: "yes"
+```
+
+!!! tip "Warum dieses Muster wichtig ist"
+    - **Nur der erste `SERVER_NAME`-Eintrag wird als Wildcard behandelt**
+
+    Wenn `example.com` zuerst steht, erzeugt das Plugin `*.example.com`.
+
+    Wenn `app.example.com` zuerst steht, erzeugt es `*.app.example.com`, was in der Regel die falsche Wildcard-Ebene ist.
+
+    - **Der zweite Eintrag hilft Let's Encrypt, die korrekte Basisdomain zu erkennen**
+      Mit nur einer Apex-Domain kann die Erkennung von Wildcard-Zertifikaten bei manchen Public-Suffix-Domains wie `example.co.uk` fehlschlagen.
+
+    - **Der zweite Hostname benötigt kein echtes Backend**
+      Verwenden Sie einen beliebigen stabilen Wert wie `app.example.com` oder `www.example.com`.
+
+#### Multisite mit Let's Encrypt Wildcard
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "example.com app.example.com"
+example.com_USE_WILDCARD: "yes"
+example.com_USE_LETS_ENCRYPT_WILDCARD: "yes"
+example.com_LETS_ENCRYPT_CHALLENGE: "dns"
+example.com_LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+example.com_LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+```
+
+---
+
+### Nutzungstipps
+
+* **Planen Sie TLS separat**
+  Wildcard-Routing allein reicht für HTTPS nicht aus. Sie benötigen weiterhin Zertifikatsabdeckung für Subdomains.
+
+* **Halten Sie die Reihenfolge von `SERVER_NAME` stabil**
+  Eine geänderte Reihenfolge bestimmt, welche Domain zum Wildcard-Ziel wird.
+
+* **Funktioniert gut mit `REVERSE_PROXY_HOST`**
+  Das ist nützlich, wenn viele Subdomains über ein gemeinsames Upstream wie einen Tenant-Router geleitet werden.
+
+* **Seien Sie vorsichtig bei überlappenden Diensten**
+  NGINX bevorzugt immer den spezifischsten `server_name`-Treffer.

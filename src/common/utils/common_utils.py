@@ -341,7 +341,17 @@ def safe_zip_extractall(zf, path):
     dest = Path(path).resolve()
     for member in zf.namelist():
         member_path = (dest / member).resolve()
-        if not member_path.is_relative_to(dest):
+        # Path.is_relative_to() was added in Python 3.9; fall back to relative_to()
+        # for older interpreters so this helper still raises on traversal attempts.
+        try:
+            contained = member_path.is_relative_to(dest)
+        except AttributeError:
+            try:
+                member_path.relative_to(dest)
+                contained = True
+            except ValueError:
+                contained = False
+        if not contained:
             raise ValueError(f"Zip member {member!r} would escape target directory")
     zf.extractall(path)
 

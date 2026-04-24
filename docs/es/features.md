@@ -325,9 +325,9 @@ Los atacantes suelen utilizar herramientas automatizadas (bots) para intentar ex
 
 Siga estos pasos para habilitar y configurar la función Antibot:
 
-1.  **Elija un tipo de desafío:** Decida qué tipo de desafío antibot usar (p. ej., [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [javascript](#__tabbed_3_2)).
+1.  **Elija un tipo de desafío:** Decida qué tipo de desafío antibot usar (p. ej., [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [capjs](#__tabbed_3_8), [javascript](#__tabbed_3_2)).
 2.  **Habilite la función:** Establezca la configuración `USE_ANTIBOT` en el tipo de desafío elegido en su configuración de BunkerWeb.
-3.  **Configure los ajustes:** Ajuste las otras configuraciones `ANTIBOT_*` según sea necesario. Para reCAPTCHA, hCaptcha, Turnstile y mCaptcha, debe crear una cuenta con el servicio respectivo y obtener claves de API.
+3.  **Configure los ajustes:** Ajuste las otras configuraciones `ANTIBOT_*` según sea necesario. Para reCAPTCHA, hCaptcha y Turnstile, cree una cuenta con el servicio respectivo y obtenga claves de API. Para mCaptcha y Cap.js, puede autoalojar el proveedor o usar un servicio alojado y luego configurar la clave de sitio y la clave secreta requeridas.
 4.  **Importante:** Asegúrese de que el `ANTIBOT_URI` sea una URL única en su sitio que no esté en uso.
 
 !!! important "Acerca de la configuración `ANTIBOT_URI`"
@@ -364,6 +364,9 @@ BunkerWeb le permite especificar ciertos usuarios, IP o solicitudes que deben om
 !!! note "Comportamiento de la configuración basada en países"
       - Cuando se configuran `ANTIBOT_IGNORE_COUNTRY` y `ANTIBOT_ONLY_COUNTRY`, la lista de exclusiones tiene prioridad: los países presentes en ambas listas omiten el desafío.
       - Las direcciones IP privadas o desconocidas omiten el desafío cuando `ANTIBOT_ONLY_COUNTRY` está configurado, porque no se puede determinar un código de país.
+
+!!! tip "Compartir el estado del desafío entre subdominios"
+    El estado de antibot (incluidos `turnstile`, `hcaptcha`, `recaptcha`, `mcaptcha`, `captcha`, `javascript` y `cookie`) se conserva en la [cookie de sesión](#sessions) de BunkerWeb. De forma predeterminada, esa cookie queda limitada al host exacto que la emitió, por lo que un usuario que resuelva el desafío en `a.example.com` tendrá que resolverlo de nuevo en `b.example.com`. Para resolver el desafío una sola vez para todos los subdominios hermanos del mismo dominio registrable, configure [`SESSIONS_DOMAIN`](#sessions) con el dominio padre (por ejemplo `example.com`) **en cada servidor relevante**. `SESSIONS_DOMAIN` es un ajuste multisite: configúrelo por servidor para que los tenants no relacionados alojados en la misma instancia de BunkerWeb nunca reciban un atributo `Domain` compartido entre tenants.
 
 **Ejemplos:**
 
@@ -540,6 +543,29 @@ BunkerWeb le permite especificar ciertos usuarios, IP o solicitudes que deben om
 
     Consulte los [Ajustes comunes](#configuraciones-comunes) para opciones de configuración adicionales.
 
+=== "Cap.js"
+
+    [Cap.js](https://capjs.js.org/) es un CAPTCHA de prueba de trabajo autoalojado, de código abierto y respetuoso con la privacidad. En lugar de delegar la verificación en un servicio de terceros, usted ejecuta el servidor Cap.js y BunkerWeb verifica los tokens contra ese servidor.
+
+    Use la URL frontend para el endpoint visible desde el navegador que sirve el widget. Si BunkerWeb puede llegar al servidor Cap.js mediante una dirección interna, establezca la URL backend en ese endpoint interno; de lo contrario, déjela vacía y BunkerWeb usará la URL frontend para `/siteverify`.
+
+    **Ajustes de configuración:**
+
+    | Configuración                | Valor por defecto | Contexto  | Múltiple | Descripción                                                                                                               |
+    | ---------------------------- | ----------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------- |
+    | `USE_ANTIBOT`                | `no`              | multisite | no       | **Habilitar Antibot:** Establezca en `capjs` para habilitar el desafío de Cap.js.                                         |
+    | `ANTIBOT_CAPJS_FRONTEND_URL` |                   | multisite | no       | **URL frontend de Cap.js:** URL visible para el navegador del servidor Cap.js que sirve el widget.                        |
+    | `ANTIBOT_CAPJS_BACKEND_URL`  |                   | multisite | no       | **URL backend de Cap.js:** URL interna opcional que BunkerWeb usa para `/siteverify`; si está vacía, usa la URL frontend. |
+    | `ANTIBOT_CAPJS_SITEKEY`      |                   | multisite | no       | **Clave del sitio de Cap.js:** La clave de sitio para el desafío de Cap.js.                                               |
+    | `ANTIBOT_CAPJS_SECRET`       |                   | multisite | no       | **Clave secreta de Cap.js:** La clave secreta que BunkerWeb usa para verificar los tokens de Cap.js.                      |
+
+    !!! note "Requisitos operativos"
+        - Use HTTPS para `ANTIBOT_CAPJS_FRONTEND_URL` en producción. El worker del navegador requiere `crypto.subtle` en un contexto seguro, y HTTPS evita cambios MITM en el widget.
+        - Configure CORS en la clave de sitio de Cap.js para permitir el origen protegido.
+        - Defina `ANTIBOT_CAPJS_FRONTEND_URL` y `ANTIBOT_CAPJS_BACKEND_URL` solo como orígenes: esquema, host y puerto opcional, sin ruta.
+
+    Consulte los [Ajustes comunes](#configuraciones-comunes) para opciones de configuración adicionales.
+
 ### Configuraciones de ejemplo
 
 === "Desafío de Cookie"
@@ -647,6 +673,21 @@ BunkerWeb le permite especificar ciertos usuarios, IP o solicitudes que deben om
     ANTIBOT_MCAPTCHA_SITEKEY: "your-site-key"
     ANTIBOT_MCAPTCHA_SECRET: "your-secret-key"
     ANTIBOT_MCAPTCHA_URL: "https://demo.mcaptcha.org"
+    ANTIBOT_URI: "/challenge"
+    ANTIBOT_TIME_RESOLVE: "60"
+    ANTIBOT_TIME_VALID: "86400"
+    ```
+
+=== "Desafío de Cap.js"
+
+    Configuración de ejemplo para habilitar el desafío de Cap.js:
+
+    ```yaml
+    USE_ANTIBOT: "capjs"
+    ANTIBOT_CAPJS_FRONTEND_URL: "https://cap.example.com"
+    ANTIBOT_CAPJS_BACKEND_URL: "http://cap-server:3000"
+    ANTIBOT_CAPJS_SITEKEY: "your-site-key"
+    ANTIBOT_CAPJS_SECRET: "your-secret-key"
     ANTIBOT_URI: "/challenge"
     ANTIBOT_TIME_RESOLVE: "60"
     ANTIBOT_TIME_VALID: "86400"
@@ -1803,7 +1844,7 @@ Las siguientes secciones desarrollan cada paso.
     services:
       bunkerweb:
         # Este es el nombre que se utilizará para identificar la instancia en el Planificador
-        image: bunkerity/bunkerweb:1.6.10-rc3
+        image: bunkerity/bunkerweb:1.6.10-rc4
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1820,7 +1861,7 @@ Las siguientes secciones desarrollan cada paso.
             syslog-address: "udp://10.20.30.254:514" # La dirección IP del servicio syslog
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc3
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Asegúrese de establecer el nombre de instancia correcto
@@ -3131,6 +3172,7 @@ Siga estos pasos para configurar y usar la función de Let's Encrypt:
 | `LETS_ENCRYPT_PROFILE`                      | `classic`         | multisite | no       | **Perfil de certificado:** Seleccione el perfil de certificado a utilizar. Opciones: `classic` (propósito general), `tlsserver` (optimizado para servidores TLS) o `shortlived` (certificados de 7 días).                                                                                                                                                                   |
 | `LETS_ENCRYPT_CUSTOM_PROFILE`               |                   | multisite | no       | **Perfil de certificado personalizado:** Ingrese un perfil de certificado personalizado si su servidor ACME admite perfiles no estándar. Esto anula `LETS_ENCRYPT_PROFILE` si está configurado.                                                                                                                                                                             |
 | `LETS_ENCRYPT_MAX_RETRIES`                  | `3`               | multisite | no       | **Máximo de reintentos:** Número de veces que se reintentará la generación de certificados en caso de fallo. Establezca en `0` para deshabilitar los reintentos. Útil para manejar problemas de red temporales o límites de velocidad de la API.                                                                                                                            |
+| `LETS_ENCRYPT_MAX_LOG_BACKUPS`              | `50`              | global    | no       | **Máximo de copias de seguridad de logs de Certbot:** Número de copias rotadas de `letsencrypt.log` que Certbot conserva por trabajo. El valor predeterminado de Certbot, `1000`, se acumula rápidamente; `50` es un límite razonable. Establece `0` para conservar solo el log activo.                                                                                     |
 
 !!! info "Información y comportamiento"
     - El ajuste `LETS_ENCRYPT_DNS_CREDENTIAL_ITEM` es un ajuste múltiple y se puede utilizar para establecer varios elementos para el proveedor de DNS. Los elementos se guardarán como un archivo de caché, y Certbot leerá las credenciales de él.
@@ -3972,6 +4014,11 @@ Siga estos pasos para configurar y usar ModSecurity:
     **Recomendamos encarecidamente mantener habilitados tanto ModSecurity como el OWASP Core Rule Set (CRS)** para proporcionar una protección robusta contra las vulnerabilidades web comunes. Aunque pueden ocurrir falsos positivos ocasionales, se pueden resolver con un poco de esfuerzo ajustando las reglas o utilizando exclusiones predefinidas.
 
     El equipo de CRS mantiene activamente una lista de exclusiones para aplicaciones populares como WordPress, Nextcloud, Drupal y Cpanel, lo que facilita la integración sin afectar la funcionalidad. Los beneficios de seguridad superan con creces el mínimo esfuerzo de configuración necesario para solucionar los falsos positivos.
+
+!!! warning "Recomendación de seguridad para cargas grandes"
+    ModSecurity almacena en memoria el cuerpo completo de la solicitud y no puede limitarlo para cargas de varios GB, lo que puede provocar OOM en el worker. Si — **y solo si** — una URL de proxy inverso se usa *exclusivamente* para cargas de archivos (por ejemplo, un endpoint `/upload` dedicado), establezca `REVERSE_PROXY_MODSECURITY_N: "no"` en esa URL para emitir `modsecurity off;` en su bloque `location`. No lo deshabilite en URL de uso mixto: perdería la cobertura del WAF en todo lo servido por esa ubicación.
+
+    Para mantener protegidas las cargas después de omitir ModSecurity, combínelo con un plugin de análisis de archivos como [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) o [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal); inspeccionan el archivo cargado en sí en lugar del cuerpo bruto de la solicitud.
 
 ### Versiones de CRS Disponibles
 
@@ -5080,13 +5127,19 @@ Siga estos pasos para configurar y usar la función de Proxy Inverso:
         - **Optimización del Rendimiento:** Afine el manejo de solicitudes para casos de uso específicos
         - **Flexibilidad:** Adáptese a los requisitos únicos de la aplicación con configuraciones especializadas
 
-| Ajuste                            | Valor por defecto | Contexto  | Múltiple | Descripción                                                                                     |
-| --------------------------------- | ----------------- | --------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `REVERSE_PROXY_INCLUDES`          |                   | multisite | yes      | **Configuraciones Adicionales:** Incluya configuraciones adicionales en el bloque de ubicación. |
-| `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`             | multisite | yes      | **Pasar el Cuerpo de la Solicitud:** Habilite o deshabilite el paso del cuerpo de la solicitud. |
+| Ajuste                            | Valor por defecto | Contexto  | Múltiple | Descripción                                                                                                                                                                                       |
+| --------------------------------- | ----------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REVERSE_PROXY_INCLUDES`          |                   | multisite | yes      | **Configuraciones Adicionales:** Incluya configuraciones adicionales en el bloque de ubicación.                                                                                                   |
+| `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`             | multisite | yes      | **Pasar el Cuerpo de la Solicitud:** Habilite o deshabilite el paso del cuerpo de la solicitud.                                                                                                   |
+| `REVERSE_PROXY_MODSECURITY`       | `yes`             | multisite | yes      | **ModSecurity (por ubicación):** Establézcalo en `no` para emitir `modsecurity off;` en esta ubicación; omite el WAF en endpoints de cargas grandes para evitar OOM (consulte la nota siguiente). |
 
     !!! warning "Consideraciones de Seguridad"
         Tenga cuidado al incluir fragmentos de configuración personalizados, ya que pueden anular la configuración de seguridad de BunkerWeb o introducir vulnerabilidades si no se configuran correctamente.
+
+    !!! warning "Recomendación de seguridad para cargas grandes"
+        ModSecurity almacena en memoria el cuerpo completo de la solicitud y no puede limitarlo para cargas de varios GB, lo que puede provocar OOM en el worker. Si — **y solo si** — una URL de proxy inverso se usa *exclusivamente* para cargas de archivos (por ejemplo, un endpoint `/upload` dedicado), establezca `REVERSE_PROXY_MODSECURITY_N: "no"` en esa URL. No lo deshabilite en URL de uso mixto: perdería la cobertura del WAF en todo lo servido por esa ubicación.
+
+        Para mantener protegidas las cargas después de omitir ModSecurity, combínelo con un plugin de análisis de archivos como [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) o [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal); inspeccionan el archivo cargado en sí en lugar del cuerpo bruto de la solicitud.
 
 === "Configuración de Caché"
 
@@ -5587,34 +5640,36 @@ El complemento de Sesiones proporciona una gestión robusta de sesiones HTTP par
 
 **Cómo funciona:**
 
-1.  Cuando un usuario interactúa por primera vez con su sitio web, BunkerWeb crea un identificador de sesión único.
-2.  Este identificador se almacena de forma segura en una cookie en el navegador del usuario.
-3.  En solicitudes posteriores, BunkerWeb recupera el identificador de sesión de la cookie y lo utiliza para acceder a los datos de la sesión del usuario.
-4.  Los datos de la sesión se pueden almacenar localmente o en [Redis](#redis) para entornos distribuidos con múltiples instancias de BunkerWeb.
-5.  Las sesiones se gestionan automáticamente con tiempos de espera configurables, lo que garantiza la seguridad y la facilidad de uso.
-6.  La seguridad criptográfica de las sesiones se garantiza mediante una clave secreta que se utiliza para firmar las cookies de sesión.
+1. Cuando un usuario interactúa por primera vez con su sitio web, BunkerWeb crea un identificador de sesión único.
+2. Este identificador se almacena de forma segura en una cookie en el navegador del usuario.
+3. En solicitudes posteriores, BunkerWeb recupera el identificador de sesión de la cookie y lo utiliza para acceder a los datos de la sesión del usuario.
+4. Los datos de la sesión se pueden almacenar localmente o en [Redis](#redis) para entornos distribuidos con múltiples instancias de BunkerWeb.
+5. Las sesiones se gestionan automáticamente con tiempos de espera configurables, lo que garantiza la seguridad y la facilidad de uso.
+6. La seguridad criptográfica de las sesiones se garantiza mediante una clave secreta que se utiliza para firmar las cookies de sesión.
 
 ### Cómo usar
 
 Siga estos pasos para configurar y usar la función de Sesiones:
 
-1.  **Configure la seguridad de la sesión:** Establezca un `SESSIONS_SECRET` fuerte y único para garantizar que las cookies de sesión no puedan ser falsificadas. (El valor predeterminado es "random", lo que hace que BunkerWeb genere una clave secreta aleatoria).
-2.  **Elija un nombre de sesión:** Opcionalmente, personalice el `SESSIONS_NAME` para definir cómo se llamará su cookie de sesión en el navegador. (El valor predeterminado es "random", lo que hace que BunkerWeb genere un nombre aleatorio).
-3.  **Establezca los tiempos de espera de la sesión:** Configure cuánto tiempo permanecen válidas las sesiones con los ajustes de tiempo de espera (`SESSIONS_IDLING_TIMEOUT`, `SESSIONS_ROLLING_TIMEOUT`, `SESSIONS_ABSOLUTE_TIMEOUT`).
-4.  **Configure la integración con Redis:** Para entornos distribuidos, establezca `USE_REDIS` en "yes" y configure su [conexión Redis](#redis) para compartir los datos de la sesión entre múltiples nodos de BunkerWeb.
-5.  **Deje que BunkerWeb se encargue del resto:** Una vez configurado, la gestión de sesiones se realiza automáticamente para su sitio web.
+1. **Configure la seguridad de la sesión:** Establezca un `SESSIONS_SECRET` fuerte y único para garantizar que las cookies de sesión no puedan ser falsificadas. (El valor predeterminado es "random", lo que hace que BunkerWeb genere una clave secreta aleatoria).
+2. **Elija un nombre de sesión:** Opcionalmente, personalice el `SESSIONS_NAME` para definir cómo se llamará su cookie de sesión en el navegador. (El valor predeterminado es "random", lo que hace que BunkerWeb genere un nombre aleatorio).
+3. **Establezca los tiempos de espera de la sesión:** Configure cuánto tiempo permanecen válidas las sesiones con los ajustes de tiempo de espera (`SESSIONS_IDLING_TIMEOUT`, `SESSIONS_ROLLING_TIMEOUT`, `SESSIONS_ABSOLUTE_TIMEOUT`).
+4. **Comparta la cookie entre subdominios (opcional, por servidor):** De forma predeterminada, la cookie de sesión está limitada al host. Si un servidor determinado aloja varios subdominios del mismo dominio registrable (por ejemplo `a.example.com` y `b.example.com`) y desea que el estado de anti-bot/desafío se comparta, configure `SESSIONS_DOMAIN` con el dominio padre (`example.com`) **solo en ese servidor**. `SESSIONS_DOMAIN` es un ajuste multisite, por lo que los tenants no relacionados en la misma instancia de BunkerWeb nunca reciben un atributo `Domain` compartido entre tenants.
+5. **Configure la integración con Redis:** Para entornos distribuidos, establezca `USE_REDIS` en "yes" y configure su [conexión Redis](#redis) para compartir los datos de la sesión entre múltiples nodos de BunkerWeb.
+6. **Deje que BunkerWeb se encargue del resto:** Una vez configurado, la gestión de sesiones se realiza automáticamente para su sitio web.
 
 ### Ajustes de Configuración
 
-| Ajuste                      | Valor por defecto | Contexto | Múltiple | Descripción                                                                                                                                         |
-| --------------------------- | ----------------- | -------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SESSIONS_SECRET`           | `random`          | global   | no       | **Secreto de sesión:** Clave criptográfica utilizada para firmar las cookies de sesión. Debe ser una cadena fuerte y aleatoria única para su sitio. |
-| `SESSIONS_NAME`             | `random`          | global   | no       | **Nombre de la cookie:** El nombre de la cookie que almacenará el identificador de sesión.                                                          |
-| `SESSIONS_IDLING_TIMEOUT`   | `1800`            | global   | no       | **Tiempo de espera por inactividad:** Tiempo máximo (en segundos) de inactividad antes de que la sesión se invalide.                                |
-| `SESSIONS_ROLLING_TIMEOUT`  | `3600`            | global   | no       | **Tiempo de espera renovable:** Tiempo máximo (en segundos) antes de que una sesión deba renovarse.                                                 |
-| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`           | global   | no       | **Tiempo de espera absoluto:** Tiempo máximo (en segundos) antes de que una sesión se destruya independientemente de la actividad.                  |
-| `SESSIONS_CHECK_IP`         | `yes`             | global   | no       | **Comprobar IP:** Cuando se establece en `yes`, destruye la sesión si la dirección IP del cliente cambia.                                           |
-| `SESSIONS_CHECK_USER_AGENT` | `yes`             | global   | no       | **Comprobar User-Agent:** Cuando se establece en `yes`, destruye la sesión si el User-Agent del cliente cambia.                                     |
+| Ajuste                      | Valor por defecto | Contexto  | Múltiple | Descripción                                                                                                                                                                                                                                                                                   |
+| --------------------------- | ----------------- | --------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SESSIONS_SECRET`           | `random`          | global    | no       | **Secreto de sesión:** Clave criptográfica utilizada para firmar las cookies de sesión. Debe ser una cadena fuerte y aleatoria única para su sitio.                                                                                                                                           |
+| `SESSIONS_NAME`             | `random`          | global    | no       | **Nombre de la cookie:** El nombre de la cookie que almacenará el identificador de sesión.                                                                                                                                                                                                    |
+| `SESSIONS_DOMAIN`           |                   | multisite | no       | **Dominio de la cookie:** Atributo `Domain` opcional aplicado a la cookie de sesión (por ejemplo `example.com`). Déjelo vacío para mantener la cookie limitada al host. Configúrelo por servidor para compartir el estado de sesión entre subdominios hermanos del mismo dominio registrable. |
+| `SESSIONS_IDLING_TIMEOUT`   | `1800`            | global    | no       | **Tiempo de espera por inactividad:** Tiempo máximo (en segundos) de inactividad antes de que la sesión se invalide.                                                                                                                                                                          |
+| `SESSIONS_ROLLING_TIMEOUT`  | `3600`            | global    | no       | **Tiempo de espera renovable:** Tiempo máximo (en segundos) antes de que una sesión deba renovarse.                                                                                                                                                                                           |
+| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`           | global    | no       | **Tiempo de espera absoluto:** Tiempo máximo (en segundos) antes de que una sesión se destruya independientemente de la actividad.                                                                                                                                                            |
+| `SESSIONS_CHECK_IP`         | `yes`             | global    | no       | **Comprobar IP:** Cuando se establece en `yes`, destruye la sesión si la dirección IP del cliente cambia.                                                                                                                                                                                     |
+| `SESSIONS_CHECK_USER_AGENT` | `yes`             | global    | no       | **Comprobar User-Agent:** Cuando se establece en `yes`, destruye la sesión si el User-Agent del cliente cambia.                                                                                                                                                                               |
 
 !!! warning "Consideraciones de Seguridad"
     El ajuste `SESSIONS_SECRET` es fundamental para la seguridad. En entornos de producción:
@@ -5684,6 +5739,39 @@ Siga estos pasos para configurar y usar la función de Sesiones:
     SESSIONS_ROLLING_TIMEOUT: "172800"  # 2 días
     SESSIONS_ABSOLUTE_TIMEOUT: "604800"  # 7 días
     ```
+
+=== "Sesiones entre subdominios (tenant único)"
+
+    Comparta la cookie de sesión entre todos los subdominios de `example.com` para que el estado de anti-bot/desafío se resuelva una sola vez para todo el sitio:
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com shop.example.com"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "crossdomainsession"
+    # SESSIONS_DOMAIN es un ajuste multisite: anteponga el nombre del servidor para que solo se aplique a los hosts coincidentes
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    shop.example.com_SESSIONS_DOMAIN: "example.com"
+    USE_ANTIBOT: "turnstile"
+    ```
+
+=== "Sesiones entre subdominios (tenants mixtos)"
+
+    Cuando la misma instancia de BunkerWeb aloja varios dominios registrables no relacionados, limite `SESSIONS_DOMAIN` únicamente a los servidores que deben compartirlo. Los servidores sin esta configuración conservan la cookie limitada al host por defecto, de modo que los tenants permanecen aislados:
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com billing.acme.org www.unrelated.io"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "tenantsession"
+    # Comparta la cookie solo entre los subdominios de example.com
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    # billing.acme.org y www.unrelated.io se dejan intencionalmente limitados al host
+    USE_ANTIBOT: "turnstile"
+    ```
+
+    !!! note
+        `SESSIONS_DOMAIN` siempre debe ser un dominio padre del servidor al que se aplica; por ejemplo, `example.com` es válido tanto para `example.com` como para cualquier host `*.example.com`, y un punto inicial (`.example.com`) se tolera por compatibilidad heredada. Si se establece en un dominio registrable no relacionado, los navegadores rechazarán la cookie.
 
 ## SSL
 
