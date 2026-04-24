@@ -7,7 +7,7 @@ from pathlib import Path
 from string import printable
 from subprocess import PIPE, Popen, call
 from time import sleep
-from typing import Dict, FrozenSet, Optional, Set, Union
+from typing import Any, Dict, FrozenSet, Optional, Set, Union
 from urllib.parse import unquote
 
 from bcrypt import checkpw, gensalt, hashpw
@@ -16,7 +16,6 @@ from regex import compile as re_compile, match
 from requests import get
 
 from logger import getLogger  # type: ignore
-
 
 TMP_DIR = Path(sep, "var", "tmp", "bunkerweb")
 LIB_DIR = Path(sep, "var", "lib", "bunkerweb")
@@ -237,6 +236,14 @@ def is_editable_method(method: Optional[str], *, allow_default: bool = False) ->
 def is_ui_api_method(method: Optional[str]) -> bool:
     """Determine if a method belongs to the UI/API editable family."""
     return method in UI_API_METHODS
+
+
+def can_delete_service(service: Dict[str, Any]) -> bool:
+    """Services deletable from the UI: ui/api methods always, autoconf only when drafted."""
+    method = service.get("method")
+    if is_ui_api_method(method):
+        return True
+    return method == "autoconf" and bool(service.get("is_draft"))
 
 
 def get_filtered_settings(settings: dict, global_config: bool = False) -> Dict[str, dict]:

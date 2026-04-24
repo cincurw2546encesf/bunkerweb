@@ -14,7 +14,7 @@ from app.dependencies import BW_CONFIG, CONFIG_TASKS_EXECUTOR, DATA, DB
 
 from app.routes.configs import EXPORT_FORMAT_VERSION, apply_imported_configs, flash_import_results, parse_configs_export
 from app.routes.utils import CUSTOM_CONF_RX, extract_file_setting_names, handle_error, verify_data_in_form, wait_applying
-from app.utils import LOGGER, get_blacklisted_settings, is_editable_method, is_ui_api_method
+from app.utils import LOGGER, can_delete_service, get_blacklisted_settings, is_editable_method, is_ui_api_method
 
 services = Blueprint("services", __name__)
 
@@ -179,24 +179,42 @@ def services_delete():
         db_services = DB.get_services(with_drafts=True)
         all_drafts = True
         services_to_delete = set()
+        # Drafted autoconf services are deleted directly against the DB — save_config(method="ui")
+        # would otherwise ignore them (method mismatch) and leave the rows untouched.
+        autoconf_drafts_to_delete = set()
         non_deletable_services = set()
 
+        non_deletable_reasons: Dict[str, str] = {}
         for db_service in db_services:
             if db_service["id"] in services:
-                if not is_ui_api_method(db_service["method"]):
+                if not can_delete_service(db_service):
                     non_deletable_services.add(db_service["id"])
+                    if db_service["method"] == "autoconf":
+                        non_deletable_reasons[db_service["id"]] = "online autoconf service (convert it to draft first)"
+                    else:
+                        non_deletable_reasons[db_service["id"]] = "not a UI/API service"
                     continue
                 if not db_service["is_draft"]:
                     all_drafts = False
                 services_to_delete.add(db_service["id"])
+                if db_service["method"] == "autoconf" and db_service["is_draft"]:
+                    autoconf_drafts_to_delete.add(db_service["id"])
 
         for non_deletable_service in non_deletable_services:
-            DATA["TO_FLASH"].append({"content": f"Service {non_deletable_service} is not a UI/API service and will not be deleted.", "type": "error"})
+            reason = non_deletable_reasons.get(non_deletable_service, "not a UI/API service")
+            DATA["TO_FLASH"].append({"content": f"Service {non_deletable_service} is {reason} and will not be deleted.", "type": "error"})
 
         if not services_to_delete:
             DATA["TO_FLASH"].append({"content": "All selected services could not be found or are not UI/API services.", "type": "error"})
             DATA.update({"RELOADING": False, "CONFIG_CHANGED": False})
             return
+
+        if autoconf_drafts_to_delete:
+            err = DB.delete_services(list(autoconf_drafts_to_delete))
+            if err:
+                DATA["TO_FLASH"].append({"content": f"Failed to delete drafted autoconf services: {err}", "type": "error"})
+                DATA.update({"RELOADING": False, "CONFIG_CHANGED": False})
+                return
 
         db_config["SERVER_NAME"] = " ".join([service["id"] for service in db_services if service["id"] not in services_to_delete])
         new_env = db_config.copy()
