@@ -4,7 +4,7 @@ FROM python:3.13-alpine@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536
 ARG TARGETPLATFORM
 
 # Install python dependencies
-RUN apk add --no-cache build-base libffi-dev postgresql-dev cargo
+RUN apk add --no-cache build-base libffi-dev postgresql-dev cargo patch
 
 # Copy python requirements
 COPY src/deps/requirements.txt /tmp/requirements-deps.txt
@@ -21,6 +21,16 @@ RUN export MAKEFLAGS="-j$(nproc)" && \
   if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then mv /tmp/req/requirements-db.arm.txt /tmp/req/requirements-db.txt && rm -f /tmp/req/requirements-db.386.txt ; elif [ "$TARGETPLATFORM" = "linux/386" ] ; then mv /tmp/req/requirements-db.386.txt /tmp/req/requirements-db.txt && rm -f /tmp/req/requirements-db.arm.txt ; else rm -f /tmp/req/requirements-db.arm.txt /tmp/req/requirements-db.386.txt ; fi && \
   pip install --no-cache-dir --require-hashes --break-system-packages -r /tmp/requirements-deps.txt && \
   pip install --no-cache-dir --require-hashes --target deps/python $(for file in $(ls /tmp/req/requirements*.txt) ; do echo "-r ${file}" ; done | xargs)
+
+# Apply BunkerWeb patches to vendored Python deps (DNS alias / CNAME delegation for certbot).
+# -F0 + --dry-run first so any context drift from a future certbot bump fails the build loudly
+# instead of fuzzing onto the wrong code; the post-patch grep is a positive assertion that the
+# expected marker landed in the patched file.
+COPY src/deps/misc/certbot-dns-alias.patch /tmp/certbot-dns-alias.patch
+RUN patch -p1 -F0 --dry-run -d /usr/share/bunkerweb/deps/python < /tmp/certbot-dns-alias.patch && \
+  patch -p1 -F0 --no-backup-if-mismatch -d /usr/share/bunkerweb/deps/python < /tmp/certbot-dns-alias.patch && \
+  grep -q '_load_domain_aliases' /usr/share/bunkerweb/deps/python/certbot/plugins/dns_common.py && \
+  rm -f /tmp/certbot-dns-alias.patch
 
 # Copy files
 # can't exclude specific files/dir from . so we are copying everything by hand
