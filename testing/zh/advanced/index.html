@@ -1853,6 +1853,93 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#wildcard-pro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wildcard (PRO)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Wildcard (PRO)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_70" class="md-nav__link">
+    <span class="md-ellipsis">
+      工作原理
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_71" class="md-nav__link">
+    <span class="md-ellipsis">
+      功能
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_72" class="md-nav__link">
+    <span class="md-ellipsis">
+      配置
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_73" class="md-nav__link">
+    <span class="md-ellipsis">
+      快速开始
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_74" class="md-nav__link">
+    <span class="md-ellipsis">
+      示例
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_75" class="md-nav__link">
+    <span class="md-ellipsis">
+      重要行为
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lets-encrypt_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      与 Let's Encrypt 通配符证书配合时的推荐方式
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_76" class="md-nav__link">
+    <span class="md-ellipsis">
+      使用提示
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4357,7 +4444,7 @@ USE_IPV6=yes
 <tbody>
 <tr>
 <td style="text-align: left;"><code>file</code></td>
-<td style="text-align: left;">将日志写入文件。Web UI 的日志查看器需要此项。</td>
+<td style="text-align: left;">将日志写入普通文件。外部轮转在 Linux 安装中由 <code>logrotate</code> 负责，在 Docker 中由您的容器日志驱动负责。Web UI 的日志查看器需要此项。</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>stderr</code></td>
@@ -4369,11 +4456,14 @@ USE_IPV6=yes
 </tr>
 </tbody>
 </table>
+<p>使用 <code>file</code> 时，您还应该配置：</p>
+<ul>
+<li><code>LOG_FILE_PATH</code>：当 <code>LOG_TYPES</code> 包含 <code>file</code> 时，日志文件写入的路径。</li>
+</ul>
 <p>在使用 <code>syslog</code> 时，您还应该配置：</p>
 <ul>
 <li><code>LOG_SYSLOG_ADDRESS</code>：syslog 服务器地址（例如 <code>udp://bw-syslog:514</code> 或 <code>/dev/log</code>）。</li>
 <li><code>LOG_SYSLOG_TAG</code>：用于区分服务条目的唯一标签（例如 <code>bw-scheduler</code>）。</li>
-<li><code>LOG_FILE_PATH</code>：当 <code>LOG_TYPES</code> 包含 <code>file</code> 时用于文件输出的路径（例如 <code>/var/log/bunkerweb/scheduler.log</code>）。</li>
 </ul>
 <h3 id="_6">访问与错误日志</h3>
 <p>这些是标准的 NGINX 日志，仅通过 <strong><code>bunkerweb</code> 服务</strong> 配置。它们支持通过在设置名称后添加编号后缀来配置多个目标（例如 <code>ACCESS_LOG</code>、<code>ACCESS_LOG_1</code> 与匹配的 <code>LOG_FORMAT</code> / <code>LOG_FORMAT_1</code>，或 <code>ERROR_LOG</code>、<code>ERROR_LOG_1</code> 与对应的 <code>LOG_LEVEL</code> / <code>LOG_LEVEL_1</code>）。</p>
@@ -4397,7 +4487,7 @@ LOG_LEVEL_1=error
 <div class="tabbed-set tabbed-alternate" data-tabs="19:3"><input checked="checked" id="__tabbed_19_1" name="__tabbed_19" type="radio" /><input id="__tabbed_19_2" name="__tabbed_19" type="radio" /><input id="__tabbed_19_3" name="__tabbed_19" type="radio" /><div class="tabbed-labels"><label for="__tabbed_19_1">Linux</label><label for="__tabbed_19_2">Docker / Autoconf / Swarm</label><label for="__tabbed_19_3">Kubernetes</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<p><strong>默认行为</strong>：<code>LOG_TYPES="file"</code>。日志写入 <code>/var/log/bunkerweb/*.log</code>。</p>
+<p><strong>默认行为</strong>：<code>LOG_TYPES="file"</code>。日志写入 <code>/var/log/bunkerweb/*.log</code>。轮转由安装到 <code>/etc/logrotate.d/bunkerweb</code> 的系统 <code>logrotate</code> 配置负责（每日轮转、保留 7 天，并通过 <code>copytruncate</code> 压缩）。</p>
 <p><strong>示例</strong>：保留本地文件（供 Web UI 使用），同时镜像到系统 syslog。</p>
 <div class="highlight"><pre><span></span><code>  # 服务日志（在 /etc/bunkerweb/variables.env 或 特定服务的环境变量文件中设置）
   LOG_TYPES=&quot;file syslog&quot;
@@ -5937,7 +6027,7 @@ kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunke
 <p>Custom Pages 插件允许您将 BunkerWeb 的内置页面（错误页面、默认服务器页面和反机器人挑战页面）替换为您自己的自定义 HTML 或 Lua 模板。这使您能够在 BunkerWeb 提供的所有面向用户的页面上保持一致的品牌形象。</p>
 <h3 id="_30">功能</h3>
 <ul>
-<li><strong>每个服务的自定义错误页面</strong>和<strong>反机器人挑战页面</strong>（验证码、JavaScript 检查、reCAPTCHA、hCaptcha、Turnstile、mCaptcha）。</li>
+<li><strong>每个服务的自定义错误页面</strong>和<strong>反机器人挑战页面</strong>（验证码、JavaScript 检查、reCAPTCHA、hCaptcha、Turnstile、mCaptcha、Cap.js）。</li>
 <li><strong>全局自定义默认服务器页面</strong>用于回退/默认虚拟主机。</li>
 <li><strong>HTML 解析和 Lua 模板标签平衡检查</strong>在接受模板之前。</li>
 <li><strong>自动缓存</strong>到 <code>/var/cache/bunkerweb/custom_pages</code>，带有变更检测以触发重新加载。</li>
@@ -6008,6 +6098,12 @@ kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunke
 <td></td>
 <td>multisite</td>
 <td>自定义反机器人 mCaptcha 页面的绝对路径。</td>
+</tr>
+<tr>
+<td><code>CUSTOM_ANTIBOT_CAPJS_PAGE</code></td>
+<td></td>
+<td>multisite</td>
+<td>自定义反机器人 Cap.js 页面的绝对路径。</td>
 </tr>
 </tbody>
 </table>
@@ -6237,6 +6333,28 @@ kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunke
 <td><code>mcaptcha_url</code></td>
 <td>string</td>
 <td>您的 mCaptcha URL</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cap.js（<code>CUSTOM_ANTIBOT_CAPJS_PAGE</code>）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>capjs_sitekey</code></td>
+<td>string</td>
+<td>您的 Cap.js 站点密钥</td>
+</tr>
+<tr>
+<td><code>capjs_url</code></td>
+<td>string</td>
+<td>您的 Cap.js 前端基础 URL</td>
 </tr>
 </tbody>
 </table>
@@ -7515,6 +7633,10 @@ chmod<span class="w"> </span><span class="m">770</span><span class="w"> </span>t
 <p>当使用 <code>ACME_CHALLENGE=http</code>（默认值）时，您<strong>必须</strong>在同一服务上设置 <code>LETS_ENCRYPT_PASSTHROUGH=yes</code>。</p>
 <p>BunkerWeb 的核心 Let's Encrypt 插件包含一个 NGINX location 块和一个用于 <code>/.well-known/acme-challenge/</code> 的 Lua access 处理器。由于 NGINX location 块在任何 Lua 插件代码运行之前匹配，它会在 ACME PRO 能够处理之前拦截挑战请求。设置 <code>LETS_ENCRYPT_PASSTHROUGH=yes</code> 可以禁用这两个机制，使 ACME PRO 能够正确处理 HTTP-01 挑战令牌。</p>
 <p>此设置<strong>仅在 HTTP-01 时需要</strong>。DNS-01 和 TLS-ALPN-01 挑战不受影响。</p>
+<h4 id="acme-acme_passthrough">上游 ACME 透传（<code>ACME_PASSTHROUGH</code>）</h4>
+<p>如果 BunkerWeb 背后的上游服务器已经运行自己的 ACME 客户端，并应由其自行处理 HTTP-01 验证，请在该服务上设置 <code>ACME_PASSTHROUGH=yes</code>。此时 ACME PRO 将不再渲染 <code>/.well-known/acme-challenge/</code> location 块，也不会在 <code>access</code> 阶段将挑战路径加入白名单，从而让上游提供的验证文件原样到达 CA。</p>
+<p>当您希望 ACME PRO 自行签发和续期证书时，请将 <code>ACME_PASSTHROUGH</code> 保持为 <code>no</code>（默认值）。ACME PRO 管理服务的标准 HTTP-01 组合是：<code>LETS_ENCRYPT_PASSTHROUGH=yes</code>（让 OSS 核心 Let's Encrypt 插件让出其挑战 location 块），再配合 <code>ACME_PASSTHROUGH=no</code>。仅当上游完全拥有证书生命周期时才将 <code>ACME_PASSTHROUGH</code> 设为 <code>yes</code> —— 在该模式下 BunkerWeb 不会尝试为该服务签发证书。</p>
+<p>此设置与 OSS 核心的 <code>LETS_ENCRYPT_PASSTHROUGH</code> 行为一致，并且仅影响 HTTP-01；DNS-01 和 TLS-ALPN-01 挑战不受影响。</p>
 <h4 id="_65">插件执行顺序</h4>
 <p>ACME 插件会自动将自身重新排序，以在 <code>ssl_certificate</code> NGINX 阶段最先执行，确保 TLS-ALPN-01 挑战证书在其他证书提供插件（selfsigned、letsencrypt、customcert）短路循环之前被提供。</p>
 <p>当 ACME 与其他依赖有效 TLS 的 PRO 插件（如 OpenID Connect、UI SSO）一起使用时，建议在相关的阶段排序设置中，将 <code>acme</code> 明确放在 <code>customcert</code> 之后：</p>
@@ -7545,6 +7667,13 @@ PLUGINS_ORDER_INIT=sessions whitelist blacklist greylist bunkernet limit authbas
 <td>multisite</td>
 <td>否</td>
 <td>为此服务启用 ACME 证书管理。</td>
+</tr>
+<tr>
+<td><code>ACME_PASSTHROUGH</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>否</td>
+<td>将 HTTP-01 挑战请求透传给上游服务器（上游自行运行 ACME 客户端）。</td>
 </tr>
 <tr>
 <td><code>ACME_DIRECTORY_URL</code></td>
@@ -7938,6 +8067,196 @@ PLUGINS_ORDER_INIT=sessions whitelist blacklist greylist bunkernet limit authbas
 <li><strong>TLS-ALPN-01 挑战失败</strong>：确保 ACME 服务器可访问端口 443，且在 <code>ssl_certificate</code> 阶段没有其他插件在 ACME 之前提供证书。如有疑问，请检查 <code>PLUGINS_ORDER_SSL_CERTIFICATE</code>。</li>
 <li><strong>DNS-01 挑战失败</strong>：验证 <code>ACME_DNS_CREDENTIAL_ITEM</code> 中的 DNS 提供商凭据，如果您的提供商传播记录较慢，请调整 <code>ACME_DNS_PROPAGATION</code>。</li>
 <li><strong>证书未续期</strong>：检查 <code>ACME_RENEWAL_DAYS</code> 和调度器日志。<code>acme-renew</code> 作业每天运行，续期处于配置阈值内的证书。</li>
+</ul>
+<h2 id="wildcard-pro">Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)</h2>
+<p>STREAM 支持 <img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/274c.svg" title=":x:" /></p>
+<p><strong>Wildcard</strong> 插件允许单个 BunkerWeb 服务响应：</p>
+<ul>
+<li>其精确主机名</li>
+<li>该主机名下任意<strong>直接子域名</strong></li>
+</ul>
+<p>启用后，插件会从 <code>SERVER_NAME</code> 中取出<strong>第一个条目</strong>，并在生成的 NGINX 配置中添加一个通配符 <code>server_name</code>。</p>
+<p>例如，如果第一个条目是 <code>example.com</code>，插件会添加：</p>
+<div class="highlight"><pre><span></span><code><span class="k">server_name</span><span class="w"> </span><span class="s">*.example.com</span><span class="p">;</span>
+</code></pre></div>
+<p>这样该服务就会响应：</p>
+<ul>
+<li><code>example.com</code></li>
+<li><code>www.example.com</code></li>
+<li><code>api.example.com</code></li>
+</ul>
+<p>这是一个最小化、纯配置型插件：</p>
+<ul>
+<li>无 jobs</li>
+<li>无 Lua</li>
+<li>无 UI</li>
+</ul>
+<hr />
+<h3 id="_70">工作原理</h3>
+<p>该插件从 <code>SERVER_NAME</code> 的<strong>第一个值</strong>推导出通配符主机名，并在生成配置时注入标准 NGINX 通配符服务器名。</p>
+<p>除主机名匹配外，它不会改变请求处理逻辑。</p>
+<div class="admonition info">
+<p class="admonition-title">通配符主机并不等于通配符证书</p>
+<p>此插件只影响 <strong>HTTP 路由</strong>。它告诉 NGINX 服务应接受哪些主机名。</p>
+<p>它<strong>不会</strong>签发通配符 TLS 证书。</p>
+<p>如果要通过 HTTPS 提供 <code>*.example.com</code>，您仍然需要匹配的通配符证书，通常可以使用以下其中一种方式：</p>
+<ul>
+<li>使用内置 Let's Encrypt 插件并设置 <code>USE_LETS_ENCRYPT_WILDCARD=yes</code></li>
+<li>使用 <a href="#acme">ACME PRO</a> 插件并设置 <code>ACME_WILDCARD=yes</code>，同时使用 DNS-01 挑战</li>
+</ul>
+</div>
+<hr />
+<h3 id="_71">功能</h3>
+<ul>
+<li><strong>启用简单</strong>：通过 <code>USE_WILDCARD=yes</code> 启用通配符路由</li>
+<li><strong>自动推导</strong>：通配符主机基于 <code>SERVER_NAME</code> 的第一个条目构建</li>
+<li><strong>原生 NGINX 语义</strong>：匹配遵循标准 <code>server_name</code> 行为</li>
+<li><strong>支持多站点</strong>：每个服务都可以独立启用或禁用通配符路由</li>
+</ul>
+<hr />
+<h3 id="_72">配置</h3>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>上下文</th>
+<th>可重复</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_WILDCARD</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>否</td>
+<td>为服务启用通配符 <code>server_name</code>，即为 <code>SERVER_NAME</code> 的第一个条目添加 <code>*.domain</code>。</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="_73">快速开始</h3>
+<ol>
+<li>将您想要使用通配符的域名放在 <code>SERVER_NAME</code> 的<strong>第一位</strong></li>
+<li>设置 <code>USE_WILDCARD=yes</code></li>
+<li>将通配符 DNS 记录指向 BunkerWeb，通常是通配符 <code>A</code> 或 <code>AAAA</code> 记录</li>
+<li>如果需要 HTTPS，请单独签发通配符证书</li>
+<li>重新加载或重启 BunkerWeb</li>
+</ol>
+<hr />
+<h3 id="_74">示例</h3>
+<h4 id="single-site">Single-site</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+</code></pre></div>
+<p>该服务将响应：</p>
+<ul>
+<li><code>example.com</code></li>
+<li><code>www.example.com</code></li>
+<li><code>api.example.com</code></li>
+<li>任何其他解析到 BunkerWeb 的 <code>*.example.com</code> 主机名</li>
+</ul>
+<h4 id="multisite">Multisite</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">MULTISITE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app.example.com</span><span class="nv"> </span><span class="s">docs.example.org&quot;</span>
+
+<span class="c1"># 只有 app.example.com 会启用通配符路由</span>
+<span class="nt">app.example.com_USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+</code></pre></div>
+<p>在此配置中：</p>
+<ul>
+<li><code>app.example.com</code> 和 <code>*.app.example.com</code> 会路由到第一个服务</li>
+<li><code>docs.example.org</code> 仍然只保留精确匹配</li>
+</ul>
+<hr />
+<h3 id="_75">重要行为</h3>
+<div class="admonition warning">
+<p class="admonition-title">只有第一个域名会被通配</p>
+<p>如果 <code>SERVER_NAME</code> 是：</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com</span><span class="nv"> </span><span class="s">example.org&quot;</span>
+</code></pre></div>
+<p>则只会添加 <code>*.example.com</code>。</p>
+<p>请将您想要使用通配符的域名放在第一位。</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">已有通配符条目会被保留</p>
+<p>如果第一个域名已经以 <code>*.</code> 开头，例如：</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;*.example.com&quot;</span>
+</code></pre></div>
+<p>插件将不会输出任何内容。</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">通配符匹配仅支持单层标签</p>
+<p><code>*.example.com</code> 可以匹配 <code>foo.example.com</code>，但不能匹配 <code>a.b.example.com</code>。</p>
+<p>对于更深层的子域名，请使用显式的 <code>SERVER_NAME</code> 条目或单独的服务。</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">精确匹配优先</p>
+<p>如果另一个服务显式定义了 <code>foo.example.com</code>，NGINX 会优先将该主机名路由到精确匹配。</p>
+</div>
+<hr />
+<h3 id="lets-encrypt_1">与 Let's Encrypt 通配符证书配合时的推荐方式</h3>
+<p>如果您将此插件与 <code>USE_LETS_ENCRYPT_WILDCARD=yes</code> 一起使用，请采用以下模式：</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;root_domain&gt;</span><span class="nv"> </span><span class="s">&lt;any_app&gt;.&lt;root_domain&gt;&quot;</span>
+</code></pre></div>
+<p><strong>根域名必须放在第一位</strong>。</p>
+<p>示例：</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com</span><span class="nv"> </span><span class="s">app.example.com&quot;</span>
+<span class="nt">USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">AUTO_LETS_ENCRYPT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">EMAIL_LETS_ENCRYPT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin@example.com&quot;</span>
+<span class="nt">LETS_ENCRYPT_CHALLENGE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dns&quot;</span>
+<span class="nt">LETS_ENCRYPT_DNS_PROVIDER</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cloudflare&quot;</span>
+<span class="nt">LETS_ENCRYPT_DNS_CREDENTIAL_ITEM</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api_token</span><span class="nv"> </span><span class="s">YOUR_API_TOKEN&quot;</span>
+<span class="nt">USE_LETS_ENCRYPT_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">为什么这个模式很重要</p>
+<ul>
+<li><strong>只有 <code>SERVER_NAME</code> 的第一个条目会被通配</strong></li>
+</ul>
+<p>如果 <code>example.com</code> 放在第一位，插件会生成 <code>*.example.com</code>。</p>
+<p>如果 <code>app.example.com</code> 放在第一位，它会生成 <code>*.app.example.com</code>，这通常不是您想要的通配层级。</p>
+<ul>
+<li>
+<p><strong>第二个条目有助于 Let's Encrypt 检测正确的基础域名</strong>
+  如果只有裸 apex 域名，在某些公共后缀域名（例如 <code>example.co.uk</code>）上，通配符证书检测可能会失败。</p>
+</li>
+<li>
+<p><strong>第二个主机名不需要真实后端</strong>
+  使用任何稳定的值即可，例如 <code>app.example.com</code> 或 <code>www.example.com</code>。</p>
+</li>
+</ul>
+</div>
+<h4 id="multisite-with-lets-encrypt-wildcard">Multisite with Let's Encrypt wildcard</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">MULTISITE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com</span><span class="nv"> </span><span class="s">app.example.com&quot;</span>
+<span class="nt">example.com_USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">example.com_USE_LETS_ENCRYPT_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">example.com_LETS_ENCRYPT_CHALLENGE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dns&quot;</span>
+<span class="nt">example.com_LETS_ENCRYPT_DNS_PROVIDER</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cloudflare&quot;</span>
+<span class="nt">example.com_LETS_ENCRYPT_DNS_CREDENTIAL_ITEM</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api_token</span><span class="nv"> </span><span class="s">YOUR_API_TOKEN&quot;</span>
+</code></pre></div>
+<hr />
+<h3 id="_76">使用提示</h3>
+<ul>
+<li>
+<p><strong>请单独规划 TLS</strong>
+  仅有通配符路由不足以支持 HTTPS。您仍然需要为子域名准备相应的证书覆盖。</p>
+</li>
+<li>
+<p><strong>保持 <code>SERVER_NAME</code> 顺序稳定</strong>
+  调整条目顺序会改变哪个域名成为通配目标。</p>
+</li>
+<li>
+<p><strong>与 <code>REVERSE_PROXY_HOST</code> 配合良好</strong>
+  当大量子域名通过共享上游（例如租户路由器）进行转发时，这会很有用。</p>
+</li>
+<li>
+<p><strong>注意重叠服务</strong>
+  NGINX 总是优先选择最具体的 <code>server_name</code> 匹配。</p>
+</li>
 </ul>
 
 

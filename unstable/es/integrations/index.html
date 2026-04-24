@@ -2824,7 +2824,8 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 <li><code>AUTOCONF_MODE=no</code> (predeterminado) - Habilita el servicio de autoconfiguración</li>
 <li><code>USE_REDIS=yes</code> (predeterminado) - Habilita la instancia de <a href="#redis-integration">Redis</a> integrada</li>
 <li><code>USE_CROWDSEC=no</code> (predeterminado) - La integración con <a href="#crowdsec-integration">CrowdSec</a> está deshabilitada por defecto</li>
-<li><code>HIDE_SERVICE_LOGS=</code> (opcional) - Lista separada por comas de servicios cuyos registros se silencian en los logs del contenedor. Valores admitidos: <code>api</code>, <code>autoconf</code>, <code>bunkerweb</code>, <code>crowdsec</code>, <code>redis</code>, <code>scheduler</code>, <code>ui</code>, <code>nginx.access</code>, <code>nginx.error</code>, <code>modsec</code>. Los archivos en <code>/var/log/bunkerweb/&lt;service&gt;.log</code> se siguen actualizando.</li>
+<li><code>HIDE_SERVICE_LOGS=</code> (opcional) - Lista separada por comas de servicios cuyos registros se silencian en los logs del contenedor. Valores admitidos: <code>api</code>, <code>autoconf</code>, <code>bunkerweb</code>, <code>crowdsec</code>, <code>redis</code>, <code>scheduler</code>, <code>ui</code>, <code>nginx.access</code>, <code>nginx.error</code>, <code>modsec</code>.</li>
+<li><strong>Registros</strong>: La imagen todo en uno envía el stdout y el stderr de cada servicio a la salida del contenedor. Usa <code>docker logs bunkerweb-aio</code> (o tu controlador de logs de contenedores preferido) para ver y rotar los logs. La imagen no escribe archivos de log en disco para sus servicios Python.</li>
 </ul>
 <h3 id="integracion-de-la-api">Integración de la API</h3>
 <p>La imagen Todo en Uno incorpora la API de BunkerWeb. Está deshabilitada por defecto y se puede habilitar estableciendo <code>SERVICE_API=yes</code>.</p>
@@ -3293,7 +3294,7 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 </tr>
 <tr>
 <td><code>SCHEDULER_LOG_TO_FILE</code></td>
-<td>Habilitar logging a archivo y ruta por defecto</td>
+<td>Opción heredada de compatibilidad: cuando se define, <code>LOG_FILE_PATH</code> toma por defecto <code>/var/log/bunkerweb/scheduler.log</code> si <code>LOG_TYPES</code> incluye <code>file</code> y no definiste <code>LOG_FILE_PATH</code> explícitamente.</td>
 <td><code>yes</code> o <code>no</code></td>
 <td><code>no</code></td>
 </tr>
@@ -3301,7 +3302,7 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 <td><code>LOG_FILE_PATH</code></td>
 <td>Ruta de log personalizada (usada cuando <code>LOG_TYPES</code> incluye <code>file</code>)</td>
 <td>Ruta de archivo</td>
-<td><code>/var/log/bunkerweb/scheduler.log</code> con <code>SCHEDULER_LOG_TO_FILE=yes</code>, si no unset</td>
+<td><code>/var/log/bunkerweb/scheduler.log</code> cuando <code>LOG_TYPES</code> contiene <code>file</code>, si no unset</td>
 </tr>
 <tr>
 <td><code>LOG_SYSLOG_ADDRESS</code></td>
@@ -4234,6 +4235,12 @@ MY_SETTING_2=value2
 <td><code>5</code></td>
 </tr>
 <tr>
+<td><code>AUTOCONF_DISABLE_CLEANUP</code></td>
+<td>Cuando es <code>yes</code>, los servicios y configuraciones personalizadas eliminados del orquestador se convierten en borrador (draft) en lugar de eliminarse, por lo que sobreviven a eliminaciones transitorias y pueden borrarse desde la Web UI.</td>
+<td><code>yes</code> o <code>no</code></td>
+<td><code>no</code></td>
+</tr>
+<tr>
 <td><code>LOG_SYSLOG_TAG</code></td>
 <td>Tag syslog para logs de autoconf</td>
 <td>Cadena</td>
@@ -4458,6 +4465,23 @@ MY_SETTING_2=value2
 <span class="w">  </span><span class="nt">bw-services</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-services</span>
+</code></pre></div>
+<h4 id="autoconf-disable-cleanup">Conservar servicios como borradores al eliminarlos</h4>
+<p>De forma predeterminada, cuando un contenedor, servicio Swarm o Ingress gestionado por autoconf desaparece del orquestador, su fila de servicio en BunkerWeb (y cualquier configuración personalizada asociada) se elimina inmediatamente de la base de datos compartida. Este comportamiento es destructivo: un fallo transitorio no puede distinguirse de un desmontaje intencional, y recuperar el servicio obliga a reconstruir la definición desde cero.</p>
+<p>Si se establece <code>AUTOCONF_DISABLE_CLEANUP=yes</code> en el contenedor <code>bw-autoconf</code>:</p>
+<ul>
+<li>Los servicios eliminados del orquestador pasan a <code>is_draft = true</code> en lugar de borrarse. Sus filas <code>services_settings</code>, configuraciones personalizadas y cachés de trabajos se conservan.</li>
+<li>Los servicios en borrador quedan excluidos de la configuración NGINX renderizada (no se sirven), por lo que el sitio sigue saliendo de línea al retirar el objeto; solo se conserva el estado.</li>
+<li>Si autoconf vuelve a registrar el mismo servicio (mismo nombre de servidor / host de Ingress), se vuelve a poner automáticamente en línea y se republica; las configuraciones personalizadas existentes se reutilizan.</li>
+<li>Mientras un servicio está en ese estado "draft por autoconf", puede eliminarse desde la página <strong>Servicios</strong> de la Web UI — normalmente los servicios gestionados por autoconf no son eliminables desde la UI, pero el botón <strong>Eliminar</strong> se habilita para los servicios autoconf en borrador, permitiendo limpiar entradas obsoletas. Los servicios autoconf en línea siguen sin poder eliminarse desde la UI.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">bw-autoconf</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bunkerity/bunkerweb-autoconf:testing</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">AUTOCONF_MODE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="w">      </span><span class="nt">AUTOCONF_DISABLE_CLEANUP</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span><span class="w"> </span><span class="c1"># conservar como borradores los servicios eliminados</span>
+<span class="w">      </span><span class="nt">DATABASE_URI</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mariadb+pymysql://bunkerweb:secret@bw-db:3306/db&quot;</span>
 </code></pre></div>
 <h3 id="namespaces">Espacios de nombres</h3>
 <p>A partir de la versión <code>1.6.0</code>, las pilas de Autoconfiguración de BunkerWeb ahora admiten espacios de nombres. Esta característica te permite gestionar múltiples "<em>clústeres</em>" de instancias y servicios de BunkerWeb en el mismo host de Docker. Para aprovechar los espacios de nombres, simplemente establece la etiqueta <code>NAMESPACE</code> en tus servicios. Aquí tienes un ejemplo:</p>

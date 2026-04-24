@@ -2824,7 +2824,8 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 <li><code>AUTOCONF_MODE=no</code> (默认) - 启用自动配置服务</li>
 <li><code>USE_REDIS=yes</code> (默认) - 启用内置的 <a href="#redis-integration">Redis</a> 实例</li>
 <li><code>USE_CROWDSEC=no</code> (默认) - <a href="#crowdsec-integration">CrowdSec</a> 集成默认禁用</li>
-<li><code>HIDE_SERVICE_LOGS=</code>（可选）- 以逗号分隔的服务列表，用于在容器日志中静音这些服务。支持的值：<code>api</code>、<code>autoconf</code>、<code>bunkerweb</code>、<code>crowdsec</code>、<code>redis</code>、<code>scheduler</code>、<code>ui</code>、<code>nginx.access</code>、<code>nginx.error</code>、<code>modsec</code>。日志仍会写入 <code>/var/log/bunkerweb/&lt;service&gt;.log</code>。</li>
+<li><code>HIDE_SERVICE_LOGS=</code>（可选）- 以逗号分隔的服务列表，用于在容器日志中静音这些服务。支持的值：<code>api</code>、<code>autoconf</code>、<code>bunkerweb</code>、<code>crowdsec</code>、<code>redis</code>、<code>scheduler</code>、<code>ui</code>、<code>nginx.access</code>、<code>nginx.error</code>、<code>modsec</code>。</li>
+<li><strong>日志</strong>：一体化镜像会将每个服务的 stdout 和 stderr 输出到容器日志。请使用 <code>docker logs bunkerweb-aio</code>（或您偏好的容器日志驱动）来查看和轮转日志；该镜像不会为其 Python 服务写入磁盘日志文件。</li>
 </ul>
 <h3 id="api">API 集成</h3>
 <p>一体化镜像内嵌了 BunkerWeb API。它默认是禁用的，可以通过设置 <code>SERVICE_API=yes</code> 来启用。</p>
@@ -3290,7 +3291,7 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 </tr>
 <tr>
 <td><code>SCHEDULER_LOG_TO_FILE</code></td>
-<td>启用文件日志并设置默认路径</td>
+<td>兼容旧配置的便捷选项：设置后，如果 <code>LOG_TYPES</code> 包含 <code>file</code> 且您没有显式设置 <code>LOG_FILE_PATH</code>，则 <code>LOG_FILE_PATH</code> 默认使用 <code>/var/log/bunkerweb/scheduler.log</code>。</td>
 <td><code>yes</code> 或 <code>no</code></td>
 <td><code>no</code></td>
 </tr>
@@ -3298,7 +3299,7 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 <td><code>LOG_FILE_PATH</code></td>
 <td>自定义日志路径（当 <code>LOG_TYPES</code> 包含 <code>file</code> 时使用）</td>
 <td>文件路径</td>
-<td><code>SCHEDULER_LOG_TO_FILE=yes</code> 时为 <code>/var/log/bunkerweb/scheduler.log</code>，否则 unset</td>
+<td>当 <code>LOG_TYPES</code> 包含 <code>file</code> 时为 <code>/var/log/bunkerweb/scheduler.log</code>，否则 unset</td>
 </tr>
 <tr>
 <td><code>LOG_SYSLOG_ADDRESS</code></td>
@@ -4231,6 +4232,12 @@ MY_SETTING_2=value2
 <td><code>5</code></td>
 </tr>
 <tr>
+<td><code>AUTOCONF_DISABLE_CLEANUP</code></td>
+<td>设为 <code>yes</code> 时，从编排器中移除的服务及自定义配置将被转换为草稿（draft），而不是硬删除，因而可以在瞬时移除后保留，并可通过 Web UI 删除。</td>
+<td><code>yes</code> 或 <code>no</code></td>
+<td><code>no</code></td>
+</tr>
+<tr>
 <td><code>LOG_SYSLOG_TAG</code></td>
 <td>Autoconf 日志的 syslog tag</td>
 <td>字符串</td>
@@ -4455,6 +4462,23 @@ MY_SETTING_2=value2
 <span class="w">  </span><span class="nt">bw-services</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-services</span>
+</code></pre></div>
+<h4 id="autoconf-disable-cleanup">在移除时将服务保留为草稿</h4>
+<p>默认情况下，当 autoconf 管理的容器、Swarm 服务或 Ingress 从编排器中消失时，其在 BunkerWeb 共享数据库中的服务条目（以及任何关联的自定义配置）会被立即删除。这种行为具有破坏性：操作者无法区分临时性移除和有意下线，恢复服务需要从零重新定义。</p>
+<p>在 <code>bw-autoconf</code> 容器上设置 <code>AUTOCONF_DISABLE_CLEANUP=yes</code> 后：</p>
+<ul>
+<li>从编排器中移除的服务不再被删除，而是被翻转为 <code>is_draft = true</code>。其 <code>services_settings</code> 记录、自定义配置和任务缓存都会被保留。</li>
+<li>草稿状态的服务会从生成的 NGINX 配置中排除（不会对外提供服务），因此移除编排对象仍然会让站点下线，只是状态被保留下来。</li>
+<li>若该服务之后被 autoconf 再次登记（相同的 server name / Ingress host），它会自动被重新置为在线并重新发布；已有的自定义配置会被复用。</li>
+<li>当服务处于此"由 autoconf 转为草稿"状态时，可以通过 Web UI 的 <strong>Services</strong> 页面将其删除——通常 autoconf 所属的服务在 UI 中不可删除，但对 autoconf 草稿服务的 <strong>Delete</strong> 按钮会启用，方便操作者清理失效条目。在线状态的 autoconf 服务仍然无法从 UI 中删除。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">bw-autoconf</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bunkerity/bunkerweb-autoconf:testing</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">AUTOCONF_MODE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="w">      </span><span class="nt">AUTOCONF_DISABLE_CLEANUP</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span><span class="w"> </span><span class="c1"># 将被移除的服务保留为草稿</span>
+<span class="w">      </span><span class="nt">DATABASE_URI</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mariadb+pymysql://bunkerweb:secret@bw-db:3306/db&quot;</span>
 </code></pre></div>
 <h3 id="namespaces">命名空间</h3>
 <p>从 <code>1.6.0</code> 版本开始，BunkerWeb 的自动配置堆栈现在支持命名空间。此功能使您能够在同一个 Docker 主机上管理多个 BunkerWeb 实例和服务的“<em>集群</em>”。要利用命名空间，只需在您的服务上设置 <code>NAMESPACE</code> 标签。这是一个示例：</p>

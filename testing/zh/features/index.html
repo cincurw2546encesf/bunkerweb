@@ -3726,6 +3726,13 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 <td>Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.</td>
 </tr>
 <tr>
+<td><code>ACME_PASSTHROUGH</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>否</td>
+<td>Pass through ACME HTTP-01 challenge requests to the upstream server.</td>
+</tr>
+<tr>
 <td><code>ACME_DIRECTORY_URL</code></td>
 <td></td>
 <td>multisite</td>
@@ -4036,9 +4043,9 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 <h3 id="_5">如何使用</h3>
 <p>请按照以下步骤启用和配置 Antibot 功能：</p>
 <ol>
-<li><strong>选择一个挑战类型：</strong> 决定使用哪种类型的 antibot 挑战（例如，<a href="#__tabbed_3_3">captcha</a>、<a href="#__tabbed_3_5">hcaptcha</a>、<a href="#__tabbed_3_2">javascript</a>）。</li>
+<li><strong>选择一个挑战类型：</strong> 决定使用哪种类型的 antibot 挑战（例如，<a href="#__tabbed_3_3">captcha</a>、<a href="#__tabbed_3_5">hcaptcha</a>、<a href="#__tabbed_3_8">capjs</a>、<a href="#__tabbed_3_2">javascript</a>）。</li>
 <li><strong>启用该功能：</strong> 在您的 BunkerWeb 配置中将 <code>USE_ANTIBOT</code> 设置为您选择的挑战类型。</li>
-<li><strong>配置设置：</strong> 根据需要调整其他 <code>ANTIBOT_*</code> 设置。对于 reCAPTCHA、hCaptcha、Turnstile 和 mCaptcha，您必须在相应的服务上创建一个帐户并获取 API 密钥。</li>
+<li><strong>配置设置：</strong> 根据需要调整其他 <code>ANTIBOT_*</code> 设置。对于 reCAPTCHA、hCaptcha 和 Turnstile，请在相应的服务上创建账户并获取 API 密钥。对于 mCaptcha 和 Cap.js，您可以自行托管提供程序，或使用托管服务，然后配置所需的站点密钥和密钥。</li>
 <li><strong>重要提示：</strong> 确保 <code>ANTIBOT_URI</code> 是您网站上一个未被使用的唯一 URL。</li>
 </ol>
 <div class="admonition important">
@@ -4163,6 +4170,10 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 <li>当设置了 <code>ANTIBOT_ONLY_COUNTRY</code> 且 IP 为私有或无法解析的地址时，由于无法确定国家代码，请求会绕过挑战。</li>
 </ul>
 </div>
+<div class="admonition tip">
+<p class="admonition-title">在子域之间共享挑战状态</p>
+<p>antibot 状态（包括 <code>turnstile</code>、<code>hcaptcha</code>、<code>recaptcha</code>、<code>mcaptcha</code>、<code>captcha</code>、<code>javascript</code> 和 <code>cookie</code>）会保存在 BunkerWeb 的<a href="#sessions">会话 Cookie</a> 中。默认情况下，该 Cookie 仅作用于设置它的确切主机，因此用户如果在 <code>a.example.com</code> 上完成了挑战，在 <code>b.example.com</code> 上仍会再次被挑战。若要让同一可注册域名下的所有同级子域只需完成一次挑战，请为<strong>每个相关服务器</strong>将 <a href="#sessions"><code>SESSIONS_DOMAIN</code></a> 设置为父域名（例如 <code>example.com</code>）。<code>SESSIONS_DOMAIN</code> 是一项 multisite 设置，应按服务器分别配置，这样同一 BunkerWeb 实例上托管的无关租户就不会收到跨租户共享的 <code>Domain</code> 属性。</p>
+</div>
 <p><strong>示例：</strong></p>
 <ul>
 <li>
@@ -4195,7 +4206,7 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 </li>
 </ul>
 <h3 id="_8">支持的挑战机制</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:7"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><input id="__tabbed_3_4" name="__tabbed_3" type="radio" /><input id="__tabbed_3_5" name="__tabbed_3" type="radio" /><input id="__tabbed_3_6" name="__tabbed_3" type="radio" /><input id="__tabbed_3_7" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Cookie</label><label for="__tabbed_3_2">JavaScript</label><label for="__tabbed_3_3">Captcha</label><label for="__tabbed_3_4">reCAPTCHA</label><label for="__tabbed_3_5">hCaptcha</label><label for="__tabbed_3_6">Turnstile</label><label for="__tabbed_3_7">mCaptcha</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:8"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><input id="__tabbed_3_4" name="__tabbed_3" type="radio" /><input id="__tabbed_3_5" name="__tabbed_3" type="radio" /><input id="__tabbed_3_6" name="__tabbed_3" type="radio" /><input id="__tabbed_3_7" name="__tabbed_3" type="radio" /><input id="__tabbed_3_8" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Cookie</label><label for="__tabbed_3_2">JavaScript</label><label for="__tabbed_3_3">Captcha</label><label for="__tabbed_3_4">reCAPTCHA</label><label for="__tabbed_3_5">hCaptcha</label><label for="__tabbed_3_6">Turnstile</label><label for="__tabbed_3_7">mCaptcha</label><label for="__tabbed_3_8">Cap.js</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Cookie 挑战是一种轻量级的机制，它依赖于在用户的浏览器中设置一个 cookie。当用户访问网站时，服务器会向客户端发送一个 cookie。在后续的请求中，服务器会检查这个 cookie 是否存在，以验证用户是否是合法的。这种方法对于基本的机器人防护简单有效，无需额外的用户交互。</p>
@@ -4523,10 +4534,71 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 </tbody>
 </table>
 </div>
+<div class="tabbed-block">
+<p><a href="https://capjs.js.org/">Cap.js</a> 是一种自托管、开源、注重隐私的工作量证明 CAPTCHA。它不把验证交给第三方服务，而是由您自己运行 Cap.js 服务器，BunkerWeb 会向该服务器验证令牌。</p>
+<p>前端 URL 是浏览器可访问并用于加载小组件的端点。如果 BunkerWeb 可以通过内部地址访问 Cap.js 服务器，请将后端 URL 设置为该内部端点；否则保持为空，BunkerWeb 会使用前端 URL 进行 <code>/siteverify</code>。</p>
+<p><strong>配置设置：</strong></p>
+<table>
+<thead>
+<tr>
+<th>设置</th>
+<th>默认值</th>
+<th>上下文</th>
+<th>多个</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_ANTIBOT</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>启用 Antibot：</strong> 设置为 <code>capjs</code> 以启用 Cap.js 挑战。</td>
+</tr>
+<tr>
+<td><code>ANTIBOT_CAPJS_FRONTEND_URL</code></td>
+<td></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>Cap.js 前端 URL：</strong> 浏览器可访问的 Cap.js 服务器 URL，用于加载小组件。</td>
+</tr>
+<tr>
+<td><code>ANTIBOT_CAPJS_BACKEND_URL</code></td>
+<td></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>Cap.js 后端 URL：</strong> BunkerWeb 用于 <code>/siteverify</code> 的可选内部 URL；如果为空，则回退到前端 URL。</td>
+</tr>
+<tr>
+<td><code>ANTIBOT_CAPJS_SITEKEY</code></td>
+<td></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>Cap.js 站点密钥：</strong> Cap.js 挑战的站点密钥。</td>
+</tr>
+<tr>
+<td><code>ANTIBOT_CAPJS_SECRET</code></td>
+<td></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>Cap.js 密钥：</strong> BunkerWeb 用于验证 Cap.js 令牌的密钥。</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">运行要求</p>
+<ul>
+<li>在生产环境中为 <code>ANTIBOT_CAPJS_FRONTEND_URL</code> 使用 HTTPS。浏览器 worker 需要在安全上下文中使用 <code>crypto.subtle</code>，HTTPS 也能防止小组件加载过程中的 MITM 篡改。</li>
+<li>在 Cap.js 站点密钥上配置 CORS，以允许受保护的来源。</li>
+<li>将 <code>ANTIBOT_CAPJS_FRONTEND_URL</code> 和 <code>ANTIBOT_CAPJS_BACKEND_URL</code> 都设置为仅 origin：scheme、host 和可选端口，不包含路径。</li>
+</ul>
+</div>
+</div>
 </div>
 </div>
 <h3 id="_9">示例配置</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="4:8"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><input id="__tabbed_4_4" name="__tabbed_4" type="radio" /><input id="__tabbed_4_5" name="__tabbed_4" type="radio" /><input id="__tabbed_4_6" name="__tabbed_4" type="radio" /><input id="__tabbed_4_7" name="__tabbed_4" type="radio" /><input id="__tabbed_4_8" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Cookie 挑战</label><label for="__tabbed_4_2">JavaScript 挑战</label><label for="__tabbed_4_3">Captcha 挑战</label><label for="__tabbed_4_4">reCAPTCHA 经典版</label><label for="__tabbed_4_5">reCAPTCHA (新)</label><label for="__tabbed_4_6">hCaptcha 挑战</label><label for="__tabbed_4_7">Turnstile 挑战</label><label for="__tabbed_4_8">mCaptcha 挑战</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:9"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><input id="__tabbed_4_4" name="__tabbed_4" type="radio" /><input id="__tabbed_4_5" name="__tabbed_4" type="radio" /><input id="__tabbed_4_6" name="__tabbed_4" type="radio" /><input id="__tabbed_4_7" name="__tabbed_4" type="radio" /><input id="__tabbed_4_8" name="__tabbed_4" type="radio" /><input id="__tabbed_4_9" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Cookie 挑战</label><label for="__tabbed_4_2">JavaScript 挑战</label><label for="__tabbed_4_3">Captcha 挑战</label><label for="__tabbed_4_4">reCAPTCHA 经典版</label><label for="__tabbed_4_5">reCAPTCHA (新)</label><label for="__tabbed_4_6">hCaptcha 挑战</label><label for="__tabbed_4_7">Turnstile 挑战</label><label for="__tabbed_4_8">mCaptcha 挑战</label><label for="__tabbed_4_9">Cap.js 挑战</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>启用 Cookie 挑战的示例配置：</p>
@@ -4608,6 +4680,18 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 <span class="nt">ANTIBOT_MCAPTCHA_SITEKEY</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-site-key&quot;</span>
 <span class="nt">ANTIBOT_MCAPTCHA_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-secret-key&quot;</span>
 <span class="nt">ANTIBOT_MCAPTCHA_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://demo.mcaptcha.org&quot;</span>
+<span class="nt">ANTIBOT_URI</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/challenge&quot;</span>
+<span class="nt">ANTIBOT_TIME_RESOLVE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;60&quot;</span>
+<span class="nt">ANTIBOT_TIME_VALID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;86400&quot;</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>启用 Cap.js 挑战的示例配置：</p>
+<div class="highlight"><pre><span></span><code><span class="nt">USE_ANTIBOT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;capjs&quot;</span>
+<span class="nt">ANTIBOT_CAPJS_FRONTEND_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://cap.example.com&quot;</span>
+<span class="nt">ANTIBOT_CAPJS_BACKEND_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://cap-server:3000&quot;</span>
+<span class="nt">ANTIBOT_CAPJS_SITEKEY</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-site-key&quot;</span>
+<span class="nt">ANTIBOT_CAPJS_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-secret-key&quot;</span>
 <span class="nt">ANTIBOT_URI</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/challenge&quot;</span>
 <span class="nt">ANTIBOT_TIME_RESOLVE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;60&quot;</span>
 <span class="nt">ANTIBOT_TIME_VALID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;86400&quot;</span>
@@ -8657,6 +8741,13 @@ TrustedMonitor/\d+\.\d+
 <td>否</td>
 <td><strong>最大重试次数：</strong> 证书生成失败时重试的次数。设置为 <code>0</code> 以禁用重试。用于处理临时网络问题或 API 速率限制。</td>
 </tr>
+<tr>
+<td><code>LETS_ENCRYPT_MAX_LOG_BACKUPS</code></td>
+<td><code>50</code></td>
+<td>global</td>
+<td>否</td>
+<td><strong>Certbot 日志备份上限：</strong> Certbot 每个任务保留的轮转 <code>letsencrypt.log</code> 备份数量。Certbot 自带的默认值 <code>1000</code> 很容易迅速堆积；<code>50</code> 是一个更合理的上限。设置为 <code>0</code> 时仅保留当前日志。</td>
+</tr>
 </tbody>
 </table>
 <div class="admonition info">
@@ -10148,6 +10239,11 @@ TrustedMonitor/\d+\.\d+
 <p class="admonition-title">ModSecurity 和 OWASP 核心规则集</p>
 <p><strong>我们强烈建议同时启用 ModSecurity 和 OWASP 核心规则集 (CRS)</strong>，以提供针对常见 Web 漏洞的强大保护。虽然偶尔可能会出现误报，但可以通过微调规则或使用预定义的排除项来解决。</p>
 <p>CRS 团队积极维护着针对 WordPress、Nextcloud、Drupal 和 Cpanel 等流行应用程序的排除项列表，从而更容易在不影响功能的情况下进行集成。其安全优势远远超过了解决误报所需的最低配置工作量。</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">大文件上传的安全建议</p>
+<p>ModSecurity 会将完整请求体缓冲到内存中，并且无法为数 GB 的上传设置上限，这可能导致 worker OOM。如果——<strong>并且仅当</strong>——某个反向代理 URL <em>专门</em> 用于文件上传（例如专用的 <code>/upload</code> 端点），请在该 URL 上设置 <code>REVERSE_PROXY_MODSECURITY_N: "no"</code>，以便在其 <code>location</code> 块中生成 <code>modsecurity off;</code>。不要在混合用途的 URL 上禁用它：否则该 location 提供的所有内容都会失去 WAF 覆盖。</p>
+<p>为了在绕过 ModSecurity 后仍保护上传内容，请将其与文件扫描插件配合使用，例如 <a href="https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav">ClamAV</a> 或 <a href="https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal">VirusTotal</a>——它们检查上传文件本身，而不是原始请求体。</p>
 </div>
 <h3 id="crs">可用的 CRS 版本</h3>
 <p>选择一个 CRS 版本以最符合您的安全需求：</p>
@@ -12132,11 +12228,23 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <td>是</td>
 <td><strong>传递请求体：</strong> 启用或禁用传递请求体。</td>
 </tr>
+<tr>
+<td><code>REVERSE_PROXY_MODSECURITY</code></td>
+<td><code>yes</code></td>
+<td>multisite</td>
+<td>是</td>
+<td><strong>ModSecurity（按 location）：</strong> 设置为 <code>no</code> 可在此 location 中生成 <code>modsecurity off;</code>，从而在大文件上传端点上绕过 WAF 以避免 OOM（请参阅下方说明）。</td>
+</tr>
 </tbody>
 </table>
 <div class="admonition warning">
 <p class="admonition-title">安全注意事项</p>
 <p>包含自定义配置片段时请小心，因为如果配置不当，它们可能会覆盖 BunkerWeb 的安全设置或引入漏洞。</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">大文件上传的安全建议</p>
+<p>ModSecurity 会将完整请求体缓冲到内存中，并且无法为数 GB 的上传设置上限，这可能导致 worker OOM。如果——<strong>并且仅当</strong>——某个反向代理 URL <em>专门</em> 用于文件上传（例如专用的 <code>/upload</code> 端点），请在该 URL 上设置 <code>REVERSE_PROXY_MODSECURITY_N: "no"</code>。不要在混合用途的 URL 上禁用它：否则该 location 提供的所有内容都会失去 WAF 覆盖。</p>
+<p>为了在绕过 ModSecurity 后仍保护上传内容，请将其与文件扫描插件配合使用，例如 <a href="https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav">ClamAV</a> 或 <a href="https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal">VirusTotal</a>——它们检查上传文件本身，而不是原始请求体。</p>
 </div>
 </div>
 <div class="tabbed-block">
@@ -12878,6 +12986,7 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <li><strong>配置会话安全性：</strong> 设置一个强大的、唯一的 <code>SESSIONS_SECRET</code>，以确保会话 Cookie 无法被伪造。（默认值为“random”，这会触发 BunkerWeb 生成一个随机的密钥。）</li>
 <li><strong>选择会话名称：</strong> 可选地自定义 <code>SESSIONS_NAME</code>，以定义您的会话 Cookie 在浏览器中的名称。（默认值为“random”，这会触发 BunkerWeb 生成一个随机的名称。）</li>
 <li><strong>设置会话超时：</strong> 使用超时设置（<code>SESSIONS_IDLING_TIMEOUT</code>、<code>SESSIONS_ROLLING_TIMEOUT</code>、<code>SESSIONS_ABSOLUTE_TIMEOUT</code>）配置会话的有效时长。</li>
+<li><strong>在子域之间共享 Cookie（可选，按服务器配置）：</strong> 默认情况下，会话 Cookie 仅作用于主机本身。如果某个服务器托管了同一可注册域名下的多个子域（例如 <code>a.example.com</code> 和 <code>b.example.com</code>），并且您希望反机器人/挑战状态能够共用，请仅在该服务器上将 <code>SESSIONS_DOMAIN</code> 设置为父域名（<code>example.com</code>）。<code>SESSIONS_DOMAIN</code> 是一项 multisite 设置，因此同一 BunkerWeb 实例上的无关租户不会收到跨租户共享的 <code>Domain</code> 属性。</li>
 <li><strong>配置 Redis 集成：</strong> 对于分布式环境，将 <code>USE_REDIS</code> 设置为“yes”，并配置您的 <a href="#redis">Redis 连接</a> 以在多个 BunkerWeb 节点之间共享会话数据。</li>
 <li><strong>让 BunkerWeb 处理其余部分：</strong> 配置完成后，您的网站会自动进行会话管理。</li>
 </ol>
@@ -12908,25 +13017,32 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <td><strong>Cookie 名称：</strong> 将存储会话标识符的 Cookie 的名称。</td>
 </tr>
 <tr>
+<td><code>SESSIONS_DOMAIN</code></td>
+<td></td>
+<td>multisite</td>
+<td>否</td>
+<td><strong>Cookie 域：</strong> 应用于会话 Cookie 的可选 <code>Domain</code> 属性（例如 <code>example.com</code>）。留空则保持 Cookie 仅作用于主机。按服务器配置它，以便在同一可注册域名下的同级子域之间共享会话状态（反机器人、挑战等）。</td>
+</tr>
+<tr>
 <td><code>SESSIONS_IDLING_TIMEOUT</code></td>
 <td><code>1800</code></td>
 <td>global</td>
 <td>否</td>
-<td><strong>空闲超时：</strong> 会话在失效前不活动的最长时间（以秒为单位）。</td>
+<td><strong>空闲超时：</strong> 会话在失效前允许保持不活动的最长时间（以秒为单位）。</td>
 </tr>
 <tr>
 <td><code>SESSIONS_ROLLING_TIMEOUT</code></td>
 <td><code>3600</code></td>
 <td>global</td>
 <td>否</td>
-<td><strong>滚动超时：</strong> 会话必须续订前的最长时间（以秒为单位）。</td>
+<td><strong>滚动超时：</strong> 会话在必须续订之前允许存在的最长时间（以秒为单位）。</td>
 </tr>
 <tr>
 <td><code>SESSIONS_ABSOLUTE_TIMEOUT</code></td>
 <td><code>86400</code></td>
 <td>global</td>
 <td>否</td>
-<td><strong>绝对超时：</strong> 无论活动如何，会话被销毁前的最长时间（以秒为单位）。</td>
+<td><strong>绝对超时：</strong> 无论活动情况如何，会话在被销毁前允许存在的最长时间（以秒为单位）。</td>
 </tr>
 <tr>
 <td><code>SESSIONS_CHECK_IP</code></td>
@@ -12964,7 +13080,7 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 </ol>
 </div>
 <h3 id="_129">配置示例</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="44:4"><input checked="checked" id="__tabbed_44_1" name="__tabbed_44" type="radio" /><input id="__tabbed_44_2" name="__tabbed_44" type="radio" /><input id="__tabbed_44_3" name="__tabbed_44" type="radio" /><input id="__tabbed_44_4" name="__tabbed_44" type="radio" /><div class="tabbed-labels"><label for="__tabbed_44_1">基本配置</label><label for="__tabbed_44_2">增强安全性</label><label for="__tabbed_44_3">带 Redis 的集群环境</label><label for="__tabbed_44_4">长效会话</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="44:6"><input checked="checked" id="__tabbed_44_1" name="__tabbed_44" type="radio" /><input id="__tabbed_44_2" name="__tabbed_44" type="radio" /><input id="__tabbed_44_3" name="__tabbed_44" type="radio" /><input id="__tabbed_44_4" name="__tabbed_44" type="radio" /><input id="__tabbed_44_5" name="__tabbed_44" type="radio" /><input id="__tabbed_44_6" name="__tabbed_44" type="radio" /><div class="tabbed-labels"><label for="__tabbed_44_1">基本配置</label><label for="__tabbed_44_2">增强安全性</label><label for="__tabbed_44_3">带 Redis 的集群环境</label><label for="__tabbed_44_4">长效会话</label><label for="__tabbed_44_5">跨子域会话（单一租户）</label><label for="__tabbed_44_6">跨子域会话（混合租户）</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>单个 BunkerWeb 实例的简单配置：</p>
@@ -13005,6 +13121,34 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <span class="nt">SESSIONS_ROLLING_TIMEOUT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;172800&quot;</span><span class="w">  </span><span class="c1"># 2 天</span>
 <span class="nt">SESSIONS_ABSOLUTE_TIMEOUT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;604800&quot;</span><span class="w">  </span><span class="c1"># 7 天</span>
 </code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>在 <code>example.com</code> 的所有子域之间共享会话 Cookie，这样整个站点的反机器人/挑战状态只需解决一次：</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app.example.com</span><span class="nv"> </span><span class="s">api.example.com</span><span class="nv"> </span><span class="s">shop.example.com&quot;</span>
+<span class="nt">SESSIONS_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-strong-random-secret-key-here&quot;</span>
+<span class="nt">SESSIONS_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;crossdomainsession&quot;</span>
+<span class="c1"># SESSIONS_DOMAIN 是一项 multisite 设置：使用服务器名作为前缀，使其仅应用于匹配的主机</span>
+<span class="nt">app.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">api.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">shop.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">USE_ANTIBOT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;turnstile&quot;</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>当同一个 BunkerWeb 实例托管多个彼此无关的可注册域名时，只应在需要共享 Cookie 的服务器上设置 <code>SESSIONS_DOMAIN</code>。未设置的服务器将保留默认的仅主机 Cookie，从而确保租户隔离：</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app.example.com</span><span class="nv"> </span><span class="s">api.example.com</span><span class="nv"> </span><span class="s">billing.acme.org</span><span class="nv"> </span><span class="s">www.unrelated.io&quot;</span>
+<span class="nt">SESSIONS_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-strong-random-secret-key-here&quot;</span>
+<span class="nt">SESSIONS_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;tenantsession&quot;</span>
+<span class="c1"># 仅在 example.com 子域之间共享 Cookie</span>
+<span class="nt">app.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">api.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="c1"># billing.acme.org 和 www.unrelated.io 有意保持为仅主机 Cookie</span>
+<span class="nt">USE_ANTIBOT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;turnstile&quot;</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>SESSIONS_DOMAIN</code> 必须始终是其所应用服务器的父域名。例如，<code>example.com</code> 对 <code>example.com</code> 本身以及任意 <code>*.example.com</code> 主机都有效，而前导点（<code>.example.com</code>）也会因兼容旧配置而被接受。如果将其设置为无关的可注册域名，浏览器将拒绝该 Cookie。</p>
+</div>
 </div>
 </div>
 </div>
@@ -13699,7 +13843,7 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 TrustedMonitor/\d+\.\d+
 </code></pre></div>
 <h2 id="wildcard-pro">Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)</h2>
-<p>STREAM 支持 <img alt="✅" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/2705.svg" title=":white_check_mark:" /></p>
+<p>STREAM 支持 <img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/274c.svg" title=":x:" /></p>
 <p>Adds wildcard server_name support (*.domain) for services.</p>
 <table>
 <thead>

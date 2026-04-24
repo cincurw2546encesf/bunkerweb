@@ -1853,6 +1853,93 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#wildcard-pro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wildcard (PRO)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Wildcard (PRO)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wie-es-funktioniert_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wie es funktioniert
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funktionen_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      Funktionen
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#konfiguration_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      Konfiguration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schnellstart_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schnellstart
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#beispiele_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Beispiele
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wichtiges-verhalten" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wichtiges Verhalten
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#empfohlen-mit-lets-encrypt-wildcard-zertifikaten" class="md-nav__link">
+    <span class="md-ellipsis">
+      Empfohlen mit Let's Encrypt Wildcard-Zertifikaten
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nutzungstipps_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Nutzungstipps
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4359,7 +4446,7 @@ USE_IPV6=yes
 <tbody>
 <tr>
 <td style="text-align: left;"><code>file</code></td>
-<td style="text-align: left;">Schreibt Protokolle in eine Datei. Erforderlich für den Protokollanzeiger der Web-UI.</td>
+<td style="text-align: left;">Schreibt Protokolle in eine einfache Datei. Die externe Rotation wird bei Linux-Installationen von <code>logrotate</code> und unter Docker von Ihrem Container-Logging-Treiber übernommen. Erforderlich für den Protokollanzeiger der Web-UI.</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>stderr</code></td>
@@ -4371,11 +4458,14 @@ USE_IPV6=yes
 </tr>
 </tbody>
 </table>
+<p>Wenn Sie <code>file</code> verwenden, sollten Sie zusätzlich konfigurieren:</p>
+<ul>
+<li><code>LOG_FILE_PATH</code>: Pfad, in den Logdateien geschrieben werden, wenn <code>LOG_TYPES</code> <code>file</code> enthält.</li>
+</ul>
 <p>Wenn Sie <code>syslog</code> verwenden, sollten Sie zusätzlich konfigurieren:</p>
 <ul>
 <li><code>LOG_SYSLOG_ADDRESS</code>: Adresse des Syslog-Servers (z. B. <code>udp://bw-syslog:514</code> oder <code>/dev/log</code>).</li>
 <li><code>LOG_SYSLOG_TAG</code>: Ein eindeutiger Tag für den Dienst (z. B. <code>bw-scheduler</code>), damit Einträge unterschieden werden können.</li>
-<li><code>LOG_FILE_PATH</code>: Pfad für die Dateiausgabe, wenn <code>LOG_TYPES</code> <code>file</code> enthält (z. B. <code>/var/log/bunkerweb/scheduler.log</code>).</li>
 </ul>
 <h3 id="zugriffs-und-fehlerprotokolle">Zugriffs- und Fehlerprotokolle</h3>
 <p>Dies sind Standard-NGINX-Protokolle, die ausschließlich über den <code>bunkerweb</code>-Dienst konfiguriert werden. Sie unterstützen mehrere Ziele, indem Sie die Einstellung mit nummerierten Suffixen versehen (z. B. <code>ACCESS_LOG</code>, <code>ACCESS_LOG_1</code> und die passenden <code>LOG_FORMAT</code>, <code>LOG_FORMAT_1</code> bzw. <code>ERROR_LOG</code>, <code>ERROR_LOG_1</code> und die entsprechenden <code>LOG_LEVEL</code>, <code>LOG_LEVEL_1</code>).</p>
@@ -4399,7 +4489,7 @@ LOG_LEVEL_1=error
 <div class="tabbed-set tabbed-alternate" data-tabs="19:3"><input checked="checked" id="__tabbed_19_1" name="__tabbed_19" type="radio" /><input id="__tabbed_19_2" name="__tabbed_19" type="radio" /><input id="__tabbed_19_3" name="__tabbed_19" type="radio" /><div class="tabbed-labels"><label for="__tabbed_19_1">Linux</label><label for="__tabbed_19_2">Docker / Autoconf / Swarm</label><label for="__tabbed_19_3">Kubernetes</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<p><strong>Standardverhalten</strong>: <code>LOG_TYPES="file"</code>. Protokolle werden unter <code>/var/log/bunkerweb/*.log</code> geschrieben.</p>
+<p><strong>Standardverhalten</strong>: <code>LOG_TYPES="file"</code>. Protokolle werden unter <code>/var/log/bunkerweb/*.log</code> geschrieben. Die Rotation übernimmt die installierte System-<code>logrotate</code>-Konfiguration unter <code>/etc/logrotate.d/bunkerweb</code> (täglich, 7 Tage Aufbewahrung, Komprimierung per <code>copytruncate</code>).</p>
 <p><strong>Beispiel</strong>: Lokale Dateien behalten (für die Web-UI) und zusätzlich an den System-Syslog spiegeln.</p>
 <div class="highlight"><pre><span></span><code>  # Service-Protokolle (in /etc/bunkerweb/variables.env oder in spezifischen Dienst-Umgebungsdateien setzen)
   LOG_TYPES=&quot;file syslog&quot;
@@ -5940,7 +6030,7 @@ kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunke
 <p>Das Custom Pages Plugin ermöglicht es Ihnen, die eingebauten Seiten von BunkerWeb (Fehlerseiten, Standard-Server-Seite und Antibot-Challenge-Seiten) durch Ihre eigenen benutzerdefinierten HTML- oder Lua-Vorlagen zu ersetzen. Dies ermöglicht es Ihnen, ein einheitliches Branding auf allen benutzerseitigen Seiten von BunkerWeb beizubehalten.</p>
 <h3 id="funktionen_5">Funktionen</h3>
 <ul>
-<li><strong>Benutzerdefinierte Fehlerseiten pro Service</strong> und <strong>Antibot-Challenge-Seiten</strong> (Captcha, JavaScript-Prüfung, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).</li>
+<li><strong>Benutzerdefinierte Fehlerseiten pro Service</strong> und <strong>Antibot-Challenge-Seiten</strong> (Captcha, JavaScript-Prüfung, reCAPTCHA, hCaptcha, Turnstile, mCaptcha, Cap.js).</li>
 <li><strong>Globale benutzerdefinierte Standard-Server-Seite</strong> für den Fallback/Standard-vhost.</li>
 <li><strong>HTML-Parsing und Lua-Vorlagen-Tag-Balanceprüfungen</strong> bevor eine Vorlage akzeptiert wird.</li>
 <li><strong>Automatisches Caching</strong> nach <code>/var/cache/bunkerweb/custom_pages</code> mit Änderungserkennung für Neuladen.</li>
@@ -6011,6 +6101,12 @@ kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunke
 <td></td>
 <td>multisite</td>
 <td>Absoluter Pfad zur benutzerdefinierten Antibot-mCaptcha-Seite.</td>
+</tr>
+<tr>
+<td><code>CUSTOM_ANTIBOT_CAPJS_PAGE</code></td>
+<td></td>
+<td>multisite</td>
+<td>Absoluter Pfad zur benutzerdefinierten Antibot-Cap.js-Seite.</td>
 </tr>
 </tbody>
 </table>
@@ -6240,6 +6336,28 @@ kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunke
 <td><code>mcaptcha_url</code></td>
 <td>string</td>
 <td>Ihre mCaptcha-URL</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cap.js (<code>CUSTOM_ANTIBOT_CAPJS_PAGE</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Typ</th>
+<th>Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>capjs_sitekey</code></td>
+<td>string</td>
+<td>Ihr Cap.js-Site-Key</td>
+</tr>
+<tr>
+<td><code>capjs_url</code></td>
+<td>string</td>
+<td>Ihre Cap.js-Frontend-Basis-URL</td>
 </tr>
 </tbody>
 </table>
@@ -7518,6 +7636,10 @@ chmod<span class="w"> </span><span class="m">770</span><span class="w"> </span>t
 <p>Bei Verwendung von <code>ACME_CHALLENGE=http</code> (dem Standard) <strong>müssen</strong> Sie <code>LETS_ENCRYPT_PASSTHROUGH=yes</code> für denselben Service setzen.</p>
 <p>Das integrierte Let's Encrypt Plugin von BunkerWeb enthält sowohl einen NGINX-Location-Block als auch einen Lua-Access-Handler für <code>/.well-known/acme-challenge/</code>. Da der NGINX-Location-Block vor jeglichem Lua-Plugin-Code greift, fängt er Challenge-Anfragen ab, bevor ACME PRO sie bedienen kann. Durch Setzen von <code>LETS_ENCRYPT_PASSTHROUGH=yes</code> werden beide Mechanismen deaktiviert, sodass ACME PRO HTTP-01-Challenge-Tokens korrekt verarbeiten kann.</p>
 <p>Dies ist <strong>nur für HTTP-01</strong> erforderlich. DNS-01- und TLS-ALPN-01-Challenges sind nicht betroffen.</p>
+<h4 id="upstream-acme-passthrough-acme_passthrough">Upstream-ACME-Passthrough (<code>ACME_PASSTHROUGH</code>)</h4>
+<p>Wenn der Upstream-Server hinter BunkerWeb bereits einen eigenen ACME-Client betreibt und die HTTP-01-Validierung selbst durchführen soll, setzen Sie <code>ACME_PASSTHROUGH=yes</code> für den Service. ACME PRO rendert dann seinen <code>/.well-known/acme-challenge/</code>-Location-Block nicht mehr und nimmt Challenge-Pfade auch nicht mehr in der <code>access</code>-Phase in die Whitelist auf, sodass vom Upstream bereitgestellte Validierungsdateien die CA unverändert erreichen.</p>
+<p>Belassen Sie <code>ACME_PASSTHROUGH=no</code> (den Standard), wenn ACME PRO die Zertifikate selbst anfordern und erneuern soll. Die Standardkombination für HTTP-01 mit ACME PRO-verwalteten Services ist <code>LETS_ENCRYPT_PASSTHROUGH=yes</code> (damit das OSS-Core-Let's-Encrypt-Plugin seinen Challenge-Location-Block frei gibt) zusammen mit <code>ACME_PASSTHROUGH=no</code>. Setzen Sie <code>ACME_PASSTHROUGH=yes</code> nur dann, wenn der Upstream den gesamten Zertifikatslebenszyklus besitzt — BunkerWeb wird in diesem Modus kein Zertifikat für den Service ausstellen.</p>
+<p>Diese Einstellung spiegelt das Verhalten des OSS-Core-<code>LETS_ENCRYPT_PASSTHROUGH</code> wider und betrifft nur HTTP-01; DNS-01 und TLS-ALPN-01 sind unberührt.</p>
 <h4 id="plugin-ausfuhrungsreihenfolge">Plugin-Ausführungsreihenfolge</h4>
 <p>Das ACME-Plugin ordnet sich automatisch um, damit es zuerst in der NGINX-Phase <code>ssl_certificate</code> ausgeführt wird. Dadurch wird sichergestellt, dass TLS-ALPN-01-Challenge-Zertifikate bereitgestellt werden, bevor andere zertifikatsgebende Plugins (selfsigned, letsencrypt, customcert) die Schleife abbrechen können.</p>
 <p>Wenn Sie ACME zusammen mit anderen PRO-Plugins verwenden, die gültiges TLS voraussetzen (z. B. OpenID Connect, UI SSO), wird empfohlen, <code>acme</code> explizit direkt nach <code>customcert</code> in den entsprechenden Phase-Ordering-Einstellungen aufzuführen:</p>
@@ -7548,6 +7670,13 @@ PLUGINS_ORDER_INIT=sessions whitelist blacklist greylist bunkernet limit authbas
 <td>multisite</td>
 <td>nein</td>
 <td>ACME-Zertifikatsverwaltung für diesen Service aktivieren.</td>
+</tr>
+<tr>
+<td><code>ACME_PASSTHROUGH</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>HTTP-01-Challenge-Anfragen an den Upstream-Server durchreichen (Upstream betreibt einen eigenen ACME-Client).</td>
 </tr>
 <tr>
 <td><code>ACME_DIRECTORY_URL</code></td>
@@ -7941,6 +8070,196 @@ PLUGINS_ORDER_INIT=sessions whitelist blacklist greylist bunkernet limit authbas
 <li><strong>TLS-ALPN-01-Challenge schlägt fehl</strong>: Stellen Sie sicher, dass Port 443 vom ACME-Server erreichbar ist und kein anderes Plugin vor ACME in der <code>ssl_certificate</code>-Phase ein Zertifikat bereitstellt. Überprüfen Sie bei Zweifeln <code>PLUGINS_ORDER_SSL_CERTIFICATE</code>.</li>
 <li><strong>DNS-01-Challenge schlägt fehl</strong>: Überprüfen Sie die DNS-Provider-Anmeldedaten in <code>ACME_DNS_CREDENTIAL_ITEM</code> und passen Sie <code>ACME_DNS_PROPAGATION</code> an, wenn Ihr Provider langsam bei der Propagation ist.</li>
 <li><strong>Zertifikat wird nicht erneuert</strong>: Überprüfen Sie <code>ACME_RENEWAL_DAYS</code> und die Scheduler-Logs. Der Job <code>acme-renew</code> läuft täglich und erneuert Zertifikate, die innerhalb des konfigurierten Schwellenwerts liegen.</li>
+</ul>
+<h2 id="wildcard-pro">Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)</h2>
+<p>STREAM-Unterstützung <img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/274c.svg" title=":x:" /></p>
+<p>Das <strong>Wildcard</strong>-Plugin ermöglicht es einem einzelnen BunkerWeb-Dienst, auf Folgendes zu antworten:</p>
+<ul>
+<li>seinen exakten Hostnamen</li>
+<li>jede <strong>direkte Subdomain</strong> dieses Hostnamens</li>
+</ul>
+<p>Wenn es aktiviert ist, nimmt das Plugin den <strong>ersten Eintrag</strong> aus <code>SERVER_NAME</code> und fügt der generierten NGINX-Konfiguration ein Wildcard-<code>server_name</code> hinzu.</p>
+<p>Wenn der erste Eintrag zum Beispiel <code>example.com</code> ist, fügt das Plugin Folgendes hinzu:</p>
+<div class="highlight"><pre><span></span><code><span class="k">server_name</span><span class="w"> </span><span class="s">*.example.com</span><span class="p">;</span>
+</code></pre></div>
+<p>Dadurch antwortet der Dienst auf:</p>
+<ul>
+<li><code>example.com</code></li>
+<li><code>www.example.com</code></li>
+<li><code>api.example.com</code></li>
+</ul>
+<p>Dies ist ein minimales, rein konfigurationsbasiertes Plugin:</p>
+<ul>
+<li>keine Jobs</li>
+<li>kein Lua</li>
+<li>keine UI</li>
+</ul>
+<hr />
+<h3 id="wie-es-funktioniert_1">Wie es funktioniert</h3>
+<p>Das Plugin leitet den Wildcard-Hostnamen aus dem <strong>ersten Wert</strong> in <code>SERVER_NAME</code> ab und fügt während der Konfigurationsgenerierung einen normalen NGINX-Wildcard-Servernamen ein.</p>
+<p>Es verändert die Request-Verarbeitung über das Hostname-Matching hinaus nicht.</p>
+<div class="admonition info">
+<p class="admonition-title">Wildcard-Hosts sind keine Wildcard-Zertifikate</p>
+<p>Dieses Plugin beeinflusst nur das <strong>HTTP-Routing</strong>. Es legt fest, welche Hostnamen der Dienst in NGINX akzeptiert.</p>
+<p>Es stellt <strong>kein</strong> Wildcard-TLS-Zertifikat bereit.</p>
+<p>Um <code>*.example.com</code> per HTTPS bereitzustellen, benötigen Sie weiterhin ein passendes Wildcard-Zertifikat, typischerweise mit einer der folgenden Optionen:</p>
+<ul>
+<li><code>USE_LETS_ENCRYPT_WILDCARD=yes</code> mit dem integrierten Let's Encrypt Plugin</li>
+<li><code>ACME_WILDCARD=yes</code> mit dem <a href="#acme">ACME PRO</a>-Plugin unter Verwendung einer DNS-01-Challenge</li>
+</ul>
+</div>
+<hr />
+<h3 id="funktionen_9">Funktionen</h3>
+<ul>
+<li><strong>Einfache Aktivierung</strong>: Aktivieren Sie Wildcard-Routing mit <code>USE_WILDCARD=yes</code></li>
+<li><strong>Automatische Ableitung</strong>: Der Wildcard-Host wird aus dem ersten Eintrag in <code>SERVER_NAME</code> gebildet</li>
+<li><strong>Native NGINX-Semantik</strong>: Das Matching folgt dem Standardverhalten von <code>server_name</code></li>
+<li><strong>Multisite-fähig</strong>: Jeder Dienst kann Wildcard-Routing unabhängig aktivieren oder deaktivieren</li>
+</ul>
+<hr />
+<h3 id="konfiguration_7">Konfiguration</h3>
+<table>
+<thead>
+<tr>
+<th>Einstellung</th>
+<th>Standardwert</th>
+<th>Kontext</th>
+<th>Mehrfach</th>
+<th>Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_WILDCARD</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>nein</td>
+<td>Aktiviert einen Wildcard-<code>server_name</code> für den Dienst, indem <code>*.domain</code> für den ersten Eintrag in <code>SERVER_NAME</code> hinzugefügt wird.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="schnellstart_5">Schnellstart</h3>
+<ol>
+<li>Platzieren Sie die Domain, die als Wildcard verwendet werden soll, <strong>an erster Stelle</strong> in <code>SERVER_NAME</code></li>
+<li>Setzen Sie <code>USE_WILDCARD=yes</code></li>
+<li>Lassen Sie den Wildcard-DNS-Eintrag auf BunkerWeb zeigen, üblicherweise über einen Wildcard-<code>A</code>- oder <code>AAAA</code>-Record</li>
+<li>Wenn Sie HTTPS benötigen, stellen Sie separat ein Wildcard-Zertifikat bereit</li>
+<li>Laden Sie BunkerWeb neu oder starten Sie es neu</li>
+</ol>
+<hr />
+<h3 id="beispiele_1">Beispiele</h3>
+<h4 id="single-site">Single-site</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+</code></pre></div>
+<p>Dieser Dienst antwortet auf:</p>
+<ul>
+<li><code>example.com</code></li>
+<li><code>www.example.com</code></li>
+<li><code>api.example.com</code></li>
+<li>jeden anderen <code>*.example.com</code>-Hostnamen, der zu BunkerWeb aufgelöst wird</li>
+</ul>
+<h4 id="multisite">Multisite</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">MULTISITE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app.example.com</span><span class="nv"> </span><span class="s">docs.example.org&quot;</span>
+
+<span class="c1"># Nur app.example.com erhält Wildcard-Routing</span>
+<span class="nt">app.example.com_USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+</code></pre></div>
+<p>In diesem Setup gilt:</p>
+<ul>
+<li><code>app.example.com</code> und <code>*.app.example.com</code> gehen an den ersten Dienst</li>
+<li><code>docs.example.org</code> behält ausschließlich exaktes Hostname-Matching</li>
+</ul>
+<hr />
+<h3 id="wichtiges-verhalten">Wichtiges Verhalten</h3>
+<div class="admonition warning">
+<p class="admonition-title">Nur die erste Domain wird als Wildcard behandelt</p>
+<p>Wenn <code>SERVER_NAME</code> so gesetzt ist:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com</span><span class="nv"> </span><span class="s">example.org&quot;</span>
+</code></pre></div>
+<p>wird nur <code>*.example.com</code> hinzugefügt.</p>
+<p>Platzieren Sie die Domain, die als Wildcard verwendet werden soll, an erster Stelle.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Vorhandene Wildcard-Einträge bleiben erhalten</p>
+<p>Wenn die erste Domain bereits mit <code>*.</code> beginnt, zum Beispiel:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;*.example.com&quot;</span>
+</code></pre></div>
+<p>erzeugt das Plugin nichts.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Wildcard-Matching gilt nur für eine Ebene</p>
+<p><code>*.example.com</code> passt zu <code>foo.example.com</code>, aber nicht zu <code>a.b.example.com</code>.</p>
+<p>Für tiefere Subdomains verwenden Sie einen expliziten <code>SERVER_NAME</code>-Eintrag oder einen separaten Dienst.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Exakte Treffer haben Vorrang</p>
+<p>Wenn ein anderer Dienst <code>foo.example.com</code> explizit definiert, leitet NGINX diesen Hostnamen zuerst an den exakten Treffer weiter.</p>
+</div>
+<hr />
+<h3 id="empfohlen-mit-lets-encrypt-wildcard-zertifikaten">Empfohlen mit Let's Encrypt Wildcard-Zertifikaten</h3>
+<p>Wenn Sie dieses Plugin zusammen mit <code>USE_LETS_ENCRYPT_WILDCARD=yes</code> verwenden, nutzen Sie dieses Muster:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;root_domain&gt;</span><span class="nv"> </span><span class="s">&lt;any_app&gt;.&lt;root_domain&gt;&quot;</span>
+</code></pre></div>
+<p>Die <strong>Root-Domain muss an erster Stelle stehen</strong>.</p>
+<p>Beispiel:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com</span><span class="nv"> </span><span class="s">app.example.com&quot;</span>
+<span class="nt">USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">AUTO_LETS_ENCRYPT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">EMAIL_LETS_ENCRYPT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin@example.com&quot;</span>
+<span class="nt">LETS_ENCRYPT_CHALLENGE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dns&quot;</span>
+<span class="nt">LETS_ENCRYPT_DNS_PROVIDER</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cloudflare&quot;</span>
+<span class="nt">LETS_ENCRYPT_DNS_CREDENTIAL_ITEM</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api_token</span><span class="nv"> </span><span class="s">YOUR_API_TOKEN&quot;</span>
+<span class="nt">USE_LETS_ENCRYPT_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Warum dieses Muster wichtig ist</p>
+<ul>
+<li><strong>Nur der erste <code>SERVER_NAME</code>-Eintrag wird als Wildcard behandelt</strong></li>
+</ul>
+<p>Wenn <code>example.com</code> zuerst steht, erzeugt das Plugin <code>*.example.com</code>.</p>
+<p>Wenn <code>app.example.com</code> zuerst steht, erzeugt es <code>*.app.example.com</code>, was in der Regel die falsche Wildcard-Ebene ist.</p>
+<ul>
+<li>
+<p><strong>Der zweite Eintrag hilft Let's Encrypt, die korrekte Basisdomain zu erkennen</strong>
+  Mit nur einer Apex-Domain kann die Erkennung von Wildcard-Zertifikaten bei manchen Public-Suffix-Domains wie <code>example.co.uk</code> fehlschlagen.</p>
+</li>
+<li>
+<p><strong>Der zweite Hostname benötigt kein echtes Backend</strong>
+  Verwenden Sie einen beliebigen stabilen Wert wie <code>app.example.com</code> oder <code>www.example.com</code>.</p>
+</li>
+</ul>
+</div>
+<h4 id="multisite-mit-lets-encrypt-wildcard">Multisite mit Let's Encrypt Wildcard</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">MULTISITE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com</span><span class="nv"> </span><span class="s">app.example.com&quot;</span>
+<span class="nt">example.com_USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">example.com_USE_LETS_ENCRYPT_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">example.com_LETS_ENCRYPT_CHALLENGE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dns&quot;</span>
+<span class="nt">example.com_LETS_ENCRYPT_DNS_PROVIDER</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cloudflare&quot;</span>
+<span class="nt">example.com_LETS_ENCRYPT_DNS_CREDENTIAL_ITEM</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api_token</span><span class="nv"> </span><span class="s">YOUR_API_TOKEN&quot;</span>
+</code></pre></div>
+<hr />
+<h3 id="nutzungstipps_4">Nutzungstipps</h3>
+<ul>
+<li>
+<p><strong>Planen Sie TLS separat</strong>
+  Wildcard-Routing allein reicht für HTTPS nicht aus. Sie benötigen weiterhin Zertifikatsabdeckung für Subdomains.</p>
+</li>
+<li>
+<p><strong>Halten Sie die Reihenfolge von <code>SERVER_NAME</code> stabil</strong>
+  Eine geänderte Reihenfolge bestimmt, welche Domain zum Wildcard-Ziel wird.</p>
+</li>
+<li>
+<p><strong>Funktioniert gut mit <code>REVERSE_PROXY_HOST</code></strong>
+  Das ist nützlich, wenn viele Subdomains über ein gemeinsames Upstream wie einen Tenant-Router geleitet werden.</p>
+</li>
+<li>
+<p><strong>Seien Sie vorsichtig bei überlappenden Diensten</strong>
+  NGINX bevorzugt immer den spezifischsten <code>server_name</code>-Treffer.</p>
+</li>
 </ul>
 
 

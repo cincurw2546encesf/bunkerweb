@@ -2795,7 +2795,8 @@ openssl<span class="w"> </span>s_client<span class="w"> </span>-connect<span cla
 <li><code>AUTOCONF_MODE=no</code> (default) - Enables the autoconf service</li>
 <li><code>USE_REDIS=yes</code> (default) - Enables the built-in <a href="#redis-integration">Redis</a> instance</li>
 <li><code>USE_CROWDSEC=no</code> (default) - <a href="#crowdsec-integration">CrowdSec</a> integration is disabled by default</li>
-<li><code>HIDE_SERVICE_LOGS=</code> (optional) - Comma-separated list of services to silence in container logs. Accepted values: <code>api</code>, <code>autoconf</code>, <code>bunkerweb</code>, <code>crowdsec</code>, <code>redis</code>, <code>scheduler</code>, <code>ui</code>, <code>nginx.access</code>, <code>nginx.error</code>, <code>modsec</code>. Logs still reach <code>/var/log/bunkerweb/&lt;service&gt;.log</code>.</li>
+<li><code>HIDE_SERVICE_LOGS=</code> (optional) - Comma-separated list of services to silence in container logs. Accepted values: <code>api</code>, <code>autoconf</code>, <code>bunkerweb</code>, <code>crowdsec</code>, <code>redis</code>, <code>scheduler</code>, <code>ui</code>, <code>nginx.access</code>, <code>nginx.error</code>, <code>modsec</code>.</li>
+<li><strong>Logging</strong>: The all-in-one image streams every service's stdout and stderr to the container output. Use <code>docker logs bunkerweb-aio</code> (or your preferred container logging driver) to view and rotate logs — the image does not write on-disk log files for its Python services.</li>
 </ul>
 <p>A named volume (or bind mount) is required to persist the SQLite database, cache, and backups stored under <code>/data</code> inside the container:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>
@@ -3306,15 +3307,15 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 </tr>
 <tr>
 <td><code>SCHEDULER_LOG_TO_FILE</code></td>
-<td>Enable file logging and default path</td>
-<td><code>yes</code> or <code>no</code></td>
+<td>Legacy convenience: when set, <code>LOG_FILE_PATH</code> defaults to <code>/var/log/bunkerweb/scheduler.log</code> if <code>LOG_TYPES</code> includes <code>file</code> and you didn't set <code>LOG_FILE_PATH</code> explicitly.</td>
+<td><code>yes</code>/<code>no</code></td>
 <td><code>no</code></td>
 </tr>
 <tr>
 <td><code>LOG_FILE_PATH</code></td>
-<td>Custom log file path (used when <code>LOG_TYPES</code> includes file)</td>
+<td>Custom log file path (used when <code>LOG_TYPES</code> includes <code>file</code>)</td>
 <td>File path</td>
-<td><code>/var/log/bunkerweb/scheduler.log</code> when <code>SCHEDULER_LOG_TO_FILE=yes</code>, else unset</td>
+<td><code>/var/log/bunkerweb/scheduler.log</code> when <code>LOG_TYPES</code> contains <code>file</code>, else unset</td>
 </tr>
 <tr>
 <td><code>LOG_SYSLOG_ADDRESS</code></td>
@@ -4317,6 +4318,12 @@ MY_SETTING_2=value2
 <td><code>5</code></td>
 </tr>
 <tr>
+<td><code>AUTOCONF_DISABLE_CLEANUP</code></td>
+<td>When <code>yes</code>, services and custom configs removed from the orchestrator are converted to draft instead of being hard-deleted, so they survive transient removals and can be deleted from the Web UI.</td>
+<td><code>yes</code> or <code>no</code></td>
+<td><code>no</code></td>
+</tr>
+<tr>
 <td><code>LOG_SYSLOG_TAG</code></td>
 <td>Syslog tag for autoconf logs</td>
 <td>String</td>
@@ -4535,6 +4542,23 @@ MY_SETTING_2=value2
 <span class="w">  </span><span class="nt">bw-services</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-services</span>
+</code></pre></div>
+<h4 id="autoconf-disable-cleanup">Preserving services as drafts on removal</h4>
+<p>By default, when a container, Swarm service, or Ingress managed by autoconf disappears from the orchestrator, its BunkerWeb service row (and any associated custom configs) is immediately deleted from the shared database. This is destructive: an operator cannot distinguish a genuine teardown from a transient glitch, and recovering requires recreating the service definition from scratch.</p>
+<p>Setting <code>AUTOCONF_DISABLE_CLEANUP=yes</code> on the <code>bw-autoconf</code> container changes this behavior:</p>
+<ul>
+<li>Services removed from the orchestrator are flipped to <code>is_draft = true</code> instead of being deleted. Their <code>services_settings</code> rows, custom configs, and job caches are preserved.</li>
+<li>Draft services are excluded from the rendered NGINX configuration (they are not served), so removing the orchestration object still takes the site offline — it just keeps the state around.</li>
+<li>If the same service is later re-registered by autoconf (same server name / Ingress host), it is automatically flipped back to online and republished; existing custom configs are reused.</li>
+<li>While a service is in this "drafted by autoconf" state, it can be deleted from the Web UI Services page — normally autoconf-owned services are undeletable from the UI, but the Delete button becomes enabled for draft autoconf services so operators can prune stale entries. Online autoconf services remain undeletable from the UI.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">bw-autoconf</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bunkerity/bunkerweb-autoconf:testing</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">AUTOCONF_MODE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="w">      </span><span class="nt">AUTOCONF_DISABLE_CLEANUP</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span><span class="w"> </span><span class="c1"># keep removed services as drafts</span>
+<span class="w">      </span><span class="nt">DATABASE_URI</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mariadb+pymysql://bunkerweb:secret@bw-db:3306/db&quot;</span>
 </code></pre></div>
 <h3 id="namespaces">Namespaces</h3>
 <p>Starting from version <code>1.6.0</code>, BunkerWeb's Autoconf stacks now support namespaces. This feature enables you to manage multiple "<em>clusters</em>" of BunkerWeb instances and services on the same Docker host. To take advantage of namespaces, simply set the <code>NAMESPACE</code> label on your services. Here's an example:</p>

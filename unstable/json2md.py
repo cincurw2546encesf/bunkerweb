@@ -14,6 +14,11 @@ from os import getenv, path
 DOCS_LANG = getenv("DOCS_LANG", "en")
 LANG = DOCS_LANG.split("-")[0].lower()
 
+# PRO plugins to exclude from the generated features documentation.
+# Match is done on the plugin "id" field from plugin.json.
+# Keep "alerting" here while it is in alpha testing.
+PRO_PLUGINS_IGNORE = ("alerting",)
+
 I18N = {
     "en": {
         "features_title": "# Features",
@@ -217,6 +222,9 @@ def generate_docs_for_lang(lang: str):
         with open(pro, "r") as f:
             with suppress(Exception):
                 pro_plugin = loads(f.read())
+                if pro_plugin.get("id") in PRO_PLUGINS_IGNORE:
+                    print(f"Skipping PRO plugin '{pro_plugin.get('id')}' (in PRO_PLUGINS_IGNORE)")
+                    continue
                 pro_plugin["dir"] = plugin_dir
                 core_settings[pro_plugin["name"]] = pro_plugin
                 core_settings[pro_plugin["name"]]["is_pro"] = True
@@ -251,15 +259,17 @@ def generate_docs_for_lang(lang: str):
                 print(print_md_table(data["settings"], tr_lang), file=doc)
 
     # Finalize content
+    # Note: do NOT unescape "\|" here. pytablewriter auto-escapes pipes in cell
+    # values as "\|" so that defaults like "GET|POST|HEAD" render as a literal
+    # pipe inside a Markdown table cell instead of splitting it into columns.
+    # README files included via get_readme_content() also rely on that escaping.
     doc.seek(0)
     content = doc.read()
-    doc = StringIO(content.replace("\\|", "|"))
-    doc.seek(0)
 
     # Ensure output directory per language
     out_dir = Path("docs") if lang == "en" else Path("docs", lang)
     out_dir.mkdir(parents=True, exist_ok=True)
-    Path(out_dir, "features.md").write_text(doc.read(), encoding="utf-8")
+    Path(out_dir, "features.md").write_text(content, encoding="utf-8")
     print(f"Generated features.md for language: {lang}")
 
 

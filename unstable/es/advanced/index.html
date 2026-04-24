@@ -1853,6 +1853,93 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#wildcard-pro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wildcard (PRO)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Wildcard (PRO)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#como-funciona_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cómo funciona
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funcionalidades" class="md-nav__link">
+    <span class="md-ellipsis">
+      Funcionalidades
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuracion_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuración
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inicio-rapido_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inicio rápido
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ejemplos_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Ejemplos
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comportamiento-importante" class="md-nav__link">
+    <span class="md-ellipsis">
+      Comportamiento importante
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recomendado-con-certificados-wildcard-de-lets-encrypt" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recomendado con certificados wildcard de Let's Encrypt
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consejos-de-uso_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consejos de uso
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4346,7 +4433,7 @@ USE_IPV6=yes
 <tbody>
 <tr>
 <td style="text-align: left;"><code>file</code></td>
-<td style="text-align: left;">Escribe los registros en un archivo. Requerido para el visor de registros de la interfaz UI.</td>
+<td style="text-align: left;">Escribe los registros en un archivo plano. La rotación externa la gestiona <code>logrotate</code> en instalaciones Linux o tu driver de logging del contenedor en Docker. Requerido para el visor de registros de la interfaz UI.</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>stderr</code></td>
@@ -4358,11 +4445,14 @@ USE_IPV6=yes
 </tr>
 </tbody>
 </table>
+<p>Al usar <code>file</code>, también debes configurar:</p>
+<ul>
+<li><code>LOG_FILE_PATH</code>: Ruta donde se escriben los archivos de log cuando <code>LOG_TYPES</code> incluye <code>file</code>.</li>
+</ul>
 <p>Al usar <code>syslog</code>, también debes configurar:</p>
 <ul>
 <li><code>LOG_SYSLOG_ADDRESS</code>: La dirección del servidor syslog (por ejemplo, <code>udp://bw-syslog:514</code> o <code>/dev/log</code>).</li>
 <li><code>LOG_SYSLOG_TAG</code>: Una etiqueta única para el servicio (por ejemplo, <code>bw-scheduler</code>) para distinguir sus entradas.</li>
-<li><code>LOG_FILE_PATH</code>: Ruta para la salida de archivo cuando <code>LOG_TYPES</code> incluye <code>file</code> (por ejemplo, <code>/var/log/bunkerweb/scheduler.log</code>).</li>
 </ul>
 <h3 id="registros-de-acceso-y-error">Registros de acceso y error</h3>
 <p>Estos son registros estándar de NGINX, configurados únicamente mediante el <strong>servicio <code>bunkerweb</code></strong>. Soportan múltiples destinos añadiendo sufijos numerados a la configuración (por ejemplo, <code>ACCESS_LOG</code>, <code>ACCESS_LOG_1</code> junto con <code>LOG_FORMAT</code>, <code>LOG_FORMAT_1</code>, o <code>ERROR_LOG</code>, <code>ERROR_LOG_1</code> con sus respectivos <code>LOG_LEVEL</code>, <code>LOG_LEVEL_1</code>).</p>
@@ -4386,7 +4476,7 @@ LOG_LEVEL_1=error
 <div class="tabbed-set tabbed-alternate" data-tabs="18:3"><input checked="checked" id="__tabbed_18_1" name="__tabbed_18" type="radio" /><input id="__tabbed_18_2" name="__tabbed_18" type="radio" /><input id="__tabbed_18_3" name="__tabbed_18" type="radio" /><div class="tabbed-labels"><label for="__tabbed_18_1">Linux</label><label for="__tabbed_18_2">Docker / Autoconf</label><label for="__tabbed_18_3">Kubernetes</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<p><strong>Comportamiento predeterminado</strong>: <code>LOG_TYPES="file"</code>. Los registros se escriben en <code>/var/log/bunkerweb/*.log</code>.</p>
+<p><strong>Comportamiento predeterminado</strong>: <code>LOG_TYPES="file"</code>. Los registros se escriben en <code>/var/log/bunkerweb/*.log</code>. La rotación la gestiona la configuración del sistema <code>logrotate</code> instalada en <code>/etc/logrotate.d/bunkerweb</code> (diaria, retención de 7 días, comprimida con <code>copytruncate</code>).</p>
 <p><strong>Ejemplo</strong>: Mantener archivos locales (para la interfaz web) y también enviar una copia al syslog del sistema.</p>
 <div class="highlight"><pre><span></span><code>  # Registros de servicio (establecidos en /etc/bunkerweb/variables.env o en archivos env específicos del servicio)
   LOG_TYPES=&quot;file syslog&quot;
@@ -5927,7 +6017,7 @@ kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunke
 <p>El plugin Custom Pages le permite reemplazar las páginas integradas de BunkerWeb (páginas de error, página del servidor por defecto y páginas de desafío antibot) con sus propias plantillas HTML o Lua personalizadas. Esto le permite mantener una marca consistente en todas las páginas orientadas al usuario servidas por BunkerWeb.</p>
 <h3 id="caracteristicas_6">Características</h3>
 <ul>
-<li><strong>Páginas de error personalizadas por servicio</strong> y <strong>páginas de desafío antibot</strong> (captcha, verificación JavaScript, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).</li>
+<li><strong>Páginas de error personalizadas por servicio</strong> y <strong>páginas de desafío antibot</strong> (captcha, verificación JavaScript, reCAPTCHA, hCaptcha, Turnstile, mCaptcha, Cap.js).</li>
 <li><strong>Página del servidor por defecto personalizada global</strong> para el vhost de respaldo/por defecto.</li>
 <li><strong>Análisis HTML y verificaciones de balance de etiquetas de plantilla Lua</strong> antes de que una plantilla sea aceptada.</li>
 <li><strong>Caché automático</strong> a <code>/var/cache/bunkerweb/custom_pages</code> con detección de cambios para activar recargas.</li>
@@ -5998,6 +6088,12 @@ kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunke
 <td></td>
 <td>multisite</td>
 <td>Ruta absoluta a la página mCaptcha antibot personalizada.</td>
+</tr>
+<tr>
+<td><code>CUSTOM_ANTIBOT_CAPJS_PAGE</code></td>
+<td></td>
+<td>multisite</td>
+<td>Ruta absoluta a la página Cap.js antibot personalizada.</td>
 </tr>
 </tbody>
 </table>
@@ -6227,6 +6323,28 @@ kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/mcp-bunke
 <td><code>mcaptcha_url</code></td>
 <td>string</td>
 <td>Su URL de mCaptcha</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cap.js (<code>CUSTOM_ANTIBOT_CAPJS_PAGE</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Tipo</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>capjs_sitekey</code></td>
+<td>string</td>
+<td>Su clave de sitio Cap.js</td>
+</tr>
+<tr>
+<td><code>capjs_url</code></td>
+<td>string</td>
+<td>URL base del frontend de Cap.js</td>
 </tr>
 </tbody>
 </table>
@@ -7505,6 +7623,10 @@ chmod<span class="w"> </span><span class="m">770</span><span class="w"> </span>t
 <p>Al usar <code>ACME_CHALLENGE=http</code> (el valor predeterminado), <strong>debe</strong> establecer <code>LETS_ENCRYPT_PASSTHROUGH=yes</code> en el mismo servicio.</p>
 <p>El plugin principal de Let's Encrypt de BunkerWeb incluye tanto un bloque de ubicación NGINX como un handler de acceso Lua para <code>/.well-known/acme-challenge/</code>. Dado que el bloque de ubicación NGINX coincide antes de que se ejecute cualquier código de plugin Lua, intercepta las solicitudes del desafío antes de que ACME PRO pueda atenderlas. Establecer <code>LETS_ENCRYPT_PASSTHROUGH=yes</code> deshabilita ambos mecanismos para que ACME PRO pueda gestionar correctamente los tokens del desafío HTTP-01.</p>
 <p>Esto <strong>solo es necesario para HTTP-01</strong>. Los desafíos DNS-01 y TLS-ALPN-01 no se ven afectados.</p>
+<h4 id="passthrough-acme-al-upstream-acme_passthrough">Passthrough ACME al upstream (<code>ACME_PASSTHROUGH</code>)</h4>
+<p>Si el servidor upstream detrás de BunkerWeb ya ejecuta su propio cliente ACME y debe encargarse él mismo de la validación HTTP-01, establezca <code>ACME_PASSTHROUGH=yes</code> en el servicio. ACME PRO dejará de renderizar su bloque de ubicación <code>/.well-known/acme-challenge/</code> y no añadirá las rutas del desafío a la lista blanca en la fase <code>access</code>, de modo que los archivos de validación servidos por el upstream lleguen intactos a la CA.</p>
+<p>Mantenga <code>ACME_PASSTHROUGH=no</code> (el valor predeterminado) cuando desee que ACME PRO obtenga y renueve los certificados por sí mismo. La combinación estándar HTTP-01 para los servicios gestionados por ACME PRO es <code>LETS_ENCRYPT_PASSTHROUGH=yes</code> (para que el plugin OSS principal de Let's Encrypt libere su ubicación del desafío) junto con <code>ACME_PASSTHROUGH=no</code>. Establezca <code>ACME_PASSTHROUGH=yes</code> únicamente cuando el upstream sea el propietario del ciclo de vida del certificado — en este modo BunkerWeb no intentará emitir un certificado para ese servicio.</p>
+<p>Esta configuración refleja el comportamiento del <code>LETS_ENCRYPT_PASSTHROUGH</code> del núcleo OSS y solo afecta a HTTP-01; los desafíos DNS-01 y TLS-ALPN-01 no se ven afectados.</p>
 <h4 id="orden-de-ejecucion-de-plugins">Orden de ejecución de plugins</h4>
 <p>El plugin ACME se reordena automáticamente para ejecutarse primero en la fase NGINX <code>ssl_certificate</code>, asegurando que los certificados del desafío TLS-ALPN-01 se sirvan antes de que otros plugins que proporcionan certificados (selfsigned, letsencrypt, customcert) puedan cortocircuitar el bucle.</p>
 <p>Al usar ACME junto con otros plugins PRO que dependen de TLS válido (p. ej. OpenID Connect, UI SSO), se recomienda agregar explícitamente <code>acme</code> justo después de <code>customcert</code> en las configuraciones de orden de fases relevantes:</p>
@@ -7535,6 +7657,13 @@ PLUGINS_ORDER_INIT=sessions whitelist blacklist greylist bunkernet limit authbas
 <td>multisite</td>
 <td>no</td>
 <td>Habilitar la gestión de certificados ACME para este servicio.</td>
+</tr>
+<tr>
+<td><code>ACME_PASSTHROUGH</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>no</td>
+<td>Pasar las solicitudes del desafío HTTP-01 al servidor upstream (el upstream ejecuta su propio cliente ACME).</td>
 </tr>
 <tr>
 <td><code>ACME_DIRECTORY_URL</code></td>
@@ -7928,6 +8057,196 @@ PLUGINS_ORDER_INIT=sessions whitelist blacklist greylist bunkernet limit authbas
 <li><strong>Fallo en el desafío TLS-ALPN-01</strong>: asegúrese de que el puerto 443 sea accesible desde el servidor ACME y que ningún otro plugin esté sirviendo un certificado antes de ACME en la fase <code>ssl_certificate</code>. Revise <code>PLUGINS_ORDER_SSL_CERTIFICATE</code> en caso de duda.</li>
 <li><strong>Fallo en el desafío DNS-01</strong>: verifique las credenciales del proveedor DNS en <code>ACME_DNS_CREDENTIAL_ITEM</code> y ajuste <code>ACME_DNS_PROPAGATION</code> si su proveedor tarda en propagar los registros.</li>
 <li><strong>El certificado no se renueva</strong>: revise <code>ACME_RENEWAL_DAYS</code> y los logs del programador. El trabajo <code>acme-renew</code> se ejecuta diariamente y renueva los certificados que están dentro del umbral configurado.</li>
+</ul>
+<h2 id="wildcard-pro">Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)</h2>
+<p>Compatibilidad con STREAM <img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/274c.svg" title=":x:" /></p>
+<p>El plugin <strong>Wildcard</strong> permite que un único servicio de BunkerWeb responda a:</p>
+<ul>
+<li>su nombre de host exacto</li>
+<li>cualquier <strong>subdominio directo</strong> de ese nombre de host</li>
+</ul>
+<p>Cuando está habilitado, el plugin toma la <strong>primera entrada</strong> de <code>SERVER_NAME</code> y añade un <code>server_name</code> comodín a la configuración NGINX generada.</p>
+<p>Por ejemplo, si la primera entrada es <code>example.com</code>, el plugin añade:</p>
+<div class="highlight"><pre><span></span><code><span class="k">server_name</span><span class="w"> </span><span class="s">*.example.com</span><span class="p">;</span>
+</code></pre></div>
+<p>Esto hace que el servicio responda a:</p>
+<ul>
+<li><code>example.com</code></li>
+<li><code>www.example.com</code></li>
+<li><code>api.example.com</code></li>
+</ul>
+<p>Este es un plugin mínimo, basado solo en configuración:</p>
+<ul>
+<li>sin jobs</li>
+<li>sin Lua</li>
+<li>sin UI</li>
+</ul>
+<hr />
+<h3 id="como-funciona_2">Cómo funciona</h3>
+<p>El plugin obtiene el nombre de host comodín a partir del <strong>primer valor</strong> de <code>SERVER_NAME</code> e inyecta un nombre de servidor comodín estándar de NGINX durante la generación de la configuración.</p>
+<p>No cambia la lógica de manejo de solicitudes más allá de la coincidencia de hostnames.</p>
+<div class="admonition info">
+<p class="admonition-title">Los hosts comodín no son certificados comodín</p>
+<p>Este plugin solo afecta al <strong>enrutamiento HTTP</strong>. Indica a NGINX qué hostnames debe aceptar el servicio.</p>
+<p><strong>No</strong> aprovisiona un certificado TLS comodín.</p>
+<p>Para servir <code>*.example.com</code> por HTTPS, sigue necesitando un certificado comodín compatible, normalmente con una de estas opciones:</p>
+<ul>
+<li><code>USE_LETS_ENCRYPT_WILDCARD=yes</code> con el plugin integrado de Let's Encrypt</li>
+<li><code>ACME_WILDCARD=yes</code> con el plugin <a href="#acme">ACME PRO</a> usando un desafío DNS-01</li>
+</ul>
+</div>
+<hr />
+<h3 id="funcionalidades">Funcionalidades</h3>
+<ul>
+<li><strong>Activación simple</strong>: habilite el enrutamiento comodín con <code>USE_WILDCARD=yes</code></li>
+<li><strong>Derivación automática</strong>: el host comodín se construye a partir de la primera entrada de <code>SERVER_NAME</code></li>
+<li><strong>Semántica nativa de NGINX</strong>: la coincidencia sigue el comportamiento estándar de <code>server_name</code></li>
+<li><strong>Compatible con multisite</strong>: cada servicio puede habilitar o deshabilitar el enrutamiento comodín de forma independiente</li>
+</ul>
+<hr />
+<h3 id="configuracion_7">Configuración</h3>
+<table>
+<thead>
+<tr>
+<th>Parámetro</th>
+<th>Valor predeterminado</th>
+<th>Contexto</th>
+<th>Múltiple</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_WILDCARD</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>no</td>
+<td>Habilita un <code>server_name</code> comodín para el servicio añadiendo <code>*.domain</code> para la primera entrada de <code>SERVER_NAME</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="inicio-rapido_5">Inicio rápido</h3>
+<ol>
+<li>Coloque primero en <code>SERVER_NAME</code> el dominio que quiere convertir en comodín</li>
+<li>Establezca <code>USE_WILDCARD=yes</code></li>
+<li>Haga que el registro DNS comodín apunte a BunkerWeb, normalmente con un registro comodín <code>A</code> o <code>AAAA</code></li>
+<li>Si necesita HTTPS, aprovisione un certificado comodín por separado</li>
+<li>Recargue o reinicie BunkerWeb</li>
+</ol>
+<hr />
+<h3 id="ejemplos_1">Ejemplos</h3>
+<h4 id="single-site">Single-site</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+</code></pre></div>
+<p>Este servicio responderá a:</p>
+<ul>
+<li><code>example.com</code></li>
+<li><code>www.example.com</code></li>
+<li><code>api.example.com</code></li>
+<li>cualquier otro hostname <code>*.example.com</code> que resuelva hacia BunkerWeb</li>
+</ul>
+<h4 id="multisite">Multisite</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">MULTISITE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app.example.com</span><span class="nv"> </span><span class="s">docs.example.org&quot;</span>
+
+<span class="c1"># Solo app.example.com obtiene enrutamiento comodín</span>
+<span class="nt">app.example.com_USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+</code></pre></div>
+<p>En esta configuración:</p>
+<ul>
+<li><code>app.example.com</code> y <code>*.app.example.com</code> van al primer servicio</li>
+<li><code>docs.example.org</code> conserva solo coincidencia exacta</li>
+</ul>
+<hr />
+<h3 id="comportamiento-importante">Comportamiento importante</h3>
+<div class="admonition warning">
+<p class="admonition-title">Solo el primer dominio se convierte en comodín</p>
+<p>Si <code>SERVER_NAME</code> es:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com</span><span class="nv"> </span><span class="s">example.org&quot;</span>
+</code></pre></div>
+<p>solo se añade <code>*.example.com</code>.</p>
+<p>Coloque primero el dominio que quiera usar como comodín.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Las entradas comodín existentes se conservan</p>
+<p>Si el primer dominio ya empieza por <code>*.</code>, por ejemplo:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;*.example.com&quot;</span>
+</code></pre></div>
+<p>el plugin no emite nada.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">La coincidencia comodín solo cubre una etiqueta</p>
+<p><code>*.example.com</code> coincide con <code>foo.example.com</code>, pero no con <code>a.b.example.com</code>.</p>
+<p>Para subdominios más profundos, use una entrada explícita en <code>SERVER_NAME</code> o un servicio independiente.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Las coincidencias exactas tienen prioridad</p>
+<p>Si otro servicio define explícitamente <code>foo.example.com</code>, NGINX enruta primero ese hostname a la coincidencia exacta.</p>
+</div>
+<hr />
+<h3 id="recomendado-con-certificados-wildcard-de-lets-encrypt">Recomendado con certificados wildcard de Let's Encrypt</h3>
+<p>Si utiliza este plugin junto con <code>USE_LETS_ENCRYPT_WILDCARD=yes</code>, use este patrón:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;root_domain&gt;</span><span class="nv"> </span><span class="s">&lt;any_app&gt;.&lt;root_domain&gt;&quot;</span>
+</code></pre></div>
+<p>El <strong>dominio raíz debe ir primero</strong>.</p>
+<p>Ejemplo:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com</span><span class="nv"> </span><span class="s">app.example.com&quot;</span>
+<span class="nt">USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">AUTO_LETS_ENCRYPT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">EMAIL_LETS_ENCRYPT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;admin@example.com&quot;</span>
+<span class="nt">LETS_ENCRYPT_CHALLENGE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dns&quot;</span>
+<span class="nt">LETS_ENCRYPT_DNS_PROVIDER</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cloudflare&quot;</span>
+<span class="nt">LETS_ENCRYPT_DNS_CREDENTIAL_ITEM</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api_token</span><span class="nv"> </span><span class="s">YOUR_API_TOKEN&quot;</span>
+<span class="nt">USE_LETS_ENCRYPT_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Por qué importa este patrón</p>
+<ul>
+<li><strong>Solo la primera entrada de <code>SERVER_NAME</code> se convierte en comodín</strong></li>
+</ul>
+<p>Si <code>example.com</code> va primero, el plugin genera <code>*.example.com</code>.</p>
+<p>Si <code>app.example.com</code> va primero, genera <code>*.app.example.com</code>, lo que normalmente corresponde al nivel de comodín equivocado.</p>
+<ul>
+<li>
+<p><strong>La segunda entrada ayuda a Let's Encrypt a detectar el dominio base correcto</strong>
+  Con solo un dominio apex, la detección del certificado comodín puede fallar en algunos dominios de sufijo público como <code>example.co.uk</code>.</p>
+</li>
+<li>
+<p><strong>El segundo hostname no necesita un backend real</strong>
+  Use cualquier valor estable como <code>app.example.com</code> o <code>www.example.com</code>.</p>
+</li>
+</ul>
+</div>
+<h4 id="multisite-con-lets-encrypt-wildcard">Multisite con Let's Encrypt wildcard</h4>
+<div class="highlight"><pre><span></span><code><span class="nt">MULTISITE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com</span><span class="nv"> </span><span class="s">app.example.com&quot;</span>
+<span class="nt">example.com_USE_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">example.com_USE_LETS_ENCRYPT_WILDCARD</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="nt">example.com_LETS_ENCRYPT_CHALLENGE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;dns&quot;</span>
+<span class="nt">example.com_LETS_ENCRYPT_DNS_PROVIDER</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cloudflare&quot;</span>
+<span class="nt">example.com_LETS_ENCRYPT_DNS_CREDENTIAL_ITEM</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api_token</span><span class="nv"> </span><span class="s">YOUR_API_TOKEN&quot;</span>
+</code></pre></div>
+<hr />
+<h3 id="consejos-de-uso_4">Consejos de uso</h3>
+<ul>
+<li>
+<p><strong>Planifique TLS por separado</strong>
+  El enrutamiento comodín no basta para HTTPS. Sigue necesitando cobertura de certificados para los subdominios.</p>
+</li>
+<li>
+<p><strong>Mantenga estable el orden de <code>SERVER_NAME</code></strong>
+  Reordenar las entradas cambia qué dominio se convierte en el objetivo del comodín.</p>
+</li>
+<li>
+<p><strong>Funciona bien con <code>REVERSE_PROXY_HOST</code></strong>
+  Es útil cuando muchos subdominios se enrutan a través de un upstream compartido, como un router de tenants.</p>
+</li>
+<li>
+<p><strong>Tenga cuidado con los servicios superpuestos</strong>
+  NGINX siempre prefiere la coincidencia <code>server_name</code> más específica.</p>
+</li>
 </ul>
 
 

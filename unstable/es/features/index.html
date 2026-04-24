@@ -3724,6 +3724,13 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 <td>Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.</td>
 </tr>
 <tr>
+<td><code>ACME_PASSTHROUGH</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>no</td>
+<td>Pass through ACME HTTP-01 challenge requests to the upstream server.</td>
+</tr>
+<tr>
 <td><code>ACME_DIRECTORY_URL</code></td>
 <td></td>
 <td>multisite</td>
@@ -4034,9 +4041,9 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 <h3 id="como-usar">Cómo usar</h3>
 <p>Siga estos pasos para habilitar y configurar la función Antibot:</p>
 <ol>
-<li><strong>Elija un tipo de desafío:</strong> Decida qué tipo de desafío antibot usar (p. ej., <a href="#__tabbed_3_3">captcha</a>, <a href="#__tabbed_3_5">hcaptcha</a>, <a href="#__tabbed_3_2">javascript</a>).</li>
+<li><strong>Elija un tipo de desafío:</strong> Decida qué tipo de desafío antibot usar (p. ej., <a href="#__tabbed_3_3">captcha</a>, <a href="#__tabbed_3_5">hcaptcha</a>, <a href="#__tabbed_3_8">capjs</a>, <a href="#__tabbed_3_2">javascript</a>).</li>
 <li><strong>Habilite la función:</strong> Establezca la configuración <code>USE_ANTIBOT</code> en el tipo de desafío elegido en su configuración de BunkerWeb.</li>
-<li><strong>Configure los ajustes:</strong> Ajuste las otras configuraciones <code>ANTIBOT_*</code> según sea necesario. Para reCAPTCHA, hCaptcha, Turnstile y mCaptcha, debe crear una cuenta con el servicio respectivo y obtener claves de API.</li>
+<li><strong>Configure los ajustes:</strong> Ajuste las otras configuraciones <code>ANTIBOT_*</code> según sea necesario. Para reCAPTCHA, hCaptcha y Turnstile, cree una cuenta con el servicio respectivo y obtenga claves de API. Para mCaptcha y Cap.js, puede autoalojar el proveedor o usar un servicio alojado y luego configurar la clave de sitio y la clave secreta requeridas.</li>
 <li><strong>Importante:</strong> Asegúrese de que el <code>ANTIBOT_URI</code> sea una URL única en su sitio que no esté en uso.</li>
 </ol>
 <div class="admonition important">
@@ -4161,6 +4168,10 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 <li>Las direcciones IP privadas o desconocidas omiten el desafío cuando <code>ANTIBOT_ONLY_COUNTRY</code> está configurado, porque no se puede determinar un código de país.</li>
 </ul>
 </div>
+<div class="admonition tip">
+<p class="admonition-title">Compartir el estado del desafío entre subdominios</p>
+<p>El estado de antibot (incluidos <code>turnstile</code>, <code>hcaptcha</code>, <code>recaptcha</code>, <code>mcaptcha</code>, <code>captcha</code>, <code>javascript</code> y <code>cookie</code>) se conserva en la <a href="#sessions">cookie de sesión</a> de BunkerWeb. De forma predeterminada, esa cookie queda limitada al host exacto que la emitió, por lo que un usuario que resuelva el desafío en <code>a.example.com</code> tendrá que resolverlo de nuevo en <code>b.example.com</code>. Para resolver el desafío una sola vez para todos los subdominios hermanos del mismo dominio registrable, configure <a href="#sessions"><code>SESSIONS_DOMAIN</code></a> con el dominio padre (por ejemplo <code>example.com</code>) <strong>en cada servidor relevante</strong>. <code>SESSIONS_DOMAIN</code> es un ajuste multisite: configúrelo por servidor para que los tenants no relacionados alojados en la misma instancia de BunkerWeb nunca reciban un atributo <code>Domain</code> compartido entre tenants.</p>
+</div>
 <p><strong>Ejemplos:</strong></p>
 <ul>
 <li><code>ANTIBOT_IGNORE_URI: "^/api/ ^/webhook/ ^/assets/"</code>
@@ -4185,7 +4196,7 @@ curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Hos
 </li>
 </ul>
 <h3 id="mecanismos-de-desafio-compatibles">Mecanismos de desafío compatibles</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:7"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><input id="__tabbed_3_4" name="__tabbed_3" type="radio" /><input id="__tabbed_3_5" name="__tabbed_3" type="radio" /><input id="__tabbed_3_6" name="__tabbed_3" type="radio" /><input id="__tabbed_3_7" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Cookie</label><label for="__tabbed_3_2">JavaScript</label><label for="__tabbed_3_3">Captcha</label><label for="__tabbed_3_4">reCAPTCHA</label><label for="__tabbed_3_5">hCaptcha</label><label for="__tabbed_3_6">Turnstile</label><label for="__tabbed_3_7">mCaptcha</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:8"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><input id="__tabbed_3_4" name="__tabbed_3" type="radio" /><input id="__tabbed_3_5" name="__tabbed_3" type="radio" /><input id="__tabbed_3_6" name="__tabbed_3" type="radio" /><input id="__tabbed_3_7" name="__tabbed_3" type="radio" /><input id="__tabbed_3_8" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Cookie</label><label for="__tabbed_3_2">JavaScript</label><label for="__tabbed_3_3">Captcha</label><label for="__tabbed_3_4">reCAPTCHA</label><label for="__tabbed_3_5">hCaptcha</label><label for="__tabbed_3_6">Turnstile</label><label for="__tabbed_3_7">mCaptcha</label><label for="__tabbed_3_8">Cap.js</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>El desafío de Cookie es un mecanismo ligero que se basa en establecer una cookie en el navegador del usuario. Cuando un usuario accede al sitio, el servidor envía una cookie al cliente. En solicitudes posteriores, el servidor comprueba la presencia de esta cookie para verificar que el usuario es legítimo. Este método es simple y eficaz para la protección básica contra bots sin requerir interacción adicional del usuario.</p>
@@ -4520,10 +4531,72 @@ Para la nueva versión, cree una clave de reCAPTCHA en su proyecto de Google Clo
 </table>
 <p>Consulte los <a href="#configuraciones-comunes">Ajustes comunes</a> para opciones de configuración adicionales.</p>
 </div>
+<div class="tabbed-block">
+<p><a href="https://capjs.js.org/">Cap.js</a> es un CAPTCHA de prueba de trabajo autoalojado, de código abierto y respetuoso con la privacidad. En lugar de delegar la verificación en un servicio de terceros, usted ejecuta el servidor Cap.js y BunkerWeb verifica los tokens contra ese servidor.</p>
+<p>Use la URL frontend para el endpoint visible desde el navegador que sirve el widget. Si BunkerWeb puede llegar al servidor Cap.js mediante una dirección interna, establezca la URL backend en ese endpoint interno; de lo contrario, déjela vacía y BunkerWeb usará la URL frontend para <code>/siteverify</code>.</p>
+<p><strong>Ajustes de configuración:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Configuración</th>
+<th>Valor por defecto</th>
+<th>Contexto</th>
+<th>Múltiple</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_ANTIBOT</code></td>
+<td><code>no</code></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>Habilitar Antibot:</strong> Establezca en <code>capjs</code> para habilitar el desafío de Cap.js.</td>
+</tr>
+<tr>
+<td><code>ANTIBOT_CAPJS_FRONTEND_URL</code></td>
+<td></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>URL frontend de Cap.js:</strong> URL visible para el navegador del servidor Cap.js que sirve el widget.</td>
+</tr>
+<tr>
+<td><code>ANTIBOT_CAPJS_BACKEND_URL</code></td>
+<td></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>URL backend de Cap.js:</strong> URL interna opcional que BunkerWeb usa para <code>/siteverify</code>; si está vacía, usa la URL frontend.</td>
+</tr>
+<tr>
+<td><code>ANTIBOT_CAPJS_SITEKEY</code></td>
+<td></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>Clave del sitio de Cap.js:</strong> La clave de sitio para el desafío de Cap.js.</td>
+</tr>
+<tr>
+<td><code>ANTIBOT_CAPJS_SECRET</code></td>
+<td></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>Clave secreta de Cap.js:</strong> La clave secreta que BunkerWeb usa para verificar los tokens de Cap.js.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Requisitos operativos</p>
+<ul>
+<li>Use HTTPS para <code>ANTIBOT_CAPJS_FRONTEND_URL</code> en producción. El worker del navegador requiere <code>crypto.subtle</code> en un contexto seguro, y HTTPS evita cambios MITM en el widget.</li>
+<li>Configure CORS en la clave de sitio de Cap.js para permitir el origen protegido.</li>
+<li>Defina <code>ANTIBOT_CAPJS_FRONTEND_URL</code> y <code>ANTIBOT_CAPJS_BACKEND_URL</code> solo como orígenes: esquema, host y puerto opcional, sin ruta.</li>
+</ul>
+</div>
+<p>Consulte los <a href="#configuraciones-comunes">Ajustes comunes</a> para opciones de configuración adicionales.</p>
+</div>
 </div>
 </div>
 <h3 id="configuraciones-de-ejemplo_1">Configuraciones de ejemplo</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="4:8"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><input id="__tabbed_4_4" name="__tabbed_4" type="radio" /><input id="__tabbed_4_5" name="__tabbed_4" type="radio" /><input id="__tabbed_4_6" name="__tabbed_4" type="radio" /><input id="__tabbed_4_7" name="__tabbed_4" type="radio" /><input id="__tabbed_4_8" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Desafío de Cookie</label><label for="__tabbed_4_2">Desafío de JavaScript</label><label for="__tabbed_4_3">Desafío de Captcha</label><label for="__tabbed_4_4">reCAPTCHA Clásico</label><label for="__tabbed_4_5">reCAPTCHA (nuevo)</label><label for="__tabbed_4_6">Desafío de hCaptcha</label><label for="__tabbed_4_7">Desafío de Turnstile</label><label for="__tabbed_4_8">Desafío de mCaptcha</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:9"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><input id="__tabbed_4_4" name="__tabbed_4" type="radio" /><input id="__tabbed_4_5" name="__tabbed_4" type="radio" /><input id="__tabbed_4_6" name="__tabbed_4" type="radio" /><input id="__tabbed_4_7" name="__tabbed_4" type="radio" /><input id="__tabbed_4_8" name="__tabbed_4" type="radio" /><input id="__tabbed_4_9" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Desafío de Cookie</label><label for="__tabbed_4_2">Desafío de JavaScript</label><label for="__tabbed_4_3">Desafío de Captcha</label><label for="__tabbed_4_4">reCAPTCHA Clásico</label><label for="__tabbed_4_5">reCAPTCHA (nuevo)</label><label for="__tabbed_4_6">Desafío de hCaptcha</label><label for="__tabbed_4_7">Desafío de Turnstile</label><label for="__tabbed_4_8">Desafío de mCaptcha</label><label for="__tabbed_4_9">Desafío de Cap.js</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Configuración de ejemplo para habilitar el desafío de Cookie:</p>
@@ -4605,6 +4678,18 @@ Para la nueva versión, cree una clave de reCAPTCHA en su proyecto de Google Clo
 <span class="nt">ANTIBOT_MCAPTCHA_SITEKEY</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-site-key&quot;</span>
 <span class="nt">ANTIBOT_MCAPTCHA_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-secret-key&quot;</span>
 <span class="nt">ANTIBOT_MCAPTCHA_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://demo.mcaptcha.org&quot;</span>
+<span class="nt">ANTIBOT_URI</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/challenge&quot;</span>
+<span class="nt">ANTIBOT_TIME_RESOLVE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;60&quot;</span>
+<span class="nt">ANTIBOT_TIME_VALID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;86400&quot;</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Configuración de ejemplo para habilitar el desafío de Cap.js:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">USE_ANTIBOT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;capjs&quot;</span>
+<span class="nt">ANTIBOT_CAPJS_FRONTEND_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://cap.example.com&quot;</span>
+<span class="nt">ANTIBOT_CAPJS_BACKEND_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://cap-server:3000&quot;</span>
+<span class="nt">ANTIBOT_CAPJS_SITEKEY</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-site-key&quot;</span>
+<span class="nt">ANTIBOT_CAPJS_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-secret-key&quot;</span>
 <span class="nt">ANTIBOT_URI</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/challenge&quot;</span>
 <span class="nt">ANTIBOT_TIME_RESOLVE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;60&quot;</span>
 <span class="nt">ANTIBOT_TIME_VALID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;86400&quot;</span>
@@ -8653,6 +8738,13 @@ TrustedMonitor/\d+\.\d+
 <td>no</td>
 <td><strong>Máximo de reintentos:</strong> Número de veces que se reintentará la generación de certificados en caso de fallo. Establezca en <code>0</code> para deshabilitar los reintentos. Útil para manejar problemas de red temporales o límites de velocidad de la API.</td>
 </tr>
+<tr>
+<td><code>LETS_ENCRYPT_MAX_LOG_BACKUPS</code></td>
+<td><code>50</code></td>
+<td>global</td>
+<td>no</td>
+<td><strong>Máximo de copias de seguridad de logs de Certbot:</strong> Número de copias rotadas de <code>letsencrypt.log</code> que Certbot conserva por trabajo. El valor predeterminado de Certbot, <code>1000</code>, se acumula rápidamente; <code>50</code> es un límite razonable. Establece <code>0</code> para conservar solo el log activo.</td>
+</tr>
 </tbody>
 </table>
 <div class="admonition info">
@@ -10159,6 +10251,11 @@ Para habilitar y configurar el almacenamiento en caché de archivos:
 <p class="admonition-title">ModSecurity y el OWASP Core Rule Set</p>
 <p><strong>Recomendamos encarecidamente mantener habilitados tanto ModSecurity como el OWASP Core Rule Set (CRS)</strong> para proporcionar una protección robusta contra las vulnerabilidades web comunes. Aunque pueden ocurrir falsos positivos ocasionales, se pueden resolver con un poco de esfuerzo ajustando las reglas o utilizando exclusiones predefinidas.</p>
 <p>El equipo de CRS mantiene activamente una lista de exclusiones para aplicaciones populares como WordPress, Nextcloud, Drupal y Cpanel, lo que facilita la integración sin afectar la funcionalidad. Los beneficios de seguridad superan con creces el mínimo esfuerzo de configuración necesario para solucionar los falsos positivos.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Recomendación de seguridad para cargas grandes</p>
+<p>ModSecurity almacena en memoria el cuerpo completo de la solicitud y no puede limitarlo para cargas de varios GB, lo que puede provocar OOM en el worker. Si — <strong>y solo si</strong> — una URL de proxy inverso se usa <em>exclusivamente</em> para cargas de archivos (por ejemplo, un endpoint <code>/upload</code> dedicado), establezca <code>REVERSE_PROXY_MODSECURITY_N: "no"</code> en esa URL para emitir <code>modsecurity off;</code> en su bloque <code>location</code>. No lo deshabilite en URL de uso mixto: perdería la cobertura del WAF en todo lo servido por esa ubicación.</p>
+<p>Para mantener protegidas las cargas después de omitir ModSecurity, combínelo con un plugin de análisis de archivos como <a href="https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav">ClamAV</a> o <a href="https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal">VirusTotal</a>; inspeccionan el archivo cargado en sí en lugar del cuerpo bruto de la solicitud.</p>
 </div>
 <h3 id="versiones-de-crs-disponibles">Versiones de CRS Disponibles</h3>
 <p>Seleccione una versión de CRS que se ajuste mejor a sus necesidades de seguridad:</p>
@@ -12158,10 +12255,22 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <td>yes</td>
 <td><strong>Pasar el Cuerpo de la Solicitud:</strong> Habilite o deshabilite el paso del cuerpo de la solicitud.</td>
 </tr>
+<tr>
+<td><code>REVERSE_PROXY_MODSECURITY</code></td>
+<td><code>yes</code></td>
+<td>multisite</td>
+<td>yes</td>
+<td><strong>ModSecurity (por ubicación):</strong> Establézcalo en <code>no</code> para emitir <code>modsecurity off;</code> en esta ubicación; omite el WAF en endpoints de cargas grandes para evitar OOM (consulte la nota siguiente).</td>
+</tr>
 </tbody>
 </table>
 <pre><code>!!! warning "Consideraciones de Seguridad"
     Tenga cuidado al incluir fragmentos de configuración personalizados, ya que pueden anular la configuración de seguridad de BunkerWeb o introducir vulnerabilidades si no se configuran correctamente.
+
+!!! warning "Recomendación de seguridad para cargas grandes"
+    ModSecurity almacena en memoria el cuerpo completo de la solicitud y no puede limitarlo para cargas de varios GB, lo que puede provocar OOM en el worker. Si — **y solo si** — una URL de proxy inverso se usa *exclusivamente* para cargas de archivos (por ejemplo, un endpoint `/upload` dedicado), establezca `REVERSE_PROXY_MODSECURITY_N: "no"` en esa URL. No lo deshabilite en URL de uso mixto: perdería la cobertura del WAF en todo lo servido por esa ubicación.
+
+    Para mantener protegidas las cargas después de omitir ModSecurity, combínelo con un plugin de análisis de archivos como [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) o [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal); inspeccionan el archivo cargado en sí en lugar del cuerpo bruto de la solicitud.
 </code></pre>
 <div class="tabbed-set tabbed-alternate" data-tabs="53:1"><input checked="checked" id="__tabbed_53_1" name="__tabbed_53" type="radio" /><div class="tabbed-labels"><label for="__tabbed_53_1">Configuración de Caché</label></div>
 <div class="tabbed-content">
@@ -12899,6 +13008,7 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <li><strong>Configure la seguridad de la sesión:</strong> Establezca un <code>SESSIONS_SECRET</code> fuerte y único para garantizar que las cookies de sesión no puedan ser falsificadas. (El valor predeterminado es "random", lo que hace que BunkerWeb genere una clave secreta aleatoria).</li>
 <li><strong>Elija un nombre de sesión:</strong> Opcionalmente, personalice el <code>SESSIONS_NAME</code> para definir cómo se llamará su cookie de sesión en el navegador. (El valor predeterminado es "random", lo que hace que BunkerWeb genere un nombre aleatorio).</li>
 <li><strong>Establezca los tiempos de espera de la sesión:</strong> Configure cuánto tiempo permanecen válidas las sesiones con los ajustes de tiempo de espera (<code>SESSIONS_IDLING_TIMEOUT</code>, <code>SESSIONS_ROLLING_TIMEOUT</code>, <code>SESSIONS_ABSOLUTE_TIMEOUT</code>).</li>
+<li><strong>Comparta la cookie entre subdominios (opcional, por servidor):</strong> De forma predeterminada, la cookie de sesión está limitada al host. Si un servidor determinado aloja varios subdominios del mismo dominio registrable (por ejemplo <code>a.example.com</code> y <code>b.example.com</code>) y desea que el estado de anti-bot/desafío se comparta, configure <code>SESSIONS_DOMAIN</code> con el dominio padre (<code>example.com</code>) <strong>solo en ese servidor</strong>. <code>SESSIONS_DOMAIN</code> es un ajuste multisite, por lo que los tenants no relacionados en la misma instancia de BunkerWeb nunca reciben un atributo <code>Domain</code> compartido entre tenants.</li>
 <li><strong>Configure la integración con Redis:</strong> Para entornos distribuidos, establezca <code>USE_REDIS</code> en "yes" y configure su <a href="#redis">conexión Redis</a> para compartir los datos de la sesión entre múltiples nodos de BunkerWeb.</li>
 <li><strong>Deje que BunkerWeb se encargue del resto:</strong> Una vez configurado, la gestión de sesiones se realiza automáticamente para su sitio web.</li>
 </ol>
@@ -12927,6 +13037,13 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <td>global</td>
 <td>no</td>
 <td><strong>Nombre de la cookie:</strong> El nombre de la cookie que almacenará el identificador de sesión.</td>
+</tr>
+<tr>
+<td><code>SESSIONS_DOMAIN</code></td>
+<td></td>
+<td>multisite</td>
+<td>no</td>
+<td><strong>Dominio de la cookie:</strong> Atributo <code>Domain</code> opcional aplicado a la cookie de sesión (por ejemplo <code>example.com</code>). Déjelo vacío para mantener la cookie limitada al host. Configúrelo por servidor para compartir el estado de sesión entre subdominios hermanos del mismo dominio registrable.</td>
 </tr>
 <tr>
 <td><code>SESSIONS_IDLING_TIMEOUT</code></td>
@@ -12985,7 +13102,7 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 </ol>
 </div>
 <h3 id="configuraciones-de-ejemplo_33">Configuraciones de Ejemplo</h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="58:4"><input checked="checked" id="__tabbed_58_1" name="__tabbed_58" type="radio" /><input id="__tabbed_58_2" name="__tabbed_58" type="radio" /><input id="__tabbed_58_3" name="__tabbed_58" type="radio" /><input id="__tabbed_58_4" name="__tabbed_58" type="radio" /><div class="tabbed-labels"><label for="__tabbed_58_1">Configuración Básica</label><label for="__tabbed_58_2">Seguridad Mejorada</label><label for="__tabbed_58_3">Entorno en Clúster con Redis</label><label for="__tabbed_58_4">Sesiones de Larga Duración</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="58:6"><input checked="checked" id="__tabbed_58_1" name="__tabbed_58" type="radio" /><input id="__tabbed_58_2" name="__tabbed_58" type="radio" /><input id="__tabbed_58_3" name="__tabbed_58" type="radio" /><input id="__tabbed_58_4" name="__tabbed_58" type="radio" /><input id="__tabbed_58_5" name="__tabbed_58" type="radio" /><input id="__tabbed_58_6" name="__tabbed_58" type="radio" /><div class="tabbed-labels"><label for="__tabbed_58_1">Configuración Básica</label><label for="__tabbed_58_2">Seguridad Mejorada</label><label for="__tabbed_58_3">Entorno en Clúster con Redis</label><label for="__tabbed_58_4">Sesiones de Larga Duración</label><label for="__tabbed_58_5">Sesiones entre subdominios (tenant único)</label><label for="__tabbed_58_6">Sesiones entre subdominios (tenants mixtos)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Una configuración simple para una única instancia de BunkerWeb:</p>
@@ -13026,6 +13143,34 @@ SecRule REQUEST_FILENAME &quot;^/wp-json/yoast&quot; &quot;id:3,ctl:ruleRemoveBy
 <span class="nt">SESSIONS_ROLLING_TIMEOUT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;172800&quot;</span><span class="w">  </span><span class="c1"># 2 días</span>
 <span class="nt">SESSIONS_ABSOLUTE_TIMEOUT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;604800&quot;</span><span class="w">  </span><span class="c1"># 7 días</span>
 </code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Comparta la cookie de sesión entre todos los subdominios de <code>example.com</code> para que el estado de anti-bot/desafío se resuelva una sola vez para todo el sitio:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app.example.com</span><span class="nv"> </span><span class="s">api.example.com</span><span class="nv"> </span><span class="s">shop.example.com&quot;</span>
+<span class="nt">SESSIONS_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-strong-random-secret-key-here&quot;</span>
+<span class="nt">SESSIONS_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;crossdomainsession&quot;</span>
+<span class="c1"># SESSIONS_DOMAIN es un ajuste multisite: anteponga el nombre del servidor para que solo se aplique a los hosts coincidentes</span>
+<span class="nt">app.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">api.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">shop.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">USE_ANTIBOT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;turnstile&quot;</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Cuando la misma instancia de BunkerWeb aloja varios dominios registrables no relacionados, limite <code>SESSIONS_DOMAIN</code> únicamente a los servidores que deben compartirlo. Los servidores sin esta configuración conservan la cookie limitada al host por defecto, de modo que los tenants permanecen aislados:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">SERVER_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app.example.com</span><span class="nv"> </span><span class="s">api.example.com</span><span class="nv"> </span><span class="s">billing.acme.org</span><span class="nv"> </span><span class="s">www.unrelated.io&quot;</span>
+<span class="nt">SESSIONS_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-strong-random-secret-key-here&quot;</span>
+<span class="nt">SESSIONS_NAME</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;tenantsession&quot;</span>
+<span class="c1"># Comparta la cookie solo entre los subdominios de example.com</span>
+<span class="nt">app.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="nt">api.example.com_SESSIONS_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;example.com&quot;</span>
+<span class="c1"># billing.acme.org y www.unrelated.io se dejan intencionalmente limitados al host</span>
+<span class="nt">USE_ANTIBOT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;turnstile&quot;</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>SESSIONS_DOMAIN</code> siempre debe ser un dominio padre del servidor al que se aplica; por ejemplo, <code>example.com</code> es válido tanto para <code>example.com</code> como para cualquier host <code>*.example.com</code>, y un punto inicial (<code>.example.com</code>) se tolera por compatibilidad heredada. Si se establece en un dominio registrable no relacionado, los navegadores rechazarán la cookie.</p>
+</div>
 </div>
 </div>
 </div>
@@ -13720,7 +13865,7 @@ Para bloquear clientes no deseados, consulte el <a href="#blacklist">complemento
 TrustedMonitor/\d+\.\d+
 </code></pre></div>
 <h2 id="wildcard-pro">Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)</h2>
-<p>Compatibilidad con STREAM <img alt="✅" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/2705.svg" title=":white_check_mark:" /></p>
+<p>Compatibilidad con STREAM <img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/274c.svg" title=":x:" /></p>
 <p>Adds wildcard server_name support (*.domain) for services.</p>
 <table>
 <thead>

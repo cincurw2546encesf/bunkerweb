@@ -2815,7 +2815,8 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 <li><code>AUTOCONF_MODE=no</code> (Standard) - Aktiviert den Autoconf-Dienst</li>
 <li><code>USE_REDIS=yes</code> (Standard) - Aktiviert die integrierte <a href="#redis-integration">Redis-Instanz</a></li>
 <li><code>USE_CROWDSEC=no</code> (Standard) - Die <a href="#crowdsec-integration">CrowdSec-Integration</a> ist standardmäßig deaktiviert</li>
-<li><code>HIDE_SERVICE_LOGS=</code> (optional) - Kommagetrennte Liste von Diensten, deren Ausgaben in den Container-Logs unterdrückt werden. Unterstützte Werte: <code>api</code>, <code>autoconf</code>, <code>bunkerweb</code>, <code>crowdsec</code>, <code>redis</code>, <code>scheduler</code>, <code>ui</code>, <code>nginx.access</code>, <code>nginx.error</code>, <code>modsec</code>. Die Dateien in <code>/var/log/bunkerweb/&lt;service&gt;.log</code> werden weiterhin beschrieben.</li>
+<li><code>HIDE_SERVICE_LOGS=</code> (optional) - Kommagetrennte Liste von Diensten, deren Ausgaben in den Container-Logs unterdrückt werden. Unterstützte Werte: <code>api</code>, <code>autoconf</code>, <code>bunkerweb</code>, <code>crowdsec</code>, <code>redis</code>, <code>scheduler</code>, <code>ui</code>, <code>nginx.access</code>, <code>nginx.error</code>, <code>modsec</code>.</li>
+<li><strong>Protokollierung</strong>: Das All-In-One-Image leitet stdout und stderr aller Dienste an die Container-Ausgabe weiter. Verwenden Sie <code>docker logs bunkerweb-aio</code> (oder Ihren bevorzugten Container-Logging-Treiber), um Protokolle anzuzeigen und zu rotieren. Das Image schreibt für seine Python-Dienste keine Logdateien auf die Festplatte.</li>
 </ul>
 <h3 id="api-integration">API-Integration</h3>
 <p>Das All-In-One-Image enthält die BunkerWeb-API. Sie ist standardmäßig deaktiviert und kann durch Setzen von <code>SERVICE_API=yes</code> aktiviert werden.</p>
@@ -3258,7 +3259,7 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 </tr>
 <tr>
 <td><code>SCHEDULER_LOG_TO_FILE</code></td>
-<td>File-Logging aktivieren und Standardpfad setzen</td>
+<td>Kompatibilitätsoption aus älteren Versionen: Wenn gesetzt, wird <code>LOG_FILE_PATH</code> standardmäßig auf <code>/var/log/bunkerweb/scheduler.log</code> gesetzt, falls <code>LOG_TYPES</code> <code>file</code> enthält und Sie <code>LOG_FILE_PATH</code> nicht explizit gesetzt haben.</td>
 <td><code>yes</code> oder <code>no</code></td>
 <td><code>no</code></td>
 </tr>
@@ -3266,7 +3267,7 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </sp
 <td><code>LOG_FILE_PATH</code></td>
 <td>Benutzerdefinierter Log-Pfad (genutzt wenn <code>LOG_TYPES</code> <code>file</code> enthält)</td>
 <td>Dateipfad</td>
-<td><code>/var/log/bunkerweb/scheduler.log</code> bei <code>SCHEDULER_LOG_TO_FILE=yes</code>, sonst unset</td>
+<td><code>/var/log/bunkerweb/scheduler.log</code>, wenn <code>LOG_TYPES</code> <code>file</code> enthält, sonst unset</td>
 </tr>
 <tr>
 <td><code>LOG_SYSLOG_ADDRESS</code></td>
@@ -4206,6 +4207,12 @@ export UI_WIZARD=no
 <td><code>5</code></td>
 </tr>
 <tr>
+<td><code>AUTOCONF_DISABLE_CLEANUP</code></td>
+<td>Wenn <code>yes</code>, werden aus dem Orchestrator entfernte Dienste und benutzerdefinierte Konfigurationen als Entwurf (Draft) beibehalten, statt hart gelöscht zu werden. So bleiben sie bei transienten Ausfällen erhalten und können aus der Web-UI gelöscht werden.</td>
+<td><code>yes</code> oder <code>no</code></td>
+<td><code>no</code></td>
+</tr>
+<tr>
 <td><code>LOG_SYSLOG_TAG</code></td>
 <td>Syslog-Tag für Autoconf-Logs</td>
 <td>String</td>
@@ -4430,6 +4437,23 @@ export UI_WIZARD=no
 <span class="w">  </span><span class="nt">bw-services</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">external</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bw-services</span>
+</code></pre></div>
+<h4 id="autoconf-disable-cleanup">Dienste bei Entfernung als Entwürfe beibehalten</h4>
+<p>Standardmäßig wird ein von Autoconf verwalteter Dienst (Container, Swarm-Service oder Ingress) sofort aus der gemeinsamen Datenbank gelöscht, sobald das zugehörige Orchestrator-Objekt verschwindet — zusammen mit allen zugehörigen <code>services_settings</code>-Einträgen und benutzerdefinierten Konfigurationen. Dieses Verhalten ist destruktiv: ein transienter Ausfall ist vom absichtlichen Abbau nicht zu unterscheiden, und eine Wiederherstellung erfordert das vollständige Neuerstellen der Dienstdefinition.</p>
+<p>Wenn <code>AUTOCONF_DISABLE_CLEANUP=yes</code> am <code>bw-autoconf</code>-Container gesetzt ist:</p>
+<ul>
+<li>Aus dem Orchestrator entfernte Dienste werden auf <code>is_draft = true</code> umgestellt statt gelöscht. Ihre <code>services_settings</code>-Zeilen, benutzerdefinierten Konfigurationen und Job-Caches bleiben erhalten.</li>
+<li>Draft-Dienste werden nicht in die gerenderte NGINX-Konfiguration übernommen (sie werden nicht ausgeliefert), die Seite geht also offline, nur die Konfiguration bleibt gespeichert.</li>
+<li>Wird derselbe Dienst später erneut vom Orchestrator erkannt (gleicher Server-Name / Ingress-Host), wird er automatisch wieder online gestellt und republiziert; bestehende benutzerdefinierte Konfigurationen werden wiederverwendet.</li>
+<li>Während sich ein Dienst in diesem "von Autoconf als Entwurf markierten" Zustand befindet, kann er über die Seite <strong>Dienste</strong> der Web-UI gelöscht werden — normalerweise sind Autoconf-eigene Dienste aus der UI heraus nicht löschbar, aber die Schaltfläche <strong>Löschen</strong> wird für Draft-Autoconf-Dienste aktiviert, damit Betreiber veraltete Einträge entfernen können. Online-Autoconf-Dienste bleiben aus der UI heraus nicht löschbar.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">bw-autoconf</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bunkerity/bunkerweb-autoconf:testing</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">AUTOCONF_MODE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span>
+<span class="w">      </span><span class="nt">AUTOCONF_DISABLE_CLEANUP</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;yes&quot;</span><span class="w"> </span><span class="c1"># entfernte Dienste als Entwürfe beibehalten</span>
+<span class="w">      </span><span class="nt">DATABASE_URI</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mariadb+pymysql://bunkerweb:secret@bw-db:3306/db&quot;</span>
 </code></pre></div>
 <h3 id="namespaces">Namespaces</h3>
 <p>Ab Version <code>1.6.0</code> unterstützen die Autoconf-Stacks von BunkerWeb Namespaces. Mit dieser Funktion können Sie mehrere "<em>Cluster</em>" von BunkerWeb-Instanzen und -Diensten auf demselben Docker-Host verwalten. Um Namespaces zu nutzen, setzen Sie einfach das <code>NAMESPACE</code>-Label auf Ihre Dienste. Hier ist ein Beispiel:</p>

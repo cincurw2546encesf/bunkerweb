@@ -2517,7 +2517,8 @@ The All-In-One image comes with several built-in services, which can be controll
 - `AUTOCONF_MODE=no` (default) - Enables the autoconf service
 - `USE_REDIS=yes` (default) - Enables the built-in [Redis](#redis-integration) instance
 - `USE_CROWDSEC=no` (default) - [CrowdSec](#crowdsec-integration) integration is disabled by default
-- `HIDE_SERVICE_LOGS=` (optional) - Comma-separated list of services to silence in container logs. Accepted values: `api`, `autoconf`, `bunkerweb`, `crowdsec`, `redis`, `scheduler`, `ui`, `nginx.access`, `nginx.error`, `modsec`. Logs still reach `/var/log/bunkerweb/<service>.log`.
+- `HIDE_SERVICE_LOGS=` (optional) - Comma-separated list of services to silence in container logs. Accepted values: `api`, `autoconf`, `bunkerweb`, `crowdsec`, `redis`, `scheduler`, `ui`, `nginx.access`, `nginx.error`, `modsec`.
+- **Logging**: The all-in-one image streams every service's stdout and stderr to the container output. Use `docker logs bunkerweb-aio` (or your preferred container logging driver) to view and rotate logs — the image does not write on-disk log files for its Python services.
 
 A named volume (or bind mount) is required to persist the SQLite database, cache, and backups stored under `/data` inside the container:
 
@@ -3016,14 +3017,14 @@ The scheduler is the control-plane worker that reads settings, renders configs, 
 
 ##### Logging
 
-| Setting                         | Description                                                        | Accepted values                                 | Default                                                                         |
-| ------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------- |
-| `LOG_LEVEL`, `CUSTOM_LOG_LEVEL` | Base/override log level                                            | `debug`, `info`, `warning`, `error`, `critical` | `info`                                                                          |
-| `LOG_TYPES`                     | Destinations                                                       | Space-separated `stderr`/`file`/`syslog`        | `stderr`                                                                        |
-| `SCHEDULER_LOG_TO_FILE`         | Enable file logging and default path                               | `yes` or `no`                                   | `no`                                                                            |
-| `LOG_FILE_PATH`                 | Custom log file path (used when `LOG_TYPES` includes file)         | File path                                       | `/var/log/bunkerweb/scheduler.log` when `SCHEDULER_LOG_TO_FILE=yes`, else unset |
-| `LOG_SYSLOG_ADDRESS`            | Syslog target (`udp://host:514`, `tcp://host:514`, or socket path) | Host:port, proto-prefixed host, or socket path  | unset                                                                           |
-| `LOG_SYSLOG_TAG`                | Syslog ident/tag                                                   | String                                          | `bw-scheduler`                                                                  |
+| Setting                         | Description                                                                                                                                                                | Accepted values                                 | Default                                                                         |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| `LOG_LEVEL`, `CUSTOM_LOG_LEVEL` | Base/override log level                                                                                                                                                    | `debug`, `info`, `warning`, `error`, `critical` | `info`                                                                          |
+| `LOG_TYPES`                     | Destinations                                                                                                                                                               | Space-separated `stderr`/`file`/`syslog`        | `stderr`                                                                        |
+| `SCHEDULER_LOG_TO_FILE`         | Legacy convenience: when set, `LOG_FILE_PATH` defaults to `/var/log/bunkerweb/scheduler.log` if `LOG_TYPES` includes `file` and you didn't set `LOG_FILE_PATH` explicitly. | `yes`/`no`                                      | `no`                                                                            |
+| `LOG_FILE_PATH`                 | Custom log file path (used when `LOG_TYPES` includes `file`)                                                                                                               | File path                                       | `/var/log/bunkerweb/scheduler.log` when `LOG_TYPES` contains `file`, else unset |
+| `LOG_SYSLOG_ADDRESS`            | Syslog target (`udp://host:514`, `tcp://host:514`, or socket path)                                                                                                         | Host:port, proto-prefixed host, or socket path  | unset                                                                           |
+| `LOG_SYSLOG_TAG`                | Syslog ident/tag                                                                                                                                                           | String                                          | `bw-scheduler`                                                                  |
 
 ### UI container settings
 
@@ -3262,7 +3263,7 @@ For non-interactive or automated setups, the script can be controlled with comma
 
 | Option                  | Description                                                           |
 | ----------------------- | --------------------------------------------------------------------- |
-| `-v, --version VERSION` | Specifies the BunkerWeb version to install (e.g., `testing`).           |
+| `-v, --version VERSION` | Specifies the BunkerWeb version to install (e.g., `testing`).      |
 | `-w, --enable-wizard`   | Enables the setup wizard.                                             |
 | `-n, --no-wizard`       | Disables the setup wizard.                                            |
 | `-y, --yes`             | Runs in non-interactive mode using default answers for all prompts.   |
@@ -3851,16 +3852,17 @@ The `bw-autoconf` controller watches your orchestrator and writes changes to the
 
 ##### Mode & runtime
 
-| Setting                   | Description                                       | Accepted values                         | Default                                |
-| ------------------------- | ------------------------------------------------- | --------------------------------------- | -------------------------------------- |
-| `AUTOCONF_MODE`           | Enable the autoconf controller                    | `yes` or `no`                           | `no`                                   |
-| `SWARM_MODE`              | Watch Swarm services instead of Docker containers | `yes` or `no`                           | `no`                                   |
-| `KUBERNETES_MODE`         | Watch Kubernetes ingresses/pods instead of Docker | `yes` or `no`                           | `no`                                   |
-| `KUBERNETES_GATEWAY_MODE` | Use the Gateway API controller for Kubernetes     | `yes` or `no`                           | `no`                                   |
-| `DOCKER_HOST`             | Docker socket / remote API URL                    | e.g., `unix:///var/run/docker.sock`     | `unix:///var/run/docker.sock`          |
-| `WAIT_RETRY_INTERVAL`     | Seconds between readiness checks for instances    | Integer seconds                         | `5`                                    |
-| `LOG_SYSLOG_TAG`          | Syslog tag for autoconf logs                      | String                                  | `bw-autoconf`                          |
-| `TZ`                      | Time zone used for autoconf logs and timestamps   | TZ database name (e.g., `Europe/Paris`) | unset (container default, usually UTC) |
+| Setting                    | Description                                                                                                                                                                                        | Accepted values                         | Default                                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------- |
+| `AUTOCONF_MODE`            | Enable the autoconf controller                                                                                                                                                                     | `yes` or `no`                           | `no`                                   |
+| `SWARM_MODE`               | Watch Swarm services instead of Docker containers                                                                                                                                                  | `yes` or `no`                           | `no`                                   |
+| `KUBERNETES_MODE`          | Watch Kubernetes ingresses/pods instead of Docker                                                                                                                                                  | `yes` or `no`                           | `no`                                   |
+| `KUBERNETES_GATEWAY_MODE`  | Use the Gateway API controller for Kubernetes                                                                                                                                                      | `yes` or `no`                           | `no`                                   |
+| `DOCKER_HOST`              | Docker socket / remote API URL                                                                                                                                                                     | e.g., `unix:///var/run/docker.sock`     | `unix:///var/run/docker.sock`          |
+| `WAIT_RETRY_INTERVAL`      | Seconds between readiness checks for instances                                                                                                                                                     | Integer seconds                         | `5`                                    |
+| `AUTOCONF_DISABLE_CLEANUP` | When `yes`, services and custom configs removed from the orchestrator are converted to draft instead of being hard-deleted, so they survive transient removals and can be deleted from the Web UI. | `yes` or `no`                           | `no`                                   |
+| `LOG_SYSLOG_TAG`           | Syslog tag for autoconf logs                                                                                                                                                                       | String                                  | `bw-autoconf`                          |
+| `TZ`                       | Time zone used for autoconf logs and timestamps                                                                                                                                                    | TZ database name (e.g., `Europe/Paris`) | unset (container default, usually UTC) |
 
 ##### Database & validation
 
@@ -3923,6 +3925,27 @@ networks:
   bw-services:
     external: true
     name: bw-services
+```
+
+#### Preserving services as drafts on removal {#autoconf-disable-cleanup}
+
+By default, when a container, Swarm service, or Ingress managed by autoconf disappears from the orchestrator, its BunkerWeb service row (and any associated custom configs) is immediately deleted from the shared database. This is destructive: an operator cannot distinguish a genuine teardown from a transient glitch, and recovering requires recreating the service definition from scratch.
+
+Setting `AUTOCONF_DISABLE_CLEANUP=yes` on the `bw-autoconf` container changes this behavior:
+
+- Services removed from the orchestrator are flipped to `is_draft = true` instead of being deleted. Their `services_settings` rows, custom configs, and job caches are preserved.
+- Draft services are excluded from the rendered NGINX configuration (they are not served), so removing the orchestration object still takes the site offline — it just keeps the state around.
+- If the same service is later re-registered by autoconf (same server name / Ingress host), it is automatically flipped back to online and republished; existing custom configs are reused.
+- While a service is in this "drafted by autoconf" state, it can be deleted from the Web UI Services page — normally autoconf-owned services are undeletable from the UI, but the Delete button becomes enabled for draft autoconf services so operators can prune stale entries. Online autoconf services remain undeletable from the UI.
+
+```yaml
+services:
+  bw-autoconf:
+    image: bunkerity/bunkerweb-autoconf:testing
+    environment:
+      AUTOCONF_MODE: "yes"
+      AUTOCONF_DISABLE_CLEANUP: "yes" # keep removed services as drafts
+      DATABASE_URI: "mariadb+pymysql://bunkerweb:secret@bw-db:3306/db"
 ```
 
 ### Namespaces {#namespaces}
@@ -6287,6 +6310,7 @@ Advanced ACME certificate management with custom CA support, certificate monitor
 | Setting                             | Default     | Context   | Multiple | Description                                                                                                                                                              |
 | ----------------------------------- | ----------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `USE_ACME`                          | `no`        | multisite | no       | Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.                                                                |
+| `ACME_PASSTHROUGH`                  | `no`        | multisite | no       | Pass through ACME HTTP-01 challenge requests to the upstream server.                                                                                                     |
 | `ACME_DIRECTORY_URL`                |             | multisite | no       | ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI). |
 | `ACME_EMAIL`                        |             | multisite | no       | Email address for ACME account registration and notifications.                                                                                                           |
 | `ACME_EAB_KID`                      |             | multisite | no       | External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).                                                                              |
@@ -6354,9 +6378,9 @@ Attackers often use automated tools (bots) to try and exploit your website. To p
 
 Follow these steps to enable and configure the Antibot feature:
 
-1. **Choose a challenge type:** Decide which type of antibot challenge to use (e.g., [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [javascript](#__tabbed_3_2)).
+1. **Choose a challenge type:** Decide which type of antibot challenge to use (e.g., [captcha](#__tabbed_3_3), [hcaptcha](#__tabbed_3_5), [capjs](#__tabbed_3_8), [javascript](#__tabbed_3_2)).
 2. **Enable the feature:** Set the `USE_ANTIBOT` setting to your chosen challenge type in your BunkerWeb configuration.
-3. **Configure the settings:** Adjust the other `ANTIBOT_*` settings as needed. For reCAPTCHA, hCaptcha, Turnstile, and mCaptcha, you must create an account with the respective service and obtain API keys.
+3. **Configure the settings:** Adjust the other `ANTIBOT_*` settings as needed. For reCAPTCHA, hCaptcha, and Turnstile, create an account with the respective service and obtain API keys. For mCaptcha and Cap.js, you can either self-host the provider or use a hosted service, then configure the required sitekey and secret.
 4. **Important:** Ensure the `ANTIBOT_URI` is a unique URL on your site that is not in use.
 
 !!! important "About the `ANTIBOT_URI` Setting"
@@ -6393,6 +6417,9 @@ BunkerWeb allows you to specify certain users, IPs, or requests that should bypa
 !!! note "Behavior of Country-Based Settings"
       - When both `ANTIBOT_IGNORE_COUNTRY` and `ANTIBOT_ONLY_COUNTRY` are set, the ignore list takes precedence—countries listed in both will bypass the challenge.
       - Private or unknown IP addresses bypass the challenge when `ANTIBOT_ONLY_COUNTRY` is set because no country code can be determined.
+
+!!! tip "Sharing challenge state across subdomains"
+    The antibot state (including `turnstile`, `hcaptcha`, `recaptcha`, `mcaptcha`, `captcha`, `javascript` and `cookie`) is persisted in the BunkerWeb [session cookie](#sessions). By default that cookie is scoped to the exact host that served it, so a user who solves the challenge on `a.example.com` will be challenged again on `b.example.com`. To solve the challenge once for every sibling subdomain of the same registrable domain, set [`SESSIONS_DOMAIN`](#sessions) to the parent domain (for example `example.com`) **for each relevant server**. `SESSIONS_DOMAIN` is a multisite setting — configure it per-server so unrelated tenants hosted on the same BunkerWeb instance never receive a cross-tenant `Domain` attribute.
 
 **Examples:**
 
@@ -6573,6 +6600,29 @@ BunkerWeb allows you to specify certain users, IPs, or requests that should bypa
 
     Refer to the [Common Settings](#common-settings) for additional configuration options.
 
+=== "Cap.js"
+
+    [Cap.js](https://capjs.js.org/) is a self-hosted, open-source, privacy-friendly proof-of-work CAPTCHA. Instead of delegating verification to a third-party service, you run the Cap.js server yourself and BunkerWeb verifies tokens against that server.
+
+    Use the frontend URL for the browser-facing endpoint that serves the widget. If BunkerWeb can reach the Cap.js server through an internal address, set the backend URL to that internal endpoint; otherwise leave it empty and BunkerWeb will use the frontend URL for `/siteverify`.
+
+    **Configuration Settings:**
+
+    | Setting                      | Default | Context   | Multiple | Description                                                                                                              |
+    | ---------------------------- | ------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+    | `USE_ANTIBOT`                | `no`    | multisite | no       | **Enable Antibot:** Set to `capjs` to enable the Cap.js challenge.                                                       |
+    | `ANTIBOT_CAPJS_FRONTEND_URL` |         | multisite | no       | **Cap.js Frontend URL:** Browser-facing URL of the Cap.js server that serves the widget.                                 |
+    | `ANTIBOT_CAPJS_BACKEND_URL`  |         | multisite | no       | **Cap.js Backend URL:** Optional internal URL BunkerWeb uses for `/siteverify`; falls back to the frontend URL if empty. |
+    | `ANTIBOT_CAPJS_SITEKEY`      |         | multisite | no       | **Cap.js Sitekey:** The sitekey for the Cap.js challenge.                                                                |
+    | `ANTIBOT_CAPJS_SECRET`       |         | multisite | no       | **Cap.js Secret:** The secret key BunkerWeb uses to verify Cap.js tokens.                                                |
+
+    !!! note "Operator requirements"
+        - Use HTTPS for `ANTIBOT_CAPJS_FRONTEND_URL` in production. The browser worker requires `crypto.subtle` in a secure context, and HTTPS prevents MITM changes to the widget.
+        - Configure CORS on the Cap.js sitekey to allow the protected origin.
+        - Set both `ANTIBOT_CAPJS_FRONTEND_URL` and `ANTIBOT_CAPJS_BACKEND_URL` to origins only: scheme, host, and optional port, with no path.
+
+    Refer to the [Common Settings](#common-settings) for additional configuration options.
+
 ### Example Configurations
 
 === "Cookie Challenge"
@@ -6680,6 +6730,21 @@ BunkerWeb allows you to specify certain users, IPs, or requests that should bypa
     ANTIBOT_MCAPTCHA_SITEKEY: "your-site-key"
     ANTIBOT_MCAPTCHA_SECRET: "your-secret-key"
     ANTIBOT_MCAPTCHA_URL: "https://demo.mcaptcha.org"
+    ANTIBOT_URI: "/challenge"
+    ANTIBOT_TIME_RESOLVE: "60"
+    ANTIBOT_TIME_VALID: "86400"
+    ```
+
+=== "Cap.js Challenge"
+
+    Example configuration for enabling the Cap.js challenge:
+
+    ```yaml
+    USE_ANTIBOT: "capjs"
+    ANTIBOT_CAPJS_FRONTEND_URL: "https://cap.example.com"
+    ANTIBOT_CAPJS_BACKEND_URL: "http://cap-server:3000"
+    ANTIBOT_CAPJS_SITEKEY: "your-site-key"
+    ANTIBOT_CAPJS_SECRET: "your-secret-key"
     ANTIBOT_URI: "/challenge"
     ANTIBOT_TIME_RESOLVE: "60"
     ANTIBOT_TIME_VALID: "86400"
@@ -9153,6 +9218,7 @@ Follow these steps to configure and use the Let's Encrypt feature:
 | `LETS_ENCRYPT_PROFILE`                      | `classic`     | multisite | no       | **Certificate Profile:** Select the certificate profile to use. Options: `classic` (general-purpose), `tlsserver` (optimized for TLS servers), or `shortlived` (7-day certificates).                                                                                           |
 | `LETS_ENCRYPT_CUSTOM_PROFILE`               |               | multisite | no       | **Custom Certificate Profile:** Enter a custom certificate profile if your ACME server supports non-standard profiles. This overrides `LETS_ENCRYPT_PROFILE` if set.                                                                                                           |
 | `LETS_ENCRYPT_MAX_RETRIES`                  | `3`           | multisite | no       | **Maximum Retries:** Number of times to retry certificate generation on failure. Set to `0` to disable retries. Useful for handling temporary network issues or API rate limits.                                                                                               |
+| `LETS_ENCRYPT_MAX_LOG_BACKUPS`              | `50`          | global    | no       | **Maximum Certbot Log Backups:** Number of rotated `letsencrypt.log` backups certbot keeps per job. Certbot's own default of 1000 piles up quickly; `50` is a sensible cap. Set to `0` to keep only the live log.                                                              |
 
 !!! info "Information and behavior"
     - The `LETS_ENCRYPT_DNS_CREDENTIAL_ITEM` setting is a multiple setting and can be used to set multiple items for the DNS provider. The items will be saved as a cache file, and Certbot will read the credentials from it.
@@ -9993,6 +10059,11 @@ Follow these steps to configure and use ModSecurity:
     **We strongly recommend keeping both ModSecurity and the OWASP Core Rule Set (CRS) enabled** to provide robust protection against common web vulnerabilities. While occasional false positives may occur, they can be resolved with some effort by fine-tuning rules or using predefined exclusions.
 
     The CRS team actively maintains a list of exclusions for popular applications such as WordPress, Nextcloud, Drupal, and Cpanel, making it easier to integrate without impacting functionality. The security benefits far outweigh the minimal configuration effort required to address false positives.
+
+!!! warning "Safety recommendation for large uploads"
+    ModSecurity buffers the full request body in memory and cannot cap it for multi-GB uploads, which can OOM the worker. If — **and only if** — a reverse-proxy URL is used *exclusively* for file uploads (e.g. a dedicated `/upload` endpoint), set `REVERSE_PROXY_MODSECURITY_N: "no"` on that URL to emit `modsecurity off;` in its `location` block. Do not disable it on mixed-use URLs: you would lose WAF coverage on everything served by that location.
+
+    To keep uploads protected after bypassing ModSecurity, pair this with a file-scanning plugin such as [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) or [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal) — they inspect the uploaded file itself instead of the raw request body.
 
 ### Available CRS Versions
 
@@ -11093,13 +11164,19 @@ Follow these steps to configure and use the Reverse Proxy feature:
         - **Performance Optimization:** Fine-tune request handling for specific use cases
         - **Flexibility:** Adapt to unique application requirements with specialized configurations
 
-    | Setting                           | Default | Context   | Multiple | Description                                                                  |
-    | --------------------------------- | ------- | --------- | -------- | ---------------------------------------------------------------------------- |
-    | `REVERSE_PROXY_INCLUDES`          |         | multisite | yes      | **Additional Configurations:** Include additional configs in location block. |
-    | `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`   | multisite | yes      | **Pass Request Body:** Enable or disable passing the request body.           |
+    | Setting                           | Default | Context   | Multiple | Description                                                                                                                                                         |
+    | --------------------------------- | ------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `REVERSE_PROXY_INCLUDES`          |         | multisite | yes      | **Additional Configurations:** Include additional configs in location block.                                                                                        |
+    | `REVERSE_PROXY_PASS_REQUEST_BODY` | `yes`   | multisite | yes      | **Pass Request Body:** Enable or disable passing the request body.                                                                                                  |
+    | `REVERSE_PROXY_MODSECURITY`       | `yes`   | multisite | yes      | **ModSecurity (per location):** Set to `no` to emit `modsecurity off;` in this location — bypasses the WAF on large-upload endpoints to avoid OOM (see note below). |
 
     !!! warning "Security Considerations"
         Be careful when including custom configuration snippets as they may override BunkerWeb's security settings or introduce vulnerabilities if not properly configured.
+
+    !!! warning "Safety recommendation for large uploads"
+        ModSecurity buffers the full request body in memory and cannot cap it for multi-GB uploads, which can OOM the worker. If — **and only if** — a reverse-proxy URL is used *exclusively* for file uploads (e.g. a dedicated `/upload` endpoint), set `REVERSE_PROXY_MODSECURITY_N: "no"` on that URL. Do not disable it on mixed-use URLs: you would lose WAF coverage on everything served by that location.
+
+        To keep uploads protected after bypassing ModSecurity, pair this with a file-scanning plugin such as [ClamAV](https://github.com/bunkerity/bunkerweb-plugins/tree/main/clamav) or [VirusTotal](https://github.com/bunkerity/bunkerweb-plugins/tree/main/virustotal) — they inspect the uploaded file itself instead of the raw request body.
 
 === "Caching Configuration"
 
@@ -11614,20 +11691,22 @@ Follow these steps to configure and use the Sessions feature:
 1. **Configure session security:** Set a strong, unique `SESSIONS_SECRET` to ensure session cookies cannot be forged. (The default value is "random" which triggers BunkerWeb to generate a random secret key.)
 2. **Choose a session name:** Optionally customize the `SESSIONS_NAME` to define what your session cookie will be called in the browser. (The default value is "random" which triggers BunkerWeb to generate a random name.)
 3. **Set session timeouts:** Configure how long sessions remain valid with the timeout settings (`SESSIONS_IDLING_TIMEOUT`, `SESSIONS_ROLLING_TIMEOUT`, `SESSIONS_ABSOLUTE_TIMEOUT`).
-4. **Configure Redis integration:** For distributed environments, set `USE_REDIS` to "yes" and configure your [Redis connection](#redis) to share session data across multiple BunkerWeb nodes.
-5. **Let BunkerWeb handle the rest:** Once configured, session management happens automatically for your website.
+4. **Share the cookie across subdomains (optional, per-server):** By default the session cookie is host-only. If a given server hosts several subdomains of the same registrable domain (for example `a.example.com` and `b.example.com`) and you want anti‑bot/challenge state to carry over, set `SESSIONS_DOMAIN` to the parent domain (`example.com`) **on that server only**. `SESSIONS_DOMAIN` is a multisite setting, so unrelated tenants on the same BunkerWeb instance never receive a cross-tenant `Domain` attribute.
+5. **Configure Redis integration:** For distributed environments, set `USE_REDIS` to "yes" and configure your [Redis connection](#redis) to share session data across multiple BunkerWeb nodes.
+6. **Let BunkerWeb handle the rest:** Once configured, session management happens automatically for your website.
 
 ### Configuration Settings
 
-| Setting                     | Default  | Context | Multiple | Description                                                                                                                |
-| --------------------------- | -------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `SESSIONS_SECRET`           | `random` | global  | no       | **Session Secret:** Cryptographic key used to sign session cookies. Should be a strong, random string unique to your site. |
-| `SESSIONS_NAME`             | `random` | global  | no       | **Cookie Name:** The name of the cookie that will store the session identifier.                                            |
-| `SESSIONS_IDLING_TIMEOUT`   | `1800`   | global  | no       | **Idling Timeout:** Maximum time (in seconds) of inactivity before the session is invalidated.                             |
-| `SESSIONS_ROLLING_TIMEOUT`  | `3600`   | global  | no       | **Rolling Timeout:** Maximum time (in seconds) before a session must be renewed.                                           |
-| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`  | global  | no       | **Absolute Timeout:** Maximum time (in seconds) before a session is destroyed regardless of activity.                      |
-| `SESSIONS_CHECK_IP`         | `yes`    | global  | no       | **Check IP:** When set to `yes`, destroys the session if the client IP address changes.                                    |
-| `SESSIONS_CHECK_USER_AGENT` | `yes`    | global  | no       | **Check User-Agent:** When set to `yes`, destroys the session if the client User-Agent changes.                            |
+| Setting                     | Default  | Context   | Multiple | Description                                                                                                                                                                                                                                                                  |
+| --------------------------- | -------- | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SESSIONS_SECRET`           | `random` | global    | no       | **Session Secret:** Cryptographic key used to sign session cookies. Should be a strong, random string unique to your site.                                                                                                                                                   |
+| `SESSIONS_NAME`             | `random` | global    | no       | **Cookie Name:** The name of the cookie that will store the session identifier.                                                                                                                                                                                              |
+| `SESSIONS_DOMAIN`           |          | multisite | no       | **Cookie Domain:** Optional `Domain` attribute set on the session cookie (for example `example.com`). Leave empty to keep the cookie host‑only. Set it per-server to share session state (anti‑bot, challenges, …) across sibling subdomains of the same registrable domain. |
+| `SESSIONS_IDLING_TIMEOUT`   | `1800`   | global    | no       | **Idling Timeout:** Maximum time (in seconds) of inactivity before the session is invalidated.                                                                                                                                                                               |
+| `SESSIONS_ROLLING_TIMEOUT`  | `3600`   | global    | no       | **Rolling Timeout:** Maximum time (in seconds) before a session must be renewed.                                                                                                                                                                                             |
+| `SESSIONS_ABSOLUTE_TIMEOUT` | `86400`  | global    | no       | **Absolute Timeout:** Maximum time (in seconds) before a session is destroyed regardless of activity.                                                                                                                                                                        |
+| `SESSIONS_CHECK_IP`         | `yes`    | global    | no       | **Check IP:** When set to `yes`, destroys the session if the client IP address changes.                                                                                                                                                                                      |
+| `SESSIONS_CHECK_USER_AGENT` | `yes`    | global    | no       | **Check User-Agent:** When set to `yes`, destroys the session if the client User-Agent changes.                                                                                                                                                                              |
 
 !!! warning "Security Considerations"
     The `SESSIONS_SECRET` setting is critical for security. In production environments:
@@ -11697,6 +11776,39 @@ Follow these steps to configure and use the Sessions feature:
     SESSIONS_ROLLING_TIMEOUT: "172800"  # 2 days
     SESSIONS_ABSOLUTE_TIMEOUT: "604800"  # 7 days
     ```
+
+=== "Cross-subdomain Sessions (single tenant)"
+
+    Share the session cookie across every subdomain of `example.com` so anti‑bot/challenge state is solved once for the whole site:
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com shop.example.com"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "crossdomainsession"
+    # SESSIONS_DOMAIN is a multisite setting: prefix with the server name so it only applies to matching hosts
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    shop.example.com_SESSIONS_DOMAIN: "example.com"
+    USE_ANTIBOT: "turnstile"
+    ```
+
+=== "Cross-subdomain Sessions (mixed tenants)"
+
+    When the same BunkerWeb instance hosts multiple unrelated registrable domains, scope `SESSIONS_DOMAIN` only to the servers that should share it. Unset servers keep the default host-only cookie so tenants stay isolated:
+
+    ```yaml
+    SERVER_NAME: "app.example.com api.example.com billing.acme.org www.unrelated.io"
+    SESSIONS_SECRET: "your-strong-random-secret-key-here"
+    SESSIONS_NAME: "tenantsession"
+    # Share the cookie across example.com subdomains only
+    app.example.com_SESSIONS_DOMAIN: "example.com"
+    api.example.com_SESSIONS_DOMAIN: "example.com"
+    # billing.acme.org and www.unrelated.io are intentionally left as host-only
+    USE_ANTIBOT: "turnstile"
+    ```
+
+    !!! note
+        `SESSIONS_DOMAIN` must always be a parent of the server it is applied to — for example `example.com` is valid for both `example.com` and any `*.example.com` host, and a leading dot (`.example.com`) is tolerated for legacy compatibility. Setting it to an unrelated registrable domain will cause browsers to reject the cookie.
 
 ## SSL
 
@@ -12032,7 +12144,7 @@ TrustedMonitor/\d+\.\d+
 
 ## Wildcard  (PRO)
 
-STREAM support :white_check_mark:
+STREAM support :x:
 
 Adds wildcard server_name support (*.domain) for services.
 
@@ -14619,15 +14731,18 @@ Service logs are controlled by the `LOG_TYPES` setting, which can accept multipl
 
 | Value    | Description                                                                             |
 | :------- | :-------------------------------------------------------------------------------------- |
-| `file`   | Writes logs to a file. Required for the Web UI log viewer.                              |
+| `file`   | Writes logs to a plain file. External rotation is handled by `logrotate` on Linux installs or by your container logging driver on Docker. Required for the Web UI log viewer. |
 | `stderr` | Writes logs to standard error. Standard for containerized environments (`docker logs`). |
 | `syslog` | Sends logs to a syslog server. Requires `LOG_SYSLOG_ADDRESS` to be set.                 |
+
+When using `file`, you should also configure:
+
+- `LOG_FILE_PATH`: Path where log files are written when `LOG_TYPES` contains `file`.
 
 When using `syslog`, you should also configure:
 
 - `LOG_SYSLOG_ADDRESS`: The address of the syslog server (e.g., `udp://bw-syslog:514` or `/dev/log`).
 - `LOG_SYSLOG_TAG`: A unique tag for the service (e.g., `bw-scheduler`) to distinguish its entries.
-- `LOG_FILE_PATH`: Path for file output when `LOG_TYPES` includes `file` (for example, `/var/log/bunkerweb/scheduler.log`).
 
 ### Access and Error Logs
 
@@ -14656,7 +14771,7 @@ LOG_LEVEL_1=error
 
 === "Linux"
 
-    **Default behavior**: `LOG_TYPES="file"`. Logs are written to `/var/log/bunkerweb/*.log`.
+    **Default behavior**: `LOG_TYPES="file"`. Logs are written to `/var/log/bunkerweb/*.log`. Rotation is handled by the system `logrotate` config installed at `/etc/logrotate.d/bunkerweb` (daily, 7-day retention, compressed via `copytruncate`).
 
     **Example**: Keep local files (for Web UI) and also mirror to the system syslog.
 
@@ -15795,7 +15910,7 @@ The Custom Pages plugin lets you replace BunkerWeb's built-in pages (error pages
 
 ### Features
 
-- **Per-service custom error pages** and **antibot challenge pages** (captcha, JavaScript check, reCAPTCHA, hCaptcha, Turnstile, mCaptcha).
+- **Per-service custom error pages** and **antibot challenge pages** (captcha, JavaScript check, reCAPTCHA, hCaptcha, Turnstile, mCaptcha, Cap.js).
 - **Global custom default server page** for the fallback/default vhost.
 - **HTML parsing and Lua template tag balance checks** before a template is accepted.
 - **Automatic caching** to `/var/cache/bunkerweb/custom_pages` with change detection to trigger reloads.
@@ -15820,6 +15935,7 @@ The Custom Pages plugin lets you replace BunkerWeb's built-in pages (error pages
 | `CUSTOM_ANTIBOT_HCAPTCHA_PAGE`   |         | multisite | Absolute path to the custom antibot hCaptcha page.          |
 | `CUSTOM_ANTIBOT_TURNSTILE_PAGE`  |         | multisite | Absolute path to the custom antibot Turnstile page.         |
 | `CUSTOM_ANTIBOT_MCAPTCHA_PAGE`   |         | multisite | Absolute path to the custom antibot mCaptcha page.          |
+| `CUSTOM_ANTIBOT_CAPJS_PAGE`      |         | multisite | Absolute path to the custom antibot Cap.js page.            |
 
 ### Template Variables Reference
 
@@ -15900,6 +16016,13 @@ These variables are available in antibot challenge page templates:
 | ------------------ | ------ | ---------------------- |
 | `mcaptcha_sitekey` | string | Your mCaptcha site key |
 | `mcaptcha_url`     | string | Your mCaptcha URL      |
+
+**Cap.js (`CUSTOM_ANTIBOT_CAPJS_PAGE`):**
+
+| Variable        | Type   | Description                  |
+| --------------- | ------ | ---------------------------- |
+| `capjs_sitekey` | string | Your Cap.js site key         |
+| `capjs_url`     | string | Your Cap.js frontend base URL |
 
 ### Template Syntax
 
@@ -16790,6 +16913,14 @@ BunkerWeb's core Let's Encrypt plugin includes both an NGINX location block and 
 
 This is **only needed for HTTP-01**. DNS-01 and TLS-ALPN-01 challenges are not affected.
 
+#### Upstream ACME passthrough (`ACME_PASSTHROUGH`)
+
+If the upstream server behind BunkerWeb already runs its own ACME client and should handle HTTP-01 validation itself, set `ACME_PASSTHROUGH=yes` on the service. ACME PRO will then skip rendering its `/.well-known/acme-challenge/` location block and will not whitelist challenge paths in the `access` phase, so upstream-served validation files reach the CA untouched.
+
+Leave `ACME_PASSTHROUGH=no` (the default) whenever you want ACME PRO to obtain and renew certificates itself. The standard HTTP-01 combo for ACME PRO-managed services is `LETS_ENCRYPT_PASSTHROUGH=yes` (so the OSS core Let's Encrypt plugin yields its challenge location) together with `ACME_PASSTHROUGH=no`. Flip `ACME_PASSTHROUGH=yes` only when the upstream owns the certificate lifecycle — BunkerWeb will not attempt to issue a certificate for that service in this mode.
+
+This setting mirrors the behavior of the OSS core `LETS_ENCRYPT_PASSTHROUGH` and only affects HTTP-01; DNS-01 and TLS-ALPN-01 are unaffected.
+
 #### Plugin execution order
 
 The ACME plugin automatically reorders itself to execute first in the `ssl_certificate` NGINX phase, ensuring TLS-ALPN-01 challenge certificates are served before other certificate-providing plugins (selfsigned, letsencrypt, customcert) can short-circuit the loop.
@@ -16810,21 +16941,22 @@ External/PRO plugins not listed in `PLUGINS_ORDER_*` settings are appended alpha
 
 **Core ACME settings**
 
-| Setting                | Default | Context   | Multiple | Description                                                                      |
-| ---------------------- | ------- | --------- | -------- | -------------------------------------------------------------------------------- |
-| `USE_ACME`             | `no`    | multisite | no       | Enable ACME certificate management for this service.                             |
-| `ACME_DIRECTORY_URL`   |         | multisite | no       | ACME directory URL of the Certificate Authority.                                 |
-| `ACME_EMAIL`           |         | multisite | no       | Email address for ACME account registration and notifications.                   |
-| `ACME_CHALLENGE`       | `http`  | multisite | no       | ACME challenge type: `http`, `dns`, or `alpn`.                                   |
-| `ACME_KEY_TYPE`        | `ecdsa` | multisite | no       | Key type for the certificate: `ecdsa` or `rsa`.                                  |
-| `ACME_KEY_SIZE`        | `256`   | multisite | no       | Key size in bits. ECDSA: `256` or `384`. RSA: `2048` or `4096`.                  |
-| `ACME_RENEWAL_DAYS`    | `30`    | multisite | no       | Renew the certificate when it has fewer than this many days until expiry.        |
-| `ACME_SSL_VERIFY`      | `yes`   | multisite | no       | Verify SSL certificates when communicating with the ACME server.                 |
-| `ACME_WILDCARD`        | `no`    | multisite | no       | Request wildcard certificate (requires DNS-01 challenge).                        |
-| `ACME_MUST_STAPLE`     | `no`    | multisite | no       | Request the OCSP Must-Staple extension in the certificate.                       |
-| `ACME_MAX_RETRIES`     | `3`     | multisite | no       | Number of times to retry certificate generation on failure (0 disables retries). |
-| `ACME_PREFERRED_CHAIN` |         | multisite | no       | Preferred certificate chain issuer CN when the CA provides multiple chains.      |
-| `ACME_CA_CERT_PATH`    |         | multisite | no       | File path to the root CA certificate for private ACME servers.                   |
+| Setting                | Default | Context   | Multiple | Description                                                                                         |
+| ---------------------- | ------- | --------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `USE_ACME`             | `no`    | multisite | no       | Enable ACME certificate management for this service.                                                |
+| `ACME_PASSTHROUGH`     | `no`    | multisite | no       | Pass through HTTP-01 challenge requests to the upstream server (upstream runs its own ACME client). |
+| `ACME_DIRECTORY_URL`   |         | multisite | no       | ACME directory URL of the Certificate Authority.                                                    |
+| `ACME_EMAIL`           |         | multisite | no       | Email address for ACME account registration and notifications.                                      |
+| `ACME_CHALLENGE`       | `http`  | multisite | no       | ACME challenge type: `http`, `dns`, or `alpn`.                                                      |
+| `ACME_KEY_TYPE`        | `ecdsa` | multisite | no       | Key type for the certificate: `ecdsa` or `rsa`.                                                     |
+| `ACME_KEY_SIZE`        | `256`   | multisite | no       | Key size in bits. ECDSA: `256` or `384`. RSA: `2048` or `4096`.                                     |
+| `ACME_RENEWAL_DAYS`    | `30`    | multisite | no       | Renew the certificate when it has fewer than this many days until expiry.                           |
+| `ACME_SSL_VERIFY`      | `yes`   | multisite | no       | Verify SSL certificates when communicating with the ACME server.                                    |
+| `ACME_WILDCARD`        | `no`    | multisite | no       | Request wildcard certificate (requires DNS-01 challenge).                                           |
+| `ACME_MUST_STAPLE`     | `no`    | multisite | no       | Request the OCSP Must-Staple extension in the certificate.                                          |
+| `ACME_MAX_RETRIES`     | `3`     | multisite | no       | Number of times to retry certificate generation on failure (0 disables retries).                    |
+| `ACME_PREFERRED_CHAIN` |         | multisite | no       | Preferred certificate chain issuer CN when the CA provides multiple chains.                         |
+| `ACME_CA_CERT_PATH`    |         | multisite | no       | File path to the root CA certificate for private ACME servers.                                      |
 
 **External Account Binding (EAB)**
 
@@ -16933,6 +17065,211 @@ app2.example.com_AUTO_LETS_ENCRYPT: "yes"
 - **TLS-ALPN-01 challenge failing**: ensure port 443 is accessible from the ACME server and that no other plugin is serving a certificate before ACME in the `ssl_certificate` phase. Check `PLUGINS_ORDER_SSL_CERTIFICATE` if in doubt.
 - **DNS-01 challenge failing**: verify the DNS provider credentials in `ACME_DNS_CREDENTIAL_ITEM` and adjust `ACME_DNS_PROPAGATION` if your provider is slow to propagate records.
 - **Certificate not renewing**: check `ACME_RENEWAL_DAYS` and scheduler logs. The `acme-renew` job runs daily and renews certificates that are within the configured threshold.
+
+## Wildcard  (PRO)
+
+STREAM support :x:
+
+The **Wildcard** plugin lets a single BunkerWeb service respond to:
+
+* its exact hostname
+* any **direct subdomain** of that hostname
+
+When enabled, the plugin takes the **first entry** from `SERVER_NAME` and adds a wildcard `server_name` to the generated NGINX configuration.
+
+For example, if the first entry is `example.com`, the plugin adds:
+
+```nginx
+server_name *.example.com;
+```
+
+This makes the service respond to:
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+
+This is a minimal, config-only plugin:
+
+* no jobs
+* no Lua
+* no UI
+
+---
+
+### How it works
+
+The plugin derives the wildcard hostname from the **first value** in `SERVER_NAME` and injects a standard NGINX wildcard server name during config generation.
+
+It does not change request handling logic beyond hostname matching.
+
+!!! info "Wildcard hosts are not wildcard certificates"
+    This plugin only affects **HTTP routing**. It tells NGINX which hostnames the service should accept.
+
+    It does **not** provision a wildcard TLS certificate.
+
+    To serve `*.example.com` over HTTPS, you still need a matching wildcard certificate, typically with one of these options:
+
+    - `USE_LETS_ENCRYPT_WILDCARD=yes` with the built-in Let's Encrypt plugin
+    - `ACME_WILDCARD=yes` with the [ACME PRO](#acme) plugin using a DNS-01 challenge
+
+---
+
+### Features
+
+* **Simple activation**: enable wildcard routing with `USE_WILDCARD=yes`
+* **Automatic derivation**: the wildcard host is built from the first entry in `SERVER_NAME`
+* **Native NGINX semantics**: matching follows standard `server_name` behavior
+* **Multisite-aware**: each service can enable or disable wildcard routing independently
+
+---
+
+### Configuration
+
+| Setting        | Default | Context   | Multiple | Description                                                                                           |
+| -------------- | ------- | --------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| `USE_WILDCARD` | `no`    | multisite | no       | Enable wildcard `server_name` for the service by adding `*.domain` for the first `SERVER_NAME` entry. |
+
+---
+
+### Quick start
+
+1. Put the domain you want to wildcard **first** in `SERVER_NAME`
+2. Set `USE_WILDCARD=yes`
+3. Point the wildcard DNS record to BunkerWeb, usually with a wildcard `A` or `AAAA` record
+4. If you need HTTPS, provision a wildcard certificate separately
+5. Reload or restart BunkerWeb
+
+---
+
+### Examples
+
+#### Single-site
+
+```yaml
+SERVER_NAME: "example.com"
+USE_WILDCARD: "yes"
+```
+
+This service will answer:
+
+* `example.com`
+* `www.example.com`
+* `api.example.com`
+* any other `*.example.com` hostname that resolves to BunkerWeb
+
+#### Multisite
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "app.example.com docs.example.org"
+
+# Only app.example.com gets wildcard routing
+app.example.com_USE_WILDCARD: "yes"
+```
+
+In this setup:
+
+* `app.example.com` and `*.app.example.com` go to the first service
+* `docs.example.org` keeps exact-match routing only
+
+---
+
+### Important behavior
+
+!!! warning "Only the first domain is wildcarded"
+    If `SERVER_NAME` is:
+
+    ```yaml
+    SERVER_NAME: "example.com example.org"
+    ```
+
+    only `*.example.com` is added.
+
+    Put the domain you want to wildcard first.
+
+!!! note "Existing wildcard entries are preserved"
+    If the first domain already starts with `*.`, for example:
+
+    ```yaml
+    SERVER_NAME: "*.example.com"
+    ```
+
+    the plugin emits nothing.
+
+!!! note "Wildcard matching is single-label only"
+    `*.example.com` matches `foo.example.com`, but not `a.b.example.com`.
+
+    For deeper subdomains, use an explicit `SERVER_NAME` entry or a separate service.
+
+!!! note "Exact matches take precedence"
+    If another service explicitly defines `foo.example.com`, NGINX routes that hostname to the exact match first.
+
+---
+
+### Recommended with Let's Encrypt wildcard certificates
+
+If you use this plugin together with `USE_LETS_ENCRYPT_WILDCARD=yes`, use this pattern:
+
+```yaml
+SERVER_NAME: "<root_domain> <any_app>.<root_domain>"
+```
+
+The **root domain must come first**.
+
+Example:
+
+```yaml
+SERVER_NAME: "example.com app.example.com"
+USE_WILDCARD: "yes"
+AUTO_LETS_ENCRYPT: "yes"
+EMAIL_LETS_ENCRYPT: "admin@example.com"
+LETS_ENCRYPT_CHALLENGE: "dns"
+LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+USE_LETS_ENCRYPT_WILDCARD: "yes"
+```
+
+!!! tip "Why this pattern matters"
+    - **Only the first `SERVER_NAME` entry is wildcarded**
+
+    If `example.com` comes first, the plugin emits `*.example.com`.
+
+    If `app.example.com` comes first, it emits `*.app.example.com`, which is usually the wrong wildcard level.
+
+    - **The second entry helps Let's Encrypt detect the correct base domain**
+      With only a bare apex domain, wildcard certificate detection can fail on some public-suffix domains such as `example.co.uk`.
+
+    - **The second hostname does not need a real backend**
+      Use any stable value such as `app.example.com` or `www.example.com`.
+
+#### Multisite with Let's Encrypt wildcard
+
+```yaml
+MULTISITE: "yes"
+SERVER_NAME: "example.com app.example.com"
+example.com_USE_WILDCARD: "yes"
+example.com_USE_LETS_ENCRYPT_WILDCARD: "yes"
+example.com_LETS_ENCRYPT_CHALLENGE: "dns"
+example.com_LETS_ENCRYPT_DNS_PROVIDER: "cloudflare"
+example.com_LETS_ENCRYPT_DNS_CREDENTIAL_ITEM: "api_token YOUR_API_TOKEN"
+```
+
+---
+
+### Usage tips
+
+* **Plan TLS separately**
+  Wildcard routing is not enough for HTTPS. You still need certificate coverage for subdomains.
+
+* **Keep `SERVER_NAME` ordering stable**
+  Reordering entries changes which domain becomes the wildcard target.
+
+* **Works well with `REVERSE_PROXY_HOST`**
+  This is useful when many subdomains are routed through a shared upstream such as a tenant router.
+
+* **Be careful with overlapping services**
+  NGINX always prefers the most specific `server_name` match.
 
 # Web UI & API
 
