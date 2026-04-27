@@ -146,6 +146,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package-${{ inputs.LINUX }}-${{ env.LARCH }}
+          retention-days: 7
           path: package-${{ inputs.LINUX }}/*.${{ inputs.PACKAGE }}
       # Build test image
       - name: Extract metadata

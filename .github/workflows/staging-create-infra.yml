@@ -56,4 +56,5 @@ jobs:
         if: always()
         with:
           name: tf-${{ inputs.TYPE }}
+          retention-days: 7
           path: terraform.tar.enc
