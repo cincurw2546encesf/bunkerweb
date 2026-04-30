@@ -1,6 +1,12 @@
 # Changelog
 
-## v1.6.10~rc4 - 2026/04/??
+## v1.6.10~rc5 - 2026/??/??
+
+- [DEPS] Updated Modsecurity version to v3.0.15
+- [DEPS] Updated Mbed TLS version to v4.1.0
+- [DEPS] Updated libinjection version to v4.0.0
+
+## v1.6.10~rc4 - 2026/04/29
 
 - [SECURITY] Harden AIO log wrapper: strip C0/C1 control chars from service output to prevent terminal injection in `docker logs`, disable pathname expansion around `HIDE_SERVICE_LOGS` word splitting, and reject `..` path-traversal segments in `LOG_FILE_PATH` validation.
 - [SECURITY] Harden the AIO `logstream.sh` nginx/ModSecurity log forwarder with the same C0/DEL control-character strip as `service-log-wrapper.sh`, so attacker-controlled `access.log`/`error.log`/`modsec_audit.log` content cannot inject ANSI/CSI/OSC escape sequences into `docker logs` output.
