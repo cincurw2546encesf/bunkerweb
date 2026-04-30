@@ -2209,7 +2209,7 @@ Dependiendo de tus elecciones durante la instalación:
 
 ### Instalación mediante el gestor de paquetes
 
-Asegúrate de tener **NGINX 1.28.3 instalado antes de instalar BunkerWeb**. Para todas las distribuciones, es obligatorio usar los paquetes precompilados del [repositorio oficial de NGINX](https://nginx.org/en/linux_packages.html). Compilar NGINX desde el código fuente o usar paquetes de diferentes repositorios no funcionará con los paquetes precompilados oficiales de BunkerWeb. Sin embargo, tienes la opción de compilar BunkerWeb desde el código fuente.
+Asegúrate de tener **NGINX 1.30.0 instalado antes de instalar BunkerWeb**. Para todas las distribuciones, es obligatorio usar los paquetes precompilados del [repositorio oficial de NGINX](https://nginx.org/en/linux_packages.html). Compilar NGINX desde el código fuente o usar paquetes de diferentes repositorios no funcionará con los paquetes precompilados oficiales de BunkerWeb. Sin embargo, tienes la opción de compilar BunkerWeb desde el código fuente.
 
 === "Debian Bookworm/Trixie"
 
@@ -2224,11 +2224,11 @@ Asegúrate de tener **NGINX 1.28.3 instalado antes de instalar BunkerWeb**. Para
     | sudo tee /etc/apt/sources.list.d/nginx.list
     ```
 
-    Ahora deberías poder instalar NGINX 1.28.3:
+    Ahora deberías poder instalar NGINX 1.30.0:
 
     ```shell
     sudo apt update && \
-    sudo apt install -y --allow-downgrades nginx=1.28.3-1~$(lsb_release -cs)
+    sudo apt install -y --allow-downgrades nginx=1.30.0-1~$(lsb_release -cs)
     ```
 
     !!! warning "Versión de prueba/desarrollo"
@@ -2272,11 +2272,11 @@ Asegúrate de tener **NGINX 1.28.3 instalado antes de instalar BunkerWeb**. Para
     | sudo tee /etc/apt/sources.list.d/nginx.list
     ```
 
-    Ahora deberías poder instalar NGINX 1.28.3:
+    Ahora deberías poder instalar NGINX 1.30.0:
 
     ```shell
     sudo apt update && \
-    sudo apt install -y --allow-downgrades nginx=1.28.3-1~$(lsb_release -cs)
+    sudo apt install -y --allow-downgrades nginx=1.30.0-1~$(lsb_release -cs)
     ```
 
     !!! warning "Versión de prueba/desarrollo"
@@ -2316,10 +2316,10 @@ Asegúrate de tener **NGINX 1.28.3 instalado antes de instalar BunkerWeb**. Para
         sudo dnf config-manager setopt updates-testing.enabled=1
         ```
 
-    Fedora ya proporciona NGINX 1.28.3 que soportamos
+    Fedora ya proporciona NGINX 1.30.0 que soportamos
 
     ```shell
-    sudo dnf install -y --allowerasing nginx-1.28.3
+    sudo dnf install -y --allowerasing nginx-1.30.0
     ```
 
     !!! example "Deshabilitar el asistente de configuración"
@@ -2366,10 +2366,10 @@ Asegúrate de tener **NGINX 1.28.3 instalado antes de instalar BunkerWeb**. Para
     module_hotfixes=true
     ```
 
-    Ahora deberías poder instalar NGINX 1.28.3:
+    Ahora deberías poder instalar NGINX 1.30.0:
 
     ```shell
-    sudo dnf install --allowerasing nginx-1.28.3
+    sudo dnf install --allowerasing nginx-1.30.0
     ```
 
     !!! example "Deshabilitar el asistente de configuración"

@@ -249,9 +249,9 @@
     },
     {
       "id": "nginx",
-      "name": "Nginx v1.28.3",
+      "name": "Nginx v1.30.0",
       "url": "https://github.com/nginx/nginx.git",
-      "commit": "9b958b000776c88036cd800c66e7e4ad39e6fd41",
+      "commit": "6e14e954aaacce9a433d9b07b4653809c7594ab8",
       "post_install": "rm -r src/deps/src/nginx/docs"
     },
     {

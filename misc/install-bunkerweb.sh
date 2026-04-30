@@ -734,7 +734,7 @@ check_supported_os() {
                     fi
                 fi
             fi
-            NGINX_VERSION="1.28.3-1~$DISTRO_CODENAME"
+            NGINX_VERSION="1.30.0-1~$DISTRO_CODENAME"
             ;;
         "ubuntu")
             if [[ "$DISTRO_VERSION" != "22.04" && "$DISTRO_VERSION" != "24.04" ]]; then
@@ -746,7 +746,7 @@ check_supported_os() {
                     fi
                 fi
             fi
-            NGINX_VERSION="1.28.3-1~$DISTRO_CODENAME"
+            NGINX_VERSION="1.30.0-1~$DISTRO_CODENAME"
             ;;
         "fedora")
             if [[ "$DISTRO_VERSION" != "42" && "$DISTRO_VERSION" != "43" ]]; then
@@ -758,7 +758,7 @@ check_supported_os() {
                     fi
                 fi
             fi
-            NGINX_VERSION="1.28.3"
+            NGINX_VERSION="1.30.0"
             ;;
         "rhel"|"rocky"|"almalinux")
             major_version=$(echo "$DISTRO_VERSION" | cut -d. -f1)
@@ -771,7 +771,7 @@ check_supported_os() {
                     fi
                 fi
             fi
-            NGINX_VERSION="1.28.3"
+            NGINX_VERSION="1.30.0"
             ;;
         *)
             print_error "Unsupported operating system: $DISTRO_ID"
