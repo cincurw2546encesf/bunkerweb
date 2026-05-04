@@ -1,5 +1,5 @@
-@@ -2318,6 +2318,55 @@
-     return transaction->setRequestHostName(reinterpret_cast<const char *>(hostname));
+@@ -2384,6 +2384,55 @@
+     return written;
  }
  
 +extern "C" const char *msc_get_transaction_variable(Transaction *transaction, const char *var_name){

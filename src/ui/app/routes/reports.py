@@ -17,7 +17,7 @@ from openpyxl.styles import Font, PatternFill
 from app.dependencies import BW_CONFIG, BW_INSTANCES_UTILS
 from app.utils import LOGGER
 
-from app.routes.utils import cors_required
+from app.routes.utils import cors_required, parse_search_panes
 
 reports = Blueprint("reports", __name__)
 REPORTS_FILTERS_CACHE_TTL_SECONDS = 5.0
@@ -391,6 +391,7 @@ def reports_export_csv():
         search_value = request.args.get("search", "").lower()
         order_column = request.args.get("order_column", "date")
         order_dir = request.args.get("order_dir", "desc")
+        search_panes_str = parse_search_panes(request.args)
 
         # Get all reports (no pagination)
         if BW_INSTANCES_UTILS:
@@ -400,7 +401,7 @@ def reports_export_csv():
                 search=search_value,
                 order_column=order_column,
                 order_dir=order_dir,
-                search_panes="",
+                search_panes=search_panes_str,
                 count_only=False,
                 include_pane_counts=False,
             )
@@ -483,6 +484,7 @@ def reports_export_excel():
         search_value = request.args.get("search", "").lower()
         order_column = request.args.get("order_column", "date")
         order_dir = request.args.get("order_dir", "desc")
+        search_panes_str = parse_search_panes(request.args)
 
         # Get all reports (no pagination)
         if BW_INSTANCES_UTILS:
@@ -492,7 +494,7 @@ def reports_export_excel():
                 search=search_value,
                 order_column=order_column,
                 order_dir=order_dir,
-                search_panes="",
+                search_panes=search_panes_str,
                 count_only=False,
                 include_pane_counts=False,
             )

@@ -1,6 +1,19 @@
 # Changelog
 
-## v1.6.10~rc4 - 2026/04/??
+## v1.6.10~rc5 - 2026/??/??
+
+- [BUGFIX] `modsecurity`/`ui`/`antibot`: stop `USE_MODSECURITY_GLOBAL_CRS=yes` from breaking the BunkerWeb UI (and the antibot challenge endpoint) with 403s on POSTs (save settings, create service, edit configs, etc.). Four independent defects were fixed: (1) the chained UI exclusions in `http/ui.modsec-crs` ran in the default phase 2, so phase-1 CRS rules like `920440` had already evaluated before `ctl:ruleRemoveById` could disable them — they now run in phase 1; (2) the `Host` chain regex in both `http/ui.modsec-crs` and `http/antibot.modsec-crs` was strictly anchored, so a non-default port (e.g. `Host: ui.example.com:8443`) and any uppercase letters bypassed it — server names are now lowercased before `re.escape`, the regex tolerates an optional `:port`, and the rule applies `t:lowercase` to the Host header (mirroring the precedent used by upstream CRS); (3) `http/antibot.modsec-crs` previously only escaped `.` and `-` manually, missing other regex metacharacters that valid hostnames might still include — it now uses `re.escape()` like the UI template; (4) when the UI is reached through the default server (catch-all bootstrap, no `<service>_USE_UI=yes`), no host-chained exclusion can ever match — the default-server UI proxy `location` blocks now emit `modsecurity off;` so CRS doesn't fire on UI-only paths there. Other defenses (limit, badbehavior, crowdsec, allowlists) continue to run via the BunkerWeb Lua pipeline. (Fixes #3118)
+- [BUGFIX] `database`: back-fill `bw_settings` defaults from `settings.json` at read time when the catalogue row is missing or has a NULL/empty `default`, so global directives like `client_body_timeout` can no longer render empty in `http.conf` after an upgrade leaves the table desynced. Logs one WARNING per affected setting on first occurrence so operators can detect and clean up the desync. (Fixes #3450)
+- [BUGFIX] `errors`: revert the rc4 `return 444;` short-circuit on `@bwerror*` handlers. Those locations only fire for legitimate intercepted 4xx/5xx (missing path, upstream 502, etc.); the deny path bypasses `error_page` entirely via `ngx.exit(get_deny_status())` in `access-lua.conf`, so gating the handlers on `DENY_HTTP_STATUS=444` only broke real error rendering (HTTP/2 stream protocol error) without changing the deny behavior. Operators who want full stealth on intercepted errors can already opt out by setting `INTERCEPTED_ERROR_CODES=""` or mapping each code to a blank page via `ERRORS=`. (Fixes #3490, reverts #3448)
+- [UI] Reports and Bans pages: CSV/Excel exports now include every column and honor the active search and SearchPanes filters (was: exporting an unfiltered, partial-column dump). (Fixes #3489)
+- [UI] Service edit page: defense-in-depth restoration of non-UI-method settings (and template defaults) on advanced/raw save so a form post that omits keys can't roll the service back to defaults; the raw-mode draft toggle and the `IS_DRAFT=` line in the raw editor are now kept in sync both ways.
+- [DEPS] Updated NGINX version to v1.30.0 for all integrations.
+- [DEPS] Updated Modsecurity version to v3.0.15
+- [DEPS] Updated Mbed TLS version to v4.1.0
+- [DEPS] Updated libinjection version to v4.0.0
+- [DEPS] Update coreruleset-v4 version to v4.26.0
+
+## v1.6.10~rc4 - 2026/04/29
 
 - [SECURITY] Harden AIO log wrapper: strip C0/C1 control chars from service output to prevent terminal injection in `docker logs`, disable pathname expansion around `HIDE_SERVICE_LOGS` word splitting, and reject `..` path-traversal segments in `LOG_FILE_PATH` validation.
 - [SECURITY] Harden the AIO `logstream.sh` nginx/ModSecurity log forwarder with the same C0/DEL control-character strip as `service-log-wrapper.sh`, so attacker-controlled `access.log`/`error.log`/`modsec_audit.log` content cannot inject ANSI/CSI/OSC escape sequences into `docker logs` output.
