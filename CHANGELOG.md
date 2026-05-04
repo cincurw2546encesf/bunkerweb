@@ -11,6 +11,7 @@
 - [DEPS] Updated Modsecurity version to v3.0.15
 - [DEPS] Updated Mbed TLS version to v4.1.0
 - [DEPS] Updated libinjection version to v4.0.0
+- [DEPS] Update coreruleset-v4 version to v4.26.0
 
 ## v1.6.10~rc4 - 2026/04/29
 
