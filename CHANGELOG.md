@@ -2,6 +2,8 @@
 
 ## v1.6.10~rc5 - 2026/??/??
 
+- [UI] Reports and Bans pages: CSV/Excel exports now include every column and honor the active search and SearchPanes filters (was: exporting an unfiltered, partial-column dump). (Fixes #3489)
+- [UI] Service edit page: defense-in-depth restoration of non-UI-method settings (and template defaults) on advanced/raw save so a form post that omits keys can't roll the service back to defaults; the raw-mode draft toggle and the `IS_DRAFT=` line in the raw editor are now kept in sync both ways.
 - [DEPS] Updated NGINX version to v1.30.0 for all integrations.
 - [DEPS] Updated Modsecurity version to v3.0.15
 - [DEPS] Updated Mbed TLS version to v4.1.0
