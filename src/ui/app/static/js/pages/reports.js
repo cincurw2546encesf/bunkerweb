@@ -113,6 +113,33 @@ $(document).ready(function () {
     filtersStateCache.set(stateKey, { ts: Date.now(), payload });
   };
 
+  // Build the server-side export URL, forwarding the current search,
+  // ordering, and any active SearchPanes selections so the file matches
+  // what the user sees in the table.
+  const buildReportsExportUrl = (dt, format) => {
+    const params = dt.ajax.params();
+    const exportParams = {
+      csrf_token: $("#csrf_token").val(),
+      search: params.search ? params.search.value : "",
+      order_column:
+        params.order && params.order.length > 0
+          ? params.columns[params.order[0].column].data
+          : "",
+      order_dir:
+        params.order && params.order.length > 0 ? params.order[0].dir : "",
+    };
+
+    Object.keys(params).forEach((key) => {
+      if (key.startsWith("searchPanes[")) {
+        exportParams[key] = params[key];
+      }
+    });
+
+    return `${window.location.pathname}/export/${format}?${$.param(
+      exportParams,
+    )}`;
+  };
+
   const headers = [
     {
       title: "Date",
@@ -285,72 +312,17 @@ $(document).ready(function () {
           },
         },
         {
-          extend: "csv",
-          text: '<span class="tf-icons bx bx-table bx-18px me-2"></span><span data-i18n="button.export_csv_visible">CSV (Visible)</span>',
-          bom: true,
-          filename: "bw_report_visible",
-          exportOptions: {
-            columns: ":visible:not(:nth-child(-n+2)):not(:last-child)",
-          },
-        },
-        {
-          text: '<span class="tf-icons bx bx-download bx-18px me-2"></span><span data-i18n="button.export_csv_all">CSV (All)</span>',
+          text: '<span class="tf-icons bx bx-table bx-18px me-2"></span><span data-i18n="button.export_csv">CSV</span>',
           className: "buttons-csv",
           action: function (e, dt, button, config) {
-            // Get current table state for filters
-            const params = dt.ajax.params();
-            // Build URL with parameters for server-side export
-            const exportUrl = `${window.location.pathname}/export/csv?${$.param(
-              {
-                csrf_token: $("#csrf_token").val(),
-                draw: params.draw,
-                search: params.search ? params.search.value : "",
-                order_column:
-                  params.order && params.order.length > 0
-                    ? params.columns[params.order[0].column].data
-                    : "",
-                order_dir:
-                  params.order && params.order.length > 0
-                    ? params.order[0].dir
-                    : "",
-              },
-            )}`;
-            // Trigger download
-            window.location.href = exportUrl;
+            window.location.href = buildReportsExportUrl(dt, "csv");
           },
         },
         {
-          extend: "excel",
-          text: '<span class="tf-icons bx bx-table bx-18px me-2"></span><span data-i18n="button.export_excel_visible">Excel (Visible)</span>',
-          filename: "bw_report_visible",
-          exportOptions: {
-            columns: ":visible:not(:nth-child(-n+2)):not(:last-child)",
-          },
-        },
-        {
-          text: '<span class="tf-icons bx bx-download bx-18px me-2"></span><span data-i18n="button.export_excel_all">Excel (All)</span>',
+          text: '<span class="tf-icons bx bx-table bx-18px me-2"></span><span data-i18n="button.export_excel">Excel</span>',
           className: "buttons-excel",
           action: function (e, dt, button, config) {
-            // Get current table state for filters
-            const params = dt.ajax.params();
-            // Build URL with parameters for server-side export
-            const exportUrl = `${
-              window.location.pathname
-            }/export/excel?${$.param({
-              csrf_token: $("#csrf_token").val(),
-              draw: params.draw,
-              search: params.search ? params.search.value : "",
-              order_column:
-                params.order && params.order.length > 0
-                  ? params.columns[params.order[0].column].data
-                  : "",
-              order_dir:
-                params.order && params.order.length > 0
-                  ? params.order[0].dir
-                  : "",
-            })}`;
-            // Trigger download
-            window.location.href = exportUrl;
+            window.location.href = buildReportsExportUrl(dt, "excel");
           },
         },
       ],

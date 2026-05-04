@@ -11,6 +11,33 @@ $(document).ready(function () {
   const isReadOnly = $("#is-read-only").val().trim() === "True";
   const userReadOnly = $("#user-read-only").val().trim() === "True";
 
+  // Build the server-side export URL, forwarding the current search,
+  // ordering, and any active SearchPanes selections so the file matches
+  // what the user sees in the table (all columns, all matching rows).
+  const buildBansExportUrl = (dt, format) => {
+    const params = dt.ajax.params();
+    const exportParams = {
+      csrf_token: $("#csrf_token").val(),
+      search: params.search ? params.search.value : "",
+      order_column:
+        params.order && params.order.length > 0
+          ? params.columns[params.order[0].column].data
+          : "",
+      order_dir:
+        params.order && params.order.length > 0 ? params.order[0].dir : "",
+    };
+
+    Object.keys(params).forEach((key) => {
+      if (key.startsWith("searchPanes[")) {
+        exportParams[key] = params[key];
+      }
+    });
+
+    return `${window.location.pathname}/export/${format}?${$.param(
+      exportParams,
+    )}`;
+  };
+
   const headers = [
     {
       title: "Date",
@@ -515,22 +542,17 @@ $(document).ready(function () {
           },
         },
         {
-          extend: "csv",
           text: `<span class="tf-icons bx bx-table bx-18px me-2"></span>CSV`,
-          bom: true,
-          filename: "bw_bans",
-          exportOptions: {
-            modifier: { search: "none" },
-            columns: ":not(:nth-child(-n+2)):not(:last-child)",
+          className: "buttons-csv",
+          action: function (e, dt, button, config) {
+            window.location.href = buildBansExportUrl(dt, "csv");
           },
         },
         {
-          extend: "excel",
           text: `<span class="tf-icons bx bx-table bx-18px me-2"></span>Excel`,
-          filename: "bw_bans",
-          exportOptions: {
-            modifier: { search: "none" },
-            columns: ":not(:nth-child(-n+2)):not(:last-child)",
+          className: "buttons-excel",
+          action: function (e, dt, button, config) {
+            window.location.href = buildBansExportUrl(dt, "excel");
           },
         },
       ],
