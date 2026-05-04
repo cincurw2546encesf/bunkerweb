@@ -1762,11 +1762,15 @@ class Database:
             self.logger.debug(f"Cleaning up {method} old services settings")
             # Collect service settings to delete (skip entirely when skip_service_management to avoid deleting service settings)
             service_settings_to_delete = []
+            # Track per-service totals so we can detect would-wipe-the-whole-service deletions below.
+            service_method_total: Dict[str, int] = defaultdict(int)
+            service_method_to_delete: Dict[str, int] = defaultdict(int)
             for db_service_config in [] if skip_service_management else session.query(Services_settings).filter_by(method=method).all():
                 # Preserve settings of services about to be drafted by the autoconf disable_cleanup path
                 # so they can be re-published when the orchestration object returns.
                 if db_service_config.service_id in drafted_service_ids:
                     continue
+                service_method_total[db_service_config.service_id] += 1
                 key = f"{db_service_config.service_id}_{db_service_config.setting_id}"
                 if db_service_config.suffix:
                     key = f"{key}_{db_service_config.suffix}"
@@ -1777,6 +1781,7 @@ class Database:
 
                     if should_delete:
                         service_settings_to_delete.append(db_service_config)
+                        service_method_to_delete[db_service_config.service_id] += 1
                         # Get plugin ID with safer query and null checking
                         plugin_query = session.query(Settings).with_entities(Settings.plugin_id).filter_by(id=db_service_config.setting_id).first()
                         if plugin_query:
@@ -1792,6 +1797,37 @@ class Database:
                 except Exception as e:
                     self.logger.warning(f"Error processing service config {db_service_config.setting_id}: {e}")
                     continue
+
+            # Data-loss guard (mirror of the scheduler global guard above): refuse the cleanup
+            # when a ui/api save_config would wipe every method-owned row of an existing service
+            # while the service itself is still listed in SERVER_NAME. A 100% wipe with the
+            # service still alive almost always means the caller submitted an incomplete config
+            # (Advanced-mode form post missing keys, JS form rebuild race, plugin tab that failed
+            # to render). Genuine service deletion drops the id from SERVER_NAME and flows
+            # through the removal path further down, so this guard never blocks legitimate deletes.
+            if method in ("ui", "api") and service_method_to_delete and not skip_service_management:
+                incoming_server_name = config.get("SERVER_NAME", "")
+                if isinstance(incoming_server_name, str):
+                    incoming_service_ids = {s for s in incoming_server_name.strip().split() if s}
+                elif isinstance(incoming_server_name, list):
+                    incoming_service_ids = {s for s in incoming_server_name if s}
+                else:
+                    incoming_service_ids = set()
+
+                refused_service_ids = sorted(
+                    sid
+                    for sid, total in service_method_total.items()
+                    if total > 0 and service_method_to_delete.get(sid, 0) == total and sid in incoming_service_ids
+                )
+                if refused_service_ids:
+                    self.logger.warning(
+                        f"Refusing save_config: incoming method={method!r} payload would wipe every "
+                        f"{method}-method setting row for service(s) {refused_service_ids} while the "
+                        f"service(s) are still present in SERVER_NAME. This indicates the caller "
+                        f"submitted an incomplete config (e.g. an Advanced-mode form post missing keys). "
+                        f"Aborting save_config to prevent data loss."
+                    )
+                    return changed_plugins
 
             if config:
                 config.pop("DATABASE_URI", None)
@@ -2348,6 +2384,9 @@ class Database:
     ) -> str:
         """Save the custom configs in the database"""
         message = ""
+        # Materialize once: callers may pass dict_values or a generator, and the
+        # data-loss guard below needs to count items before the for-loop consumes them.
+        custom_configs = [*custom_configs]
         with self._db_session() as session:
             if self.readonly:
                 return "The database is read-only, the changes will not be saved"
@@ -2356,6 +2395,25 @@ class Database:
             disable_cleanup = disable_cleanup and method == "autoconf"
 
             if not disable_cleanup:
+                # Data-loss guard (mirror of the save_config guards above): refuse the
+                # cleanup when a ui/api save_custom_configs call would wipe every
+                # method-owned custom config row while supplying nothing to replace
+                # them. An empty incoming list with existing rows almost always means
+                # the caller built an incomplete payload (route exception, form rebuild
+                # race, missing in-memory state). Genuine "remove all custom configs"
+                # actions delete rows individually through the UI/API, so by the time
+                # an empty payload reaches save_custom_configs there is nothing left
+                # to wipe and this guard is a no-op.
+                if method in ("ui", "api") and not custom_configs:
+                    existing_count = session.query(Custom_configs).filter(Custom_configs.method == method).count()
+                    if existing_count > 0:
+                        self.logger.warning(
+                            f"Refusing save_custom_configs: incoming method={method!r} payload is empty while {existing_count} "
+                            f"{method}-method custom config row(s) exist in the database. This indicates the caller submitted "
+                            f"an incomplete payload (e.g. a service edit that lost its in-memory custom-config map). Aborting "
+                            f"save_custom_configs to prevent data loss."
+                        )
+                        return message
                 # Delete all the old config
                 session.query(Custom_configs).filter(Custom_configs.method == method).delete()
 

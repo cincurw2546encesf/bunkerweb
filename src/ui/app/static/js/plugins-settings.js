@@ -2091,14 +2091,39 @@ $(document).ready(() => {
   $(".toggle-draft").on("click", function () {
     const draftInput = $("#is-draft");
     const isDraft = draftInput.val() === "yes";
+    const newValue = isDraft ? "no" : "yes";
 
-    draftInput.val(isDraft ? "no" : "yes");
+    draftInput.val(newValue);
     const newStatusKey = isDraft ? "status.online" : "status.draft";
     $(".toggle-draft").html(
       `<i class="bx bx-sm bx-${
         isDraft ? "globe" : "file-blank"
       }"></i>&nbsp; <span data-i18n="${newStatusKey}">${t(newStatusKey)}</span>`,
     );
+
+    // Keep the raw editor's IS_DRAFT line in sync with the toggle button. Without
+    // this the raw editor would still display the previous IS_DRAFT value after
+    // toggling, and a subsequent direct edit in the editor (which is the source
+    // of truth in raw mode through the editor->#is-draft change handler) would
+    // overwrite the toggle's new value with the stale editor line.
+    const rawEditor = editorRegistry["raw-config-editor"];
+    if (rawEditor) {
+      const lines = rawEditor.getValue().split("\n");
+      let mutated = false;
+      for (let i = 0; i < lines.length; i++) {
+        if (/^\s*IS_DRAFT\s*=/.test(lines[i])) {
+          const replacement = `IS_DRAFT=${newValue}`;
+          if (lines[i] !== replacement) {
+            lines[i] = replacement;
+            mutated = true;
+          }
+          break;
+        }
+      }
+      if (mutated) {
+        rawEditor.setValue(lines.join("\n"), -1);
+      }
+    }
   });
 
   $(".copy-settings").on("click", function () {
@@ -2567,6 +2592,33 @@ $(document).ready(() => {
           $rawConfigHidden.val(editor.getValue());
         });
       }
+
+      // Mirror direct edits to the IS_DRAFT line back into the canonical
+      // #is-draft hidden input (and the visible toggle button). The form-build
+      // path posts IS_DRAFT from #is-draft, so without this sync a user typing
+      // IS_DRAFT=yes directly in the raw editor would never reach the route.
+      const syncDraftFromEditor = () => {
+        const $draftInput = $("#is-draft");
+        if (!$draftInput.length) return;
+        const draftLine = editor
+          .getValue()
+          .split("\n")
+          .map((l) => l.trim())
+          .find((l) => /^IS_DRAFT\s*=/.test(l));
+        if (!draftLine) return;
+        const value = draftLine.split("=").slice(1).join("=").trim();
+        if (value !== "yes" && value !== "no") return;
+        if ($draftInput.val() === value) return;
+        $draftInput.val(value);
+        const statusKey = value === "yes" ? "status.draft" : "status.online";
+        $(".toggle-draft").html(
+          `<i class="bx bx-sm bx-${
+            value === "yes" ? "file-blank" : "globe"
+          }"></i>&nbsp; <span data-i18n="${statusKey}">${t(statusKey)}</span>`,
+        );
+      };
+      syncDraftFromEditor();
+      editor.on("change", syncDraftFromEditor);
 
       setupRawDisabledHighlight(editor);
     }
