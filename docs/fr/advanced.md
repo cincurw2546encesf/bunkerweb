@@ -2554,10 +2554,10 @@ Par défaut, BunkerWeb n'écoutera que les adresses IPv4 et n'utilisera pas IPv6
     systemctl status bunkerweb
     ```
 
-    S'il est déjà en cours d'exécution, nous pouvons le redémarrer :
+    S'il est déjà en cours d'exécution, nous pouvons redémarrer le scheduler pour qu'il régénère la configuration NGINX avec IPv6 activé :
 
     ```shell
-    systemctl restart bunkerweb
+    systemctl restart bunkerweb-scheduler
     ```
 
     Sinon, nous devrons le démarrer :
@@ -4157,10 +4157,10 @@ Les modèles utilisent la syntaxe de modèle Lua avec les délimiteurs suivants 
         CUSTOM_ANTIBOT_CAPTCHA_PAGE=/opt/bunkerweb/templates/captcha.html
         ```
 
-    3. Rechargez BunkerWeb :
+    3. Rechargez le scheduler BunkerWeb pour qu'il prenne en compte les nouveaux modèles :
 
         ```bash
-        sudo systemctl reload bunkerweb
+        sudo systemctl reload bunkerweb-scheduler
         ```
 
 === "Docker"

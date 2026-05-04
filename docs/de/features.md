@@ -1977,10 +1977,10 @@ Die folgenden Abschnitte führen diese Schritte im Detail durch.
     CROWDSEC_APPSEC_URL=http://127.0.0.1:7422
     ```
 
-    Laden Sie schließlich den BunkerWeb-Dienst neu:
+    Laden Sie schließlich den BunkerWeb-Scheduler neu, damit er die neuen Einstellungen übernimmt:
 
     ```shell
-    sudo systemctl reload bunkerweb
+    sudo systemctl reload bunkerweb-scheduler
     ```
 
 === "All-in-one"

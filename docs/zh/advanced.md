@@ -2553,10 +2553,10 @@ BunkerWeb 支持使用外部或远程的 [PHP-FPM](https://www.php.net/manual/en
     systemctl status bunkerweb
     ```
 
-    如果它们已经在运行，我们可以重启它：
+    如果它们已经在运行，我们可以重启调度器，让它在启用 IPv6 的情况下重新生成 NGINX 配置：
 
     ```shell
-    systemctl restart bunkerweb
+    systemctl restart bunkerweb-scheduler
     ```
 
     否则，我们需要启动它：
@@ -4155,10 +4155,10 @@ BunkerWeb 模板使用 [lua-resty-template](https://github.com/bungle/lua-resty-
         CUSTOM_ANTIBOT_CAPTCHA_PAGE=/opt/bunkerweb/templates/captcha.html
         ```
 
-    3. 重新加载 BunkerWeb：
+    3. 重新加载 BunkerWeb 调度器，使其加载新的模板：
 
         ```bash
-        sudo systemctl reload bunkerweb
+        sudo systemctl reload bunkerweb-scheduler
         ```
 
 === "Docker"

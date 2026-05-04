@@ -2032,10 +2032,10 @@ Follow one of the environment-specific guides below so the CrowdSec agent ingest
     CROWDSEC_APPSEC_URL=http://127.0.0.1:7422
     ```
 
-    Finally, reload the BunkerWeb service:
+    Finally, reload the BunkerWeb scheduler so it picks up the new settings:
 
     ```shell
-    sudo systemctl reload bunkerweb
+    sudo systemctl reload bunkerweb-scheduler
     ```
 
 === "All-in-one"

@@ -1825,10 +1825,10 @@ Les sections suivantes détaillent chacune de ces étapes.
     CROWDSEC_APPSEC_URL=http://127.0.0.1:7422
     ```
 
-    Enfin, rechargez le service BunkerWeb :
+    Enfin, rechargez le scheduler BunkerWeb pour qu'il prenne en compte les nouveaux paramètres :
 
     ```shell
-    sudo systemctl reload bunkerweb
+    sudo systemctl reload bunkerweb-scheduler
     ```
 
 === "All-in-one"
