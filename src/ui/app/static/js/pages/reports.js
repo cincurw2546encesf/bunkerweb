@@ -1259,30 +1259,58 @@ $(document).ready(function () {
       return [];
     }
 
+    let entries;
     if (Array.isArray(data)) {
-      return data.filter((entry) => isBadBehaviorEntry(entry));
-    }
-
-    if (typeof data === "object") {
+      entries = data.filter((entry) => isBadBehaviorEntry(entry));
+    } else if (typeof data === "object") {
       if (Array.isArray(data.events)) {
-        return data.events.filter((entry) => isBadBehaviorEntry(entry));
+        entries = data.events.filter((entry) => isBadBehaviorEntry(entry));
+      } else {
+        const numericKeys = Object.keys(data).filter((key) =>
+          /^\d+$/.test(key),
+        );
+        if (numericKeys.length) {
+          entries = numericKeys
+            .map((key) => data[key])
+            .filter((entry) => isBadBehaviorEntry(entry));
+        } else if (isBadBehaviorEntry(data)) {
+          entries = [data];
+        } else {
+          entries = [];
+        }
       }
-
-      const numericKeys = Object.keys(data).filter((key) => /^\d+$/.test(key));
-
-      if (numericKeys.length) {
-        return numericKeys
-          .sort((a, b) => Number(a) - Number(b))
-          .map((key) => data[key])
-          .filter((entry) => isBadBehaviorEntry(entry));
-      }
-
-      if (isBadBehaviorEntry(data)) {
-        return [data];
-      }
+    } else {
+      return [];
     }
 
-    return [];
+    // Sort newest-first by entry.date so all input shapes match the rest of
+    // the Reports UI. Entries with no parseable timestamp keep their relative
+    // order at the bottom.
+    return entries
+      .map((entry, idx) => ({
+        entry,
+        idx,
+        ts: parseBadBehaviorEntryTimestamp(entry),
+      }))
+      .sort((a, b) => (b.ts !== a.ts ? b.ts - a.ts : a.idx - b.idx))
+      .map((item) => item.entry);
+  }
+
+  function parseBadBehaviorEntryTimestamp(entry) {
+    if (
+      !entry ||
+      entry.date === null ||
+      entry.date === undefined ||
+      entry.date === ""
+    ) {
+      return -Infinity;
+    }
+    const numeric = Number(entry.date);
+    if (Number.isFinite(numeric)) {
+      return numeric < 1e12 ? numeric * 1000 : numeric;
+    }
+    const parsed = Date.parse(entry.date);
+    return Number.isFinite(parsed) ? parsed : -Infinity;
   }
 
   function isBadBehaviorEntry(entry) {
