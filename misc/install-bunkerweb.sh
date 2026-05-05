@@ -32,6 +32,25 @@ REDIS_USERNAME_INPUT=""
 REDIS_PASSWORD_INPUT=""
 REDIS_SSL_INPUT=""
 REDIS_SSL_VERIFY_INPUT=""
+REDIS_BIND_INPUT=""
+REDIS_AUTOPASS="yes"
+REDIS_REQUIREPASS_LOCAL=""
+REDIS_FLAVOR=""               # "redis" | "valkey" — both are wire-compatible
+REDIS_MAXMEMORY_MB=""         # 0 = unlimited (distro default); >0 = applied as <N>mb
+REDIS_MAXMEMORY_POLICY="allkeys-lru"  # WAF cache best practice — bounded + LRU eviction across all keys
+DB_INSTALL=""
+DB_NAME_INPUT="bw_db"
+DB_USER_INPUT="bunkerweb"
+DB_PASSWORD_INPUT=""
+DB_PASSWORD_GENERATED=""
+DB_DSN_GENERATED=""
+UI_ADMIN_USERNAME_INPUT=""
+UI_ADMIN_PASSWORD_INPUT=""
+UI_ADMIN_PASSWORD_GENERATED=""
+UI_ADMIN_CREATE=""
+UI_SELFSIGNED_INPUT=""
+MANAGER_UI_DEFERRED=""
+FULL_API_DEFERRED=""
 INSTALL_TYPE=""
 BUNKERWEB_INSTANCES_INPUT=""
 MANAGER_IP_INPUT=""
@@ -92,6 +111,255 @@ ensure_config_file() {
         touch "$config_file"
     fi
 
+    chown root:nginx "$config_file" 2>/dev/null || true
+    chmod 660 "$config_file" 2>/dev/null || true
+}
+
+# Generate a URL-safe random secret of N characters (default 32).
+generate_secret() {
+    local length="${1:-32}"
+    local out=""
+
+    if command -v openssl >/dev/null 2>&1; then
+        out=$(openssl rand -base64 48 2>/dev/null | tr -dc 'A-Za-z0-9' | head -c "$length")
+    fi
+
+    if [ -z "$out" ] && [ -r /dev/urandom ]; then
+        out=$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$length")
+    fi
+
+    if [ -z "$out" ]; then
+        # Last-resort fallback (no /dev/urandom and no openssl)
+        out=$(date +%s%N | sha256sum 2>/dev/null | head -c "$length")
+    fi
+
+    printf '%s' "$out"
+}
+
+# Generate a UI admin password that satisfies the BunkerWeb regex
+# (>= 8 chars, at least one lower, upper, digit, special). 18 base chars + Aa1!.
+generate_ui_admin_password() {
+    local base
+    base=$(generate_secret 18)
+    printf '%sAa1!' "$base"
+}
+
+# Validate a UI admin password against the same character classes the UI requires.
+# Returns 0 if valid, 1 otherwise.
+validate_ui_admin_password() {
+    local pw="$1"
+
+    if [ -z "$pw" ] || [ "${#pw}" -lt 8 ]; then
+        return 1
+    fi
+    [[ "$pw" =~ [a-z] ]] || return 1
+    [[ "$pw" =~ [A-Z] ]] || return 1
+    [[ "$pw" =~ [0-9] ]] || return 1
+    [[ "$pw" =~ [^A-Za-z0-9] ]] || return 1
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Default env-file templates.
+#
+# These mirror the templates that the BunkerWeb start scripts write when the
+# corresponding env file is absent (see src/linux/scripts/{start,bunkerweb-ui,
+# bunkerweb-scheduler,bunkerweb-api}.sh). The installer needs its own copy
+# because it creates these files BEFORE the start scripts ever run, so the
+# operator would otherwise end up with a sparse file containing only the
+# values the installer pinned — losing the helpful commented defaults that
+# document every supported knob.
+#
+# Each helper only writes the template when the file is empty/missing.
+# If the file already has content (re-run, manual edit), it's left alone and
+# the caller's set_config_kv writes simply patch the relevant lines.
+# ---------------------------------------------------------------------------
+
+write_default_variables_env_template() {
+    local config_file="$1"
+    if [ -s "$config_file" ]; then
+        return 0
+    fi
+    ensure_config_file "$config_file"
+    cat > "$config_file" <<'EOF'
+# BunkerWeb runtime configuration (shared across scheduler, UI and API).
+# The IS_LOADING flag is managed automatically by the deb/rpm postinstall
+# and the wizard; do not pre-seed it here.
+SERVER_NAME=
+DNS_RESOLVERS=9.9.9.9 149.112.112.112 8.8.8.8 8.8.4.4
+HTTP_PORT=80
+HTTPS_PORT=443
+API_LISTEN_IP=127.0.0.1
+API_TOKEN=
+KEEP_CONFIG_ON_RESTART=no
+# Shared database connection (read by scheduler, UI and API).
+# Defaults to SQLite when unset. Examples:
+#   sqlite:////var/lib/bunkerweb/db.sqlite3
+#   mariadb+pymysql://bunkerweb:password@127.0.0.1:3306/bw_db
+#   postgresql+psycopg://bunkerweb:password@127.0.0.1:5432/bw_db
+# DATABASE_URI=
+# DATABASE_LOG_LEVEL=warning
+# DATABASE_RETRY_TIMEOUT=60
+EOF
+    chown root:nginx "$config_file" 2>/dev/null || true
+    chmod 660 "$config_file" 2>/dev/null || true
+}
+
+write_default_ui_env_template() {
+    local config_file="$1"
+    if [ -s "$config_file" ]; then
+        return 0
+    fi
+    ensure_config_file "$config_file"
+    cat > "$config_file" <<'EOF'
+# OVERRIDE_ADMIN_CREDS=no
+ADMIN_USERNAME=
+ADMIN_PASSWORD=
+# FLASK_SECRET=changeme
+# TOTP_ENCRYPTION_KEYS=changeme
+LISTEN_ADDR=127.0.0.1
+# LISTEN_PORT=7000
+# MAX_CONTENT_LENGTH=50MB
+FORWARDED_ALLOW_IPS=127.0.0.1,::1
+PROXY_ALLOW_IPS=127.0.0.1,::1
+# ENABLE_HEALTHCHECK=no
+LOG_LEVEL=info
+LOG_TYPES=file
+# LOG_FILE_PATH=/var/log/bunkerweb/ui.log
+EOF
+    chown root:nginx "$config_file" 2>/dev/null || true
+    chmod 660 "$config_file" 2>/dev/null || true
+}
+
+write_default_scheduler_env_template() {
+    local config_file="$1"
+    if [ -s "$config_file" ]; then
+        return 0
+    fi
+    ensure_config_file "$config_file"
+    cat > "$config_file" <<'EOF'
+LOG_LEVEL=info
+LOG_TYPES=file
+# LOG_FILE_PATH=/var/log/bunkerweb/scheduler.log
+# in seconds
+HEALTHCHECK_INTERVAL=30
+
+# in seconds (the minimum is calculated by the formula and whichever is greater: RELOAD_MIN_TIMEOUT or count(SERVERS) * 2))
+RELOAD_MIN_TIMEOUT=5
+EOF
+    chown root:nginx "$config_file" 2>/dev/null || true
+    chmod 660 "$config_file" 2>/dev/null || true
+}
+
+write_default_api_env_template() {
+    local config_file="$1"
+    if [ -s "$config_file" ]; then
+        return 0
+    fi
+    ensure_config_file "$config_file"
+    cat > "$config_file" <<'EOF'
+# ==============================
+# BunkerWeb API Configuration
+# This file lists all supported API environment variables with their defaults.
+# Uncomment and adjust as needed. Lines starting with # are ignored.
+# ==============================
+
+# --- Network & Proxy ---
+# Listen address/port for the API
+LISTEN_ADDR=127.0.0.1
+LISTEN_PORT=8888
+# Trusted proxy IPs for X-Forwarded-* headers (comma-separated).
+# Default is restricted to loopback for security.
+FORWARDED_ALLOW_IPS=127.0.0.1,::1
+# Trusted proxy IPs for PROXY protocol (comma-separated).
+# Defaults to FORWARDED_ALLOW_IPS when unset.
+PROXY_ALLOW_IPS=127.0.0.1,::1
+
+# --- Logging & Runtime ---
+# LOG_LEVEL affects most components; CUSTOM_LOG_LEVEL overrides when provided.
+# LOG_LEVEL=info
+LOG_TYPES=file
+# LOG_FILE_PATH=/var/log/bunkerweb/api.log
+# Number of workers/threads (auto if unset).
+# MAX_WORKERS=<auto>
+# MAX_THREADS=<auto>
+
+# --- Authentication & Authorization ---
+# Optional admin Bearer token (grants full access when provided).
+# API_TOKEN=changeme
+# Bootstrap admin user (created/validated on startup if provided).
+# API_USERNAME=
+# API_PASSWORD=
+# Force re-applying bootstrap admin credentials on startup (use with care).
+# OVERRIDE_API_CREDS=no
+# Fine-grained ACLs can be enabled/disabled here.
+# API_ACL_BOOTSTRAP_FILE=
+
+# --- IP allowlist ---
+# Enable and shape inbound IP allowlist for the API.
+# API_WHITELIST_ENABLED=yes
+WHITELIST_IPS=127.0.0.1
+
+# --- FastAPI surface ---
+# Customize or disable documentation endpoints. Use 'disabled' to turn off.
+# API_TITLE=BunkerWeb API
+# API_DOCS_URL=/docs
+# API_REDOC_URL=/redoc
+# API_OPENAPI_URL=/openapi.json
+# Mount the API under a subpath (useful behind reverse proxies).
+# API_ROOT_PATH=
+
+# --- TLS/SSL ---
+# Enable TLS for the API listener (requires cert and key).
+# API_SSL_ENABLED=no
+# Path to PEM-encoded certificate and private key.
+# API_SSL_CERTFILE=/etc/ssl/certs/bunkerweb-api.crt
+# API_SSL_KEYFILE=/etc/ssl/private/bunkerweb-api.key
+# Optional chain/CA bundle and cipher suite.
+# API_SSL_CA_CERTS=
+# API_SSL_CIPHERS_CUSTOM=
+# API_SSL_CIPHERS_LEVEL=modern   # choices: modern|intermediate
+
+# --- Biscuit keys & policy ---
+# Bind token to client IP (except private ranges).
+# CHECK_PRIVATE_IP=yes
+# Biscuit token lifetime in seconds (0 disables expiry).
+# API_BISCUIT_TTL_SECONDS=3600
+# Provide Biscuit keys via env (hex) instead of files.
+# BISCUIT_PUBLIC_KEY=
+# BISCUIT_PRIVATE_KEY=
+
+# --- Rate limiting ---
+# Enable/disable and shape rate limiting.
+# API_RATE_LIMIT_ENABLED=yes
+# API_RATE_LIMIT_HEADERS_ENABLED=yes
+# Global default limit (times per seconds).
+# API_RATE_LIMIT_TIMES=100
+# API_RATE_LIMIT_SECONDS=60
+# Authentication endpoint limit.
+# API_RATE_LIMIT_AUTH_TIMES=10
+# API_RATE_LIMIT_AUTH_SECONDS=60
+# Advanced limits and rules (CSV/JSON/YAML).
+# API_RATE_LIMIT_DEFAULTS="200/minute"
+# API_RATE_LIMIT_APPLICATION_LIMITS=
+# API_RATE_LIMIT_RULES=
+# Strategy: fixed-window | moving-window | sliding-window-counter
+# API_RATE_LIMIT_STRATEGY=fixed-window
+# Key selector: ip | user | path | method | header:<Name>
+# API_RATE_LIMIT_KEY=ip
+# Exempt IPs (space or comma-separated CIDRs).
+# API_RATE_LIMIT_EXEMPT_IPS=
+# Storage options in JSON (merged with Redis settings if USE_REDIS=yes).
+# API_RATE_LIMIT_STORAGE_OPTIONS=
+
+# --- Shared settings (defined in /etc/bunkerweb/variables.env) ---
+# The following are read from variables.env and apply to every BunkerWeb
+# service (scheduler, UI, API). Set them there rather than duplicating here:
+#   DATABASE_URI, USE_REDIS, REDIS_HOST, REDIS_PORT, REDIS_DATABASE,
+#   REDIS_USERNAME, REDIS_PASSWORD, REDIS_SSL, REDIS_SSL_VERIFY,
+#   REDIS_TIMEOUT, REDIS_KEEPALIVE_POOL, REDIS_SENTINEL_HOSTS,
+#   REDIS_SENTINEL_MASTER, REDIS_SENTINEL_USERNAME, REDIS_SENTINEL_PASSWORD
+EOF
     chown root:nginx "$config_file" 2>/dev/null || true
     chmod 660 "$config_file" 2>/dev/null || true
 }
@@ -421,6 +689,93 @@ ask_user_preferences() {
             done
         fi
 
+        # Manager-mode UI hardening: opt-in admin user creation.
+        if [ "$INSTALL_TYPE" = "manager" ] && [ "${SERVICE_UI:-yes}" != "no" ] && [ -z "$UI_ADMIN_CREATE" ]; then
+            echo
+            echo -e "${BLUE}========================================${NC}"
+            echo -e "${BLUE}👤 Manager Web UI Admin User${NC}"
+            echo -e "${BLUE}========================================${NC}"
+            echo "The setup wizard is disabled in manager mode. The installer can create the first"
+            echo "admin user for you now and provision the credentials directly into /etc/bunkerweb/ui.env."
+            echo
+            echo "Note: the Web UI listens on 127.0.0.1:7000 by default — keep it behind a reverse"
+            echo "proxy or an SSH tunnel for remote access. (Local-only listening is the BunkerWeb"
+            echo "package default; the installer does not change it.)"
+            echo
+            while true; do
+                echo -e "${YELLOW}Create admin user now? (Y/n):${NC} "
+                read -p "" -r
+                case $REPLY in
+                    [Nn]*)
+                        UI_ADMIN_CREATE="no"
+                        break
+                        ;;
+                    [Yy]*|"")
+                        UI_ADMIN_CREATE="yes"
+                        break
+                        ;;
+                    *)
+                        echo "Please answer yes (y) or no (n)."
+                        ;;
+                esac
+            done
+
+            if [ "$UI_ADMIN_CREATE" = "yes" ]; then
+                if [ -z "$UI_ADMIN_USERNAME_INPUT" ]; then
+                    echo -e "${YELLOW}Username [admin]:${NC} "
+                    read -p "" -r UI_ADMIN_USERNAME_INPUT
+                    UI_ADMIN_USERNAME_INPUT=${UI_ADMIN_USERNAME_INPUT:-admin}
+                fi
+
+                if [ -z "$UI_ADMIN_PASSWORD_INPUT" ]; then
+                    echo "Password rules: 8+ chars, at least one lowercase, one uppercase, one digit, one special."
+                    while true; do
+                        echo -e "${YELLOW}Password (leave empty to auto-generate):${NC} "
+                        read -p "" -r UI_ADMIN_PASSWORD_INPUT
+                        if [ -z "$UI_ADMIN_PASSWORD_INPUT" ]; then
+                            break
+                        fi
+                        if validate_ui_admin_password "$UI_ADMIN_PASSWORD_INPUT"; then
+                            break
+                        fi
+                        print_warning "Password does not meet the rules. Try again or leave empty to auto-generate."
+                        UI_ADMIN_PASSWORD_INPUT=""
+                    done
+                fi
+            fi
+        fi
+
+        # Manager-mode UI hardening: opt-in self-signed HTTPS.
+        if [ "$INSTALL_TYPE" = "manager" ] && [ "${SERVICE_UI:-yes}" != "no" ] && [ -z "$UI_SELFSIGNED_INPUT" ]; then
+            echo
+            echo -e "${BLUE}========================================${NC}"
+            echo -e "${BLUE}🔒 Manager Web UI HTTPS (self-signed)${NC}"
+            echo -e "${BLUE}========================================${NC}"
+            echo "Enable HTTPS on the local Web UI listener with a self-signed certificate?"
+            echo "This is gunicorn-native TLS — no BunkerWeb in front needed."
+            echo "  Cert: /var/lib/bunkerweb/ui-tls/cert.pem"
+            echo "  Key:  /var/lib/bunkerweb/ui-tls/key.pem"
+            echo "  CN:   \$(hostname -f)   Validity: 365 days   RSA 2048"
+            echo
+            while true; do
+                echo -e "${YELLOW}Enable self-signed HTTPS? (Y/n):${NC} "
+                read -p "" -r
+                case $REPLY in
+                    [Nn]*)
+                        UI_SELFSIGNED_INPUT="no"
+                        break
+                        ;;
+                    [Yy]*|"")
+                        UI_SELFSIGNED_INPUT="yes"
+                        break
+                        ;;
+                    *)
+                        echo "Please answer yes (y) or no (n)."
+                        ;;
+                esac
+            done
+        fi
+
         # Ask about CrowdSec installation
         if [[ "$INSTALL_TYPE" != "worker" && "$INSTALL_TYPE" != "scheduler" && "$INSTALL_TYPE" != "ui" && "$INSTALL_TYPE" != "manager" && "$INSTALL_TYPE" != "api" ]]; then
             if [ -z "$CROWDSEC_INSTALL" ] || [ "$CROWDSEC_INSTALL" = "no" ]; then
@@ -511,10 +866,13 @@ ask_user_preferences() {
             if [ -z "$REDIS_INSTALL" ] || [ "$REDIS_INSTALL" = "no" ]; then
                 echo
                 echo -e "${BLUE}========================================${NC}"
-                echo -e "${BLUE}🧠 Redis Cache (Sessions/Cluster Storage)${NC}"
+                echo -e "${BLUE}🧠 Redis (HA persistence + worker sync)${NC}"
                 echo -e "${BLUE}========================================${NC}"
-                echo "Redis/Valkey enables shared caching and fast data retrieval across BunkerWeb nodes."
-                echo "It stores session data, metrics, and security data centrally so clustering and load balancing work seamlessly."
+                echo "Redis/Valkey is what makes BunkerWeb production-ready:"
+                echo "  • Persists metrics and bans across restarts (otherwise kept in memory only)"
+                echo "  • Synchronises bans/reports between workers in HA setups"
+                echo "  • Stores UI session data so logged-in users survive a UI restart"
+                echo "Without Redis this state is lost on restart and not shared between BunkerWeb instances."
                 echo "For HA, you can also use Redis Sentinel for automatic failover."
                 echo "You can install Redis locally or point to an existing Redis server."
                 echo
@@ -559,6 +917,130 @@ ask_user_preferences() {
                             ;;
                     esac
                 done
+
+                # When installing locally, let the user pick redis vs valkey.
+                # Both are wire-compatible — BunkerWeb's USE_REDIS path works with either.
+                if [ "$REDIS_INSTALL" = "yes" ] && [ -z "$REDIS_FLAVOR" ]; then
+                    echo
+                    echo -e "${BLUE}----------------------------------------${NC}"
+                    echo -e "${BLUE}🔀 Server: Redis or Valkey${NC}"
+                    echo -e "${BLUE}----------------------------------------${NC}"
+                    echo "Both speak the same wire protocol — BunkerWeb works with either."
+                    echo "  1. redis  (widest distro coverage; default)"
+                    echo "  2. valkey (open-source fork under the Linux Foundation)"
+                    echo "If the chosen package is missing from your distro repos, the installer"
+                    echo "will warn and fall back to the other one."
+                    echo
+                    while true; do
+                        echo -e "${YELLOW}Choice [1]:${NC} "
+                        read -p "" -r
+                        case $REPLY in
+                            ""|"1"|"redis"|"Redis")
+                                REDIS_FLAVOR="redis"
+                                break
+                                ;;
+                            "2"|"valkey"|"Valkey")
+                                REDIS_FLAVOR="valkey"
+                                break
+                                ;;
+                            *)
+                                echo "Please answer 1 or 2."
+                                ;;
+                        esac
+                    done
+                fi
+
+                # Manager mode: ask which interface Redis should bind to so workers can reach it.
+                # Full stack: Redis stays on 127.0.0.1 — no prompt.
+                if [ "$REDIS_INSTALL" = "yes" ] && [ "$INSTALL_TYPE" = "manager" ] && [ -z "$REDIS_BIND_INPUT" ]; then
+                    echo
+                    echo -e "${BLUE}----------------------------------------${NC}"
+                    echo -e "${BLUE}🌐 Redis Bind Address${NC}"
+                    echo -e "${BLUE}----------------------------------------${NC}"
+                    echo "Workers connect to this Redis from the network."
+                    echo "  • 0.0.0.0       — accept connections on every interface (default for HA, requires firewall + password)"
+                    echo "  • 10.x.y.z      — pin Redis to a specific private interface (recommended for VPC/LAN setups)"
+                    echo "  • 127.0.0.1     — local only; workers will NOT be able to reach it"
+                    echo
+                    echo -e "${YELLOW}Bind address [0.0.0.0]:${NC} "
+                    read -p "" -r REDIS_BIND_INPUT
+                    REDIS_BIND_INPUT=${REDIS_BIND_INPUT:-0.0.0.0}
+
+                    if [ "$REDIS_BIND_INPUT" = "0.0.0.0" ]; then
+                        print_warning "Redis will accept connections from every network interface."
+                        print_warning "Strongly recommended: firewall port 6379 to your worker subnet, and set a Redis password."
+                    fi
+
+                    if [ "$REDIS_BIND_INPUT" != "127.0.0.1" ] && [ -z "$REDIS_PASSWORD_INPUT" ] && [ "$REDIS_AUTOPASS" = "yes" ]; then
+                        while true; do
+                            echo -e "${YELLOW}Generate a random password and set REQUIREPASS automatically? (Y/n):${NC} "
+                            read -p "" -r
+                            case $REPLY in
+                                [Nn]*)
+                                    REDIS_AUTOPASS="no"
+                                    break
+                                    ;;
+                                [Yy]*|"")
+                                    REDIS_AUTOPASS="yes"
+                                    break
+                                    ;;
+                                *)
+                                    echo "Please answer yes (y) or no (n)."
+                                    ;;
+                            esac
+                        done
+                    fi
+                fi
+
+                # Memory cap prompt — runs for BOTH manager and full-stack local installs.
+                # Best practice: bound memory + use allkeys-lru so the WAF cache evicts cleanly
+                # under pressure instead of OOM-ing or rejecting writes (default = noeviction).
+                if [ "$REDIS_INSTALL" = "yes" ] && [ -z "$REDIS_MAXMEMORY_MB" ]; then
+                    echo
+                    echo -e "${BLUE}----------------------------------------${NC}"
+                    echo -e "${BLUE}🧠 ${_flavor_label:-Redis/Valkey} Memory Cap${NC}"
+                    echo -e "${BLUE}----------------------------------------${NC}"
+                    echo "Without a cap, ${_flavor_label:-Redis/Valkey} grows until the kernel OOM-kills it."
+                    echo "The installer will apply maxmemory-policy=allkeys-lru (best practice for"
+                    echo "the WAF cache pattern — evicts the least-recently-used keys when full)."
+                    echo
+                    echo "Pick a maximum memory size:"
+                    echo "  1. 128 MB    — small/dev VMs (≤ 2 GB RAM)"
+                    echo "  2. 256 MB    — recommended for most installs (4–8 GB RAM)"
+                    echo "  3. 512 MB    — high-traffic / dedicated nodes (8 GB+ RAM)"
+                    echo "  4. Custom    — enter your own value in MB"
+                    echo "  5. Unlimited — keep distro defaults (NOT recommended)"
+                    echo
+                    while true; do
+                        echo -e "${YELLOW}Choice [2]:${NC} "
+                        read -p "" -r
+                        case ${REPLY:-2} in
+                            1) REDIS_MAXMEMORY_MB="128"; break ;;
+                            2) REDIS_MAXMEMORY_MB="256"; break ;;
+                            3) REDIS_MAXMEMORY_MB="512"; break ;;
+                            4)
+                                while true; do
+                                    echo -e "${YELLOW}Memory cap in MB (e.g. 1024):${NC} "
+                                    read -p "" -r _custom_mb
+                                    if [[ "$_custom_mb" =~ ^[1-9][0-9]*$ ]]; then
+                                        REDIS_MAXMEMORY_MB="$_custom_mb"
+                                        break
+                                    fi
+                                    echo "Please enter a positive integer (MB)."
+                                done
+                                break
+                                ;;
+                            5)
+                                REDIS_MAXMEMORY_MB="0"
+                                print_warning "Skipping memory cap — ${_flavor_label:-Redis/Valkey} may consume all system RAM under load."
+                                break
+                                ;;
+                            *)
+                                echo "Please answer 1, 2, 3, 4 or 5."
+                                ;;
+                        esac
+                    done
+                fi
 
                 if [ "$REDIS_INSTALL" = "no" ]; then
                     echo
@@ -623,6 +1105,96 @@ ask_user_preferences() {
             REDIS_INSTALL="no"
         fi
 
+        # Database auto-install (full + manager only)
+        if [[ "$INSTALL_TYPE" = "full" || "$INSTALL_TYPE" = "manager" || -z "$INSTALL_TYPE" ]]; then
+            if [ -z "$DB_INSTALL" ]; then
+                echo
+                echo -e "${BLUE}========================================${NC}"
+                echo -e "${BLUE}🗄️  Database${NC}"
+                echo -e "${BLUE}========================================${NC}"
+                echo "BunkerWeb stores configuration, services and jobs in a database."
+                echo "Without a choice it falls back to SQLite — safe for single-node trials,"
+                echo "not recommended for HA or any setup with more than one BunkerWeb instance."
+                echo
+                echo "  1. MariaDB (recommended)"
+                echo "  2. PostgreSQL"
+                echo "  3. Skip (keep SQLite, or configure DATABASE_URI manually later)"
+                echo
+                while true; do
+                    echo -e "${YELLOW}Database choice [1]:${NC} "
+                    read -p "" -r
+                    case $REPLY in
+                        ""|"1"|"mariadb"|"MariaDB")
+                            DB_INSTALL="mariadb"
+                            break
+                            ;;
+                        "2"|"postgresql"|"postgres"|"PostgreSQL")
+                            DB_INSTALL="postgresql"
+                            break
+                            ;;
+                        "3"|"skip"|"none"|"sqlite"|"SQLite")
+                            DB_INSTALL="none"
+                            break
+                            ;;
+                        *)
+                            echo "Please answer 1, 2 or 3."
+                            ;;
+                    esac
+                done
+            fi
+
+            if [ "$DB_INSTALL" = "mariadb" ] || [ "$DB_INSTALL" = "postgresql" ]; then
+                if [ "$DB_INSTALL" = "mariadb" ] && [ "$DISTRO_ID" = "freebsd" ]; then
+                    print_warning "MariaDB auto-install is not supported on FreeBSD by this installer."
+                    print_warning "Falling back to SQLite — install MariaDB manually and set DATABASE_URI yourself."
+                    DB_INSTALL="none"
+                elif [ "$DB_INSTALL" = "postgresql" ] && [ "$DISTRO_ID" = "freebsd" ]; then
+                    print_warning "PostgreSQL auto-install is not supported on FreeBSD by this installer."
+                    print_warning "Falling back to SQLite — install PostgreSQL manually and set DATABASE_URI yourself."
+                    DB_INSTALL="none"
+                fi
+            fi
+
+            if [ "$DB_INSTALL" = "mariadb" ] || [ "$DB_INSTALL" = "postgresql" ]; then
+                echo
+                echo -e "${BLUE}----------------------------------------${NC}"
+                echo -e "${BLUE}✍️  Database Configuration${NC}"
+                echo -e "${BLUE}----------------------------------------${NC}"
+                echo -e "${YELLOW}Database name [${DB_NAME_INPUT}]:${NC} "
+                read -p "" -r _db_answer
+                DB_NAME_INPUT=${_db_answer:-$DB_NAME_INPUT}
+                echo -e "${YELLOW}Database user [${DB_USER_INPUT}]:${NC} "
+                read -p "" -r _db_answer
+                DB_USER_INPUT=${_db_answer:-$DB_USER_INPUT}
+                if [ -z "$DB_PASSWORD_INPUT" ]; then
+                    while true; do
+                        echo -e "${YELLOW}Generate a random database password? (Y/n):${NC} "
+                        read -p "" -r
+                        case $REPLY in
+                            [Yy]*|"")
+                                DB_PASSWORD_INPUT=""
+                                break
+                                ;;
+                            [Nn]*)
+                                echo -e "${YELLOW}Database password (avoid quotes/backslashes):${NC} "
+                                read -p "" -r DB_PASSWORD_INPUT
+                                if [ -z "$DB_PASSWORD_INPUT" ]; then
+                                    echo "Empty password is not allowed."
+                                    continue
+                                fi
+                                break
+                                ;;
+                            *)
+                                echo "Please answer yes (y) or no (n)."
+                                ;;
+                        esac
+                    done
+                fi
+            fi
+        else
+            DB_INSTALL="none"
+        fi
+
         echo
         print_status "Configuration summary:"
         echo "  🛡 BunkerWeb version: $BUNKERWEB_VERSION"
@@ -679,11 +1251,49 @@ ask_user_preferences() {
             echo "  🧠 Redis: Not available for this mode"
         else
             if [ "$REDIS_INSTALL" = "yes" ]; then
-                echo "  🧠 Redis: Will be installed and configured locally"
+                _flavor_label="${REDIS_FLAVOR:-redis}"
+                if [ "$INSTALL_TYPE" = "manager" ]; then
+                    echo "  🧠 ${_flavor_label}: Will be installed locally, bind ${REDIS_BIND_INPUT:-0.0.0.0}"
+                else
+                    echo "  🧠 ${_flavor_label}: Will be installed and configured locally"
+                fi
+                if [ "$REDIS_AUTOPASS" = "yes" ] && [ "${REDIS_BIND_INPUT:-127.0.0.1}" != "127.0.0.1" ]; then
+                    echo "  🔑 Redis password: Auto-generated (REQUIREPASS)"
+                fi
+                if [ -n "$REDIS_MAXMEMORY_MB" ]; then
+                    if [ "$REDIS_MAXMEMORY_MB" = "0" ]; then
+                        echo "  🧠 Memory cap: Unlimited (distro default — not recommended)"
+                    else
+                        echo "  🧠 Memory cap: ${REDIS_MAXMEMORY_MB} MB (policy: ${REDIS_MAXMEMORY_POLICY:-allkeys-lru})"
+                    fi
+                fi
             elif [ -n "$REDIS_HOST_INPUT" ]; then
                 echo "  🧠 Redis: Will use existing server at $REDIS_HOST_INPUT:${REDIS_PORT_INPUT:-6379}"
             else
-                echo "  🧠 Redis: Not installed"
+                echo "  🧠 Redis: Not installed (metrics + bans will be in-memory only, lost on restart)"
+            fi
+        fi
+        if [[ "$INSTALL_TYPE" != "full" && "$INSTALL_TYPE" != "manager" && -n "$INSTALL_TYPE" ]]; then
+            : # DB auto-install only relevant for full/manager
+        else
+            case "$DB_INSTALL" in
+                "mariadb")
+                    echo "  🗄️  Database: MariaDB (auto-installed locally, db=${DB_NAME_INPUT}, user=${DB_USER_INPUT})"
+                    ;;
+                "postgresql")
+                    echo "  🗄️  Database: PostgreSQL (auto-installed locally, db=${DB_NAME_INPUT}, user=${DB_USER_INPUT})"
+                    ;;
+                ""|"none")
+                    echo "  🗄️  Database: SQLite (default — set DATABASE_URI later for production)"
+                    ;;
+            esac
+        fi
+        if [ "$INSTALL_TYPE" = "manager" ] && [ "${SERVICE_UI:-yes}" != "no" ]; then
+            if [ "$UI_ADMIN_CREATE" = "yes" ]; then
+                echo "  👤 UI admin user: Will be created (${UI_ADMIN_USERNAME_INPUT:-admin})"
+            fi
+            if [ "$UI_SELFSIGNED_INPUT" = "yes" ]; then
+                echo "  🔒 UI HTTPS: Self-signed certificate will be generated"
             fi
         fi
         echo
@@ -834,8 +1444,11 @@ extract_first_ipv4() {
         fi
     done
 
+    # Always return 0 — callers detect "no IP found" by checking emptiness of
+    # captured stdout. Returning non-zero here would, under `set -e`, kill the
+    # entire script the moment anyone writes `var=$(extract_first_ipv4 "")`.
     echo ""
-    return 1
+    return 0
 }
 
 # Prompt interactively for a local IPv4 address
@@ -1033,34 +1646,36 @@ configure_manager_api_defaults() {
 
     print_status "Applying manager API defaults (listen on 0.0.0.0, whitelist local IP $whitelist_ip)"
 
-    ensure_config_file "$config_file"
+    # Lay down the canonical variables.env template with commented defaults
+    # (only effective on a fresh install — preserves any pre-existing edits),
+    # then apply the manager-specific overrides on top via set_config_kv.
+    write_default_variables_env_template "$config_file"
 
-    {
-        echo "SERVER_NAME="
-        if [ -n "$BUNKERWEB_INSTANCES_INPUT" ]; then
-            echo "BUNKERWEB_INSTANCES=$BUNKERWEB_INSTANCES_INPUT"
-        else
-            echo "BUNKERWEB_INSTANCES="
-        fi
-        # Use custom DNS resolvers if provided, otherwise use defaults
-        if [ -n "$DNS_RESOLVERS_INPUT" ]; then
-            echo "DNS_RESOLVERS=$DNS_RESOLVERS_INPUT"
-        else
-            echo "DNS_RESOLVERS=9.9.9.9 149.112.112.112 8.8.8.8 8.8.4.4" # Quad9, Google
-        fi
-        echo "HTTP_PORT=80"
-        echo "HTTPS_PORT=443"
-        echo "API_LISTEN_IP=0.0.0.0"
-        echo "API_WHITELIST_IP=$whitelist_ip"
-        if [ -n "$API_LISTEN_HTTPS_INPUT" ] && [ "$API_LISTEN_HTTPS_INPUT" = "yes" ]; then
-            echo "API_LISTEN_HTTPS=yes"
-        fi
-        echo "API_TOKEN="
-        # Enable multisite mode when UI service is used
-        if [ "${SERVICE_UI:-yes}" != "no" ]; then
-            echo "MULTISITE=yes"
-        fi
-    } > "$config_file"
+    set_config_kv "$config_file" "SERVER_NAME" ""
+    if [ -n "$BUNKERWEB_INSTANCES_INPUT" ]; then
+        set_config_kv "$config_file" "BUNKERWEB_INSTANCES" "$BUNKERWEB_INSTANCES_INPUT"
+    else
+        set_config_kv "$config_file" "BUNKERWEB_INSTANCES" ""
+    fi
+    if [ -n "$DNS_RESOLVERS_INPUT" ]; then
+        set_config_kv "$config_file" "DNS_RESOLVERS" "$DNS_RESOLVERS_INPUT"
+    fi
+    set_config_kv "$config_file" "HTTP_PORT" "80"
+    set_config_kv "$config_file" "HTTPS_PORT" "443"
+    set_config_kv "$config_file" "API_LISTEN_IP" "0.0.0.0"
+    set_config_kv "$config_file" "API_WHITELIST_IP" "$whitelist_ip"
+    if [ -n "$API_LISTEN_HTTPS_INPUT" ] && [ "$API_LISTEN_HTTPS_INPUT" = "yes" ]; then
+        set_config_kv "$config_file" "API_LISTEN_HTTPS" "yes"
+    fi
+    set_config_kv "$config_file" "API_TOKEN" ""
+    # Enable multisite mode when the UI service is used.
+    # Note: when manager-mode UI hardening is opted in, SERVICE_UI is forced to "no"
+    # earlier in main() so the package postinstall doesn't start the UI before our
+    # admin/TLS provisioning. start_manager_ui re-enables it afterwards. In that
+    # deferred-UI flow the UI *is* going to run, so we must still write MULTISITE=yes.
+    if [ "${SERVICE_UI:-yes}" != "no" ] || [ "${MANAGER_UI_DEFERRED:-no}" = "yes" ]; then
+        set_config_kv "$config_file" "MULTISITE" "yes"
+    fi
     apply_optional_integrations "$config_file"
 
     print_status "Enabling and starting BunkerWeb Scheduler with configured settings..."
@@ -1143,6 +1758,9 @@ configure_full_config() {
     local config_file="/etc/bunkerweb/variables.env"
     local needs_reload=false
 
+    # Drop in the canonical variables.env template (with documented commented defaults)
+    # only when the file doesn't yet exist; idempotent, preserves user edits on re-run.
+    write_default_variables_env_template "$config_file"
     ensure_config_file "$config_file"
 
     # Configure custom DNS resolvers if provided
@@ -1187,9 +1805,16 @@ configure_full_config() {
             sysrc bunkerweb_scheduler_enable=YES >/dev/null 2>&1
             service bunkerweb start || true
             service bunkerweb_scheduler start || true
+            if [ "$FULL_API_DEFERRED" = "yes" ]; then
+                sysrc bunkerweb_api_enable=YES >/dev/null 2>&1
+                service bunkerweb_api start || true
+            fi
         else
             run_cmd systemctl enable --now bunkerweb
             run_cmd systemctl enable --now bunkerweb-scheduler
+            if [ "$FULL_API_DEFERRED" = "yes" ]; then
+                run_cmd systemctl enable --now bunkerweb-api
+            fi
         fi
     fi
 }
@@ -1577,63 +2202,588 @@ source: appsec
     echo -e "${BLUE}========================================${NC}"
 }
 
-# Function to install Redis
-install_redis() {
-    echo
-    echo -e "${BLUE}========================================${NC}"
-    echo -e "${BLUE}Redis Installation${NC}"
-    echo -e "${BLUE}========================================${NC}"
-    echo
-    print_step "Installing Redis"
+# Try installing the chosen Redis-compatible package; fall back to redis if valkey is missing.
+# Sets REDIS_FLAVOR (resolved to "redis" or "valkey") on the way out.
+_install_redis_package() {
+    local desired="${REDIS_FLAVOR:-redis}"
+    local installed=""
 
     case "$DISTRO_ID" in
         "debian"|"ubuntu")
             run_cmd apt update
-            run_cmd apt install -y redis-server
+            if [ "$desired" = "valkey" ]; then
+                if apt-cache show valkey-server >/dev/null 2>&1; then
+                    if apt install -y valkey-server; then
+                        installed="valkey-server"
+                    fi
+                fi
+                if [ -z "$installed" ]; then
+                    print_warning "Valkey not available in your apt repos — falling back to redis-server."
+                    REDIS_FLAVOR="redis"
+                    run_cmd apt install -y redis-server
+                fi
+            else
+                run_cmd apt install -y redis-server
+            fi
             ;;
         "fedora"|"rhel"|"rocky"|"almalinux")
-            run_cmd dnf install -y redis
+            if [ "$desired" = "valkey" ]; then
+                if dnf info valkey >/dev/null 2>&1; then
+                    if dnf install -y valkey; then
+                        installed="valkey"
+                    fi
+                fi
+                if [ -z "$installed" ]; then
+                    print_warning "Valkey not available in your dnf repos — falling back to redis."
+                    REDIS_FLAVOR="redis"
+                    run_cmd dnf install -y redis
+                fi
+            else
+                run_cmd dnf install -y redis
+            fi
             ;;
         "freebsd")
-            run_cmd pkg install -y redis
+            if [ "$desired" = "valkey" ]; then
+                if pkg search -q '^valkey$' >/dev/null 2>&1 || pkg search -q '^valkey-' >/dev/null 2>&1; then
+                    if pkg install -y valkey; then
+                        installed="valkey"
+                    fi
+                fi
+                if [ -z "$installed" ]; then
+                    print_warning "Valkey not available via pkg — falling back to redis."
+                    REDIS_FLAVOR="redis"
+                    run_cmd pkg install -y redis
+                fi
+            else
+                run_cmd pkg install -y redis
+            fi
             ;;
         *)
             print_error "Unsupported distribution: $DISTRO_ID"
-            return
+            return 1
             ;;
     esac
 
+    return 0
+}
+
+# Locate the redis/valkey config file for the installed flavor.
+# Echoes the path to stdout (empty if not found).
+_locate_redis_conf() {
+    local flavor="${REDIS_FLAVOR:-redis}"
+    local candidates=()
+
+    if [ "$flavor" = "valkey" ]; then
+        candidates=(
+            /etc/valkey/valkey.conf
+            /usr/local/etc/valkey/valkey.conf
+            /etc/redis/redis.conf
+            /etc/redis.conf
+            /usr/local/etc/redis.conf
+        )
+    else
+        candidates=(
+            /etc/redis/redis.conf
+            /etc/redis.conf
+            /usr/local/etc/redis.conf
+            /etc/valkey/valkey.conf
+        )
+    fi
+
+    for path in "${candidates[@]}"; do
+        if [ -f "$path" ]; then
+            echo "$path"
+            return 0
+        fi
+    done
+
+    echo ""
+    return 1
+}
+
+# Locate the systemd service unit name for the installed flavor.
+_locate_redis_service() {
+    local flavor="${REDIS_FLAVOR:-redis}"
+    local order=()
+
+    if [ "$flavor" = "valkey" ]; then
+        order=(valkey-server valkey redis-server redis)
+    else
+        order=(redis-server redis valkey-server valkey)
+    fi
+
+    for candidate in "${order[@]}"; do
+        if systemctl list-unit-files --type=service --all 2>/dev/null | grep -q "^${candidate}\.service"; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    echo ""
+    return 1
+}
+
+# Idempotent rewrite of a single directive in a Redis-compatible config file.
+# Replaces every line beginning with the directive (case-insensitive) and appends
+# the new value if no match was found.
+_redis_conf_set() {
+    local conf="$1"
+    local directive="$2"
+    local value="$3"
+    local tmp
+
+    if [ ! -f "$conf" ]; then
+        return 1
+    fi
+
+    tmp=$(mktemp) || return 1
+    # Strip every existing matching line (commented or not).
+    awk -v d="$directive" 'BEGIN{IGNORECASE=1} {
+        line=$0
+        sub(/^[ \t]+/, "", line)
+        sub(/^#+[ \t]*/, "", line)
+        n=length(d)
+        if (tolower(substr(line,1,n)) == tolower(d) && substr(line,n+1,1) ~ /[ \t]/) next
+        print
+    }' "$conf" > "$tmp"
+    printf '%s %s\n' "$directive" "$value" >> "$tmp"
+    cat "$tmp" > "$conf"
+    rm -f "$tmp"
+}
+
+# Function to install Redis (or Valkey)
+install_redis() {
+    local label conf service
+    label="${REDIS_FLAVOR:-redis}"
+
+    echo
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}${label^} Installation${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo
+    print_step "Installing ${label}"
+
+    if ! _install_redis_package; then
+        return
+    fi
+
+    label="${REDIS_FLAVOR:-redis}"
+
     # Cross-platform service detection and enablement
     if [ "$DISTRO_ID" = "freebsd" ]; then
-        # FreeBSD uses rc.d
-        sysrc redis_enable=YES >/dev/null 2>&1
-        service redis start || true
-        print_status "Redis service enabled and started"
-    else
-        REDIS_SERVICE=""
-        for candidate in redis-server redis; do
-            if systemctl list-unit-files --type=service --all 2>/dev/null | grep -q "^${candidate}\.service"; then
-                REDIS_SERVICE="$candidate"
-                break
-            fi
-        done
-
-        if [ -n "$REDIS_SERVICE" ]; then
-            run_cmd systemctl enable --now "$REDIS_SERVICE"
-            print_status "Redis service enabled and started ($REDIS_SERVICE)"
+        if [ "$REDIS_FLAVOR" = "valkey" ]; then
+            sysrc valkey_enable=YES >/dev/null 2>&1
+            service valkey start || true
         else
-            print_warning "Redis service name not found; start it manually if needed."
+            sysrc redis_enable=YES >/dev/null 2>&1
+            service redis start || true
+        fi
+        print_status "${label^} service enabled and started"
+    else
+        service=$(_locate_redis_service || true)
+        if [ -n "$service" ]; then
+            run_cmd systemctl enable --now "$service"
+            print_status "${label^} service enabled and started ($service)"
+        else
+            print_warning "${label^} service name not found; start it manually if needed."
         fi
     fi
 
+    # Configure bind / requirepass / protected-mode based on the user's choices.
+    conf=$(_locate_redis_conf || true)
+    if [ -z "$conf" ]; then
+        print_warning "Could not locate the ${label} config file; bind/password configuration skipped."
+    else
+        local bind_addr password_set=""
+        bind_addr="${REDIS_BIND_INPUT:-127.0.0.1}"
+
+        # Generate a password if the user opted in and binding ≠ loopback.
+        if [ "$bind_addr" != "127.0.0.1" ] && [ -z "$REDIS_REQUIREPASS_LOCAL" ] && [ "$REDIS_AUTOPASS" = "yes" ]; then
+            REDIS_REQUIREPASS_LOCAL=$(generate_secret 32)
+        fi
+
+        _redis_conf_set "$conf" "bind" "$bind_addr"
+
+        if [ -n "$REDIS_REQUIREPASS_LOCAL" ]; then
+            _redis_conf_set "$conf" "requirepass" "$REDIS_REQUIREPASS_LOCAL"
+            _redis_conf_set "$conf" "protected-mode" "no"
+            password_set="yes"
+        fi
+
+        # Apply memory cap + eviction policy. "0" means "keep distro defaults" — skip the writes.
+        local memory_summary=""
+        if [ -n "$REDIS_MAXMEMORY_MB" ] && [ "$REDIS_MAXMEMORY_MB" != "0" ]; then
+            _redis_conf_set "$conf" "maxmemory" "${REDIS_MAXMEMORY_MB}mb"
+            _redis_conf_set "$conf" "maxmemory-policy" "${REDIS_MAXMEMORY_POLICY:-allkeys-lru}"
+            memory_summary=" maxmemory=${REDIS_MAXMEMORY_MB}mb policy=${REDIS_MAXMEMORY_POLICY:-allkeys-lru}"
+        fi
+
+        chmod 640 "$conf" 2>/dev/null || true
+        print_status "Configured ${label} bind=${bind_addr}${password_set:+ (REQUIREPASS set)}${memory_summary} in ${conf}"
+
+        # Restart the service to pick up new bind/password.
+        if [ "$DISTRO_ID" = "freebsd" ]; then
+            if [ "$REDIS_FLAVOR" = "valkey" ]; then
+                service valkey restart || true
+            else
+                service redis restart || true
+            fi
+        else
+            if [ -n "$service" ]; then
+                run_cmd systemctl restart "$service"
+            fi
+        fi
+    fi
+
+    # Decide which host the BunkerWeb side will connect to.
+    # If we bound to 0.0.0.0, BunkerWeb still talks to it via the manager's primary IPv4.
     if [ -z "$REDIS_HOST_INPUT" ]; then
-        REDIS_HOST_INPUT="127.0.0.1"
+        if [ "${REDIS_BIND_INPUT:-127.0.0.1}" = "0.0.0.0" ]; then
+            local primary_ip
+            primary_ip=$(get_primary_ipv4)
+            REDIS_HOST_INPUT="${primary_ip:-127.0.0.1}"
+        else
+            REDIS_HOST_INPUT="${REDIS_BIND_INPUT:-127.0.0.1}"
+        fi
+    fi
+
+    # Push the auto-generated password into the BunkerWeb client config so it can authenticate.
+    if [ -n "$REDIS_REQUIREPASS_LOCAL" ] && [ -z "$REDIS_PASSWORD_INPUT" ]; then
+        REDIS_PASSWORD_INPUT="$REDIS_REQUIREPASS_LOCAL"
     fi
 
     echo
-    echo -e "${GREEN}Redis installed and configured successfully${NC}"
+    echo -e "${GREEN}${label^} installed and configured successfully${NC}"
+    echo "Used by BunkerWeb to persist metrics and bans across restarts and to sync state between workers."
     echo "See BunkerWeb docs for more: https://docs.bunkerweb.io/latest/features/#redis"
     echo -e "${BLUE}========================================${NC}"
+}
+
+# Write DATABASE_URI once into the shared variables.env. The scheduler, UI
+# and API service start scripts all source variables.env before their own env
+# file, so a single write here is sufficient and avoids 3-way duplication.
+apply_db_config() {
+    local dsn="$1"
+    local target
+
+    if [ -z "$dsn" ]; then
+        return
+    fi
+
+    target=/etc/bunkerweb/variables.env
+    write_default_variables_env_template "$target"
+    set_config_kv "$target" "DATABASE_URI" "$dsn"
+}
+
+# Install MariaDB locally and bootstrap a BunkerWeb-ready database + user.
+install_mariadb() {
+    echo
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}MariaDB Installation${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo
+    print_step "Installing MariaDB"
+
+    case "$DISTRO_ID" in
+        "debian"|"ubuntu")
+            run_cmd apt update
+            run_cmd apt install -y mariadb-server
+            ;;
+        "fedora"|"rhel"|"rocky"|"almalinux")
+            run_cmd dnf install -y mariadb-server
+            ;;
+        *)
+            print_warning "MariaDB auto-install not supported on $DISTRO_ID. Skipping."
+            return 1
+            ;;
+    esac
+
+    # Drop in BunkerWeb-recommended tuning (max_allowed_packet=64M, bind to loopback).
+    local conf_dir conf_file
+    case "$DISTRO_ID" in
+        "debian"|"ubuntu")
+            conf_dir=/etc/mysql/mariadb.conf.d
+            ;;
+        *)
+            conf_dir=/etc/my.cnf.d
+            ;;
+    esac
+    if [ ! -d "$conf_dir" ]; then
+        mkdir -p "$conf_dir"
+    fi
+    conf_file="$conf_dir/99-bunkerweb.cnf"
+    cat > "$conf_file" <<'EOF'
+[mysqld]
+bind-address = 127.0.0.1
+max_allowed_packet = 64M
+EOF
+    chmod 644 "$conf_file"
+
+    run_cmd systemctl enable --now mariadb
+
+    # Wait briefly for the socket to come up.
+    local _wait
+    for _wait in 1 2 3 4 5; do
+        if mariadb -u root -e 'SELECT 1' >/dev/null 2>&1 \
+           || mysql -u root -e 'SELECT 1' >/dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+    done
+
+    if [ -z "$DB_PASSWORD_INPUT" ]; then
+        DB_PASSWORD_INPUT=$(generate_secret 32)
+        DB_PASSWORD_GENERATED="$DB_PASSWORD_INPUT"
+    fi
+
+    local mariadb_bin
+    if command -v mariadb >/dev/null 2>&1; then
+        mariadb_bin=mariadb
+    else
+        mariadb_bin=mysql
+    fi
+
+    print_status "Bootstrapping MariaDB database and user"
+    "$mariadb_bin" -u root <<SQL
+CREATE DATABASE IF NOT EXISTS \`${DB_NAME_INPUT}\` CHARACTER SET utf8mb4;
+CREATE USER IF NOT EXISTS '${DB_USER_INPUT}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD_INPUT}';
+ALTER USER '${DB_USER_INPUT}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD_INPUT}';
+GRANT ALL PRIVILEGES ON \`${DB_NAME_INPUT}\`.* TO '${DB_USER_INPUT}'@'127.0.0.1';
+FLUSH PRIVILEGES;
+SQL
+
+    DB_DSN_GENERATED="mariadb+pymysql://${DB_USER_INPUT}:${DB_PASSWORD_INPUT}@127.0.0.1:3306/${DB_NAME_INPUT}"
+
+    # Pick up our config snippet.
+    run_cmd systemctl restart mariadb
+
+    echo
+    echo -e "${GREEN}MariaDB installed and bootstrapped${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    return 0
+}
+
+# Install PostgreSQL locally and bootstrap a BunkerWeb-ready database + user.
+install_postgresql() {
+    echo
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}PostgreSQL Installation${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo
+    print_step "Installing PostgreSQL"
+
+    case "$DISTRO_ID" in
+        "debian"|"ubuntu")
+            run_cmd apt update
+            run_cmd apt install -y postgresql
+            ;;
+        "fedora")
+            run_cmd dnf install -y postgresql-server postgresql-contrib
+            if [ ! -d /var/lib/pgsql/data/base ]; then
+                run_cmd postgresql-setup --initdb
+            fi
+            ;;
+        "rhel"|"rocky"|"almalinux")
+            run_cmd dnf install -y postgresql-server postgresql-contrib
+            if [ ! -d /var/lib/pgsql/data/base ]; then
+                run_cmd postgresql-setup --initdb
+            fi
+            ;;
+        *)
+            print_warning "PostgreSQL auto-install not supported on $DISTRO_ID. Skipping."
+            return 1
+            ;;
+    esac
+
+    run_cmd systemctl enable --now postgresql
+
+    # Wait for the socket.
+    local _wait
+    for _wait in 1 2 3 4 5; do
+        if sudo -u postgres psql -tAc 'SELECT 1' >/dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+    done
+
+    if [ -z "$DB_PASSWORD_INPUT" ]; then
+        DB_PASSWORD_INPUT=$(generate_secret 32)
+        DB_PASSWORD_GENERATED="$DB_PASSWORD_INPUT"
+    fi
+
+    print_status "Bootstrapping PostgreSQL database and role"
+
+    # Create or update role idempotently.
+    local user_exists db_exists
+    user_exists=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER_INPUT}'" 2>/dev/null || true)
+    if [ "$user_exists" != "1" ]; then
+        sudo -u postgres psql -c "CREATE ROLE \"${DB_USER_INPUT}\" LOGIN PASSWORD '${DB_PASSWORD_INPUT}';"
+    else
+        sudo -u postgres psql -c "ALTER ROLE \"${DB_USER_INPUT}\" WITH LOGIN PASSWORD '${DB_PASSWORD_INPUT}';"
+    fi
+
+    db_exists=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME_INPUT}'" 2>/dev/null || true)
+    if [ "$db_exists" != "1" ]; then
+        sudo -u postgres psql -c "CREATE DATABASE \"${DB_NAME_INPUT}\" OWNER \"${DB_USER_INPUT}\";"
+    fi
+
+    # Make sure pg_hba.conf allows password auth from loopback for our user.
+    local pg_hba
+    pg_hba=$(sudo -u postgres psql -tAc 'SHOW hba_file' 2>/dev/null || true)
+    if [ -n "$pg_hba" ] && [ -f "$pg_hba" ]; then
+        if ! grep -qE "^[^#]*${DB_USER_INPUT}[[:space:]]+127\\.0\\.0\\.1/32" "$pg_hba"; then
+            printf '\nhost    %s    %s    127.0.0.1/32    md5\n' "$DB_NAME_INPUT" "$DB_USER_INPUT" >> "$pg_hba"
+            run_cmd systemctl reload postgresql
+        fi
+    fi
+
+    DB_DSN_GENERATED="postgresql+psycopg://${DB_USER_INPUT}:${DB_PASSWORD_INPUT}@127.0.0.1:5432/${DB_NAME_INPUT}"
+
+    echo
+    echo -e "${GREEN}PostgreSQL installed and bootstrapped${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    return 0
+}
+
+# High-level entry point: runs the right installer based on DB_INSTALL and writes the DSN.
+install_database() {
+    case "$DB_INSTALL" in
+        "mariadb")
+            if install_mariadb; then
+                apply_db_config "$DB_DSN_GENERATED"
+            else
+                print_warning "Falling back to SQLite — set DATABASE_URI manually if you need a different DB."
+                DB_INSTALL="none"
+            fi
+            ;;
+        "postgresql")
+            if install_postgresql; then
+                apply_db_config "$DB_DSN_GENERATED"
+            else
+                print_warning "Falling back to SQLite — set DATABASE_URI manually if you need a different DB."
+                DB_INSTALL="none"
+            fi
+            ;;
+        *)
+            : # nothing to do
+            ;;
+    esac
+}
+
+# Provision the first manager UI admin user via /etc/bunkerweb/ui.env.
+# The bunkerweb-ui gunicorn pre-fork hook reads ADMIN_USERNAME/ADMIN_PASSWORD on first start
+# and creates the admin via DB.create_ui_user. OVERRIDE_ADMIN_CREDS=yes makes it idempotent.
+create_ui_admin_user() {
+    local ui_env=/etc/bunkerweb/ui.env
+
+    if [ -z "$UI_ADMIN_USERNAME_INPUT" ]; then
+        UI_ADMIN_USERNAME_INPUT="admin"
+    fi
+
+    if [ -z "$UI_ADMIN_PASSWORD_INPUT" ]; then
+        UI_ADMIN_PASSWORD_INPUT=$(generate_ui_admin_password)
+        UI_ADMIN_PASSWORD_GENERATED="$UI_ADMIN_PASSWORD_INPUT"
+    fi
+
+    if ! validate_ui_admin_password "$UI_ADMIN_PASSWORD_INPUT"; then
+        print_warning "Provided admin password does not meet the BunkerWeb rules; auto-generating one instead."
+        UI_ADMIN_PASSWORD_INPUT=$(generate_ui_admin_password)
+        UI_ADMIN_PASSWORD_GENERATED="$UI_ADMIN_PASSWORD_INPUT"
+    fi
+
+    write_default_ui_env_template "$ui_env"
+    set_config_kv "$ui_env" "OVERRIDE_ADMIN_CREDS" "yes"
+    set_config_kv "$ui_env" "ADMIN_USERNAME" "$UI_ADMIN_USERNAME_INPUT"
+    set_config_kv "$ui_env" "ADMIN_PASSWORD" "$UI_ADMIN_PASSWORD_INPUT"
+
+    print_status "Manager Web UI admin user provisioned (${UI_ADMIN_USERNAME_INPUT})"
+}
+
+# Generate a self-signed cert and enable gunicorn-native TLS for the manager UI listener.
+setup_ui_selfsigned_tls() {
+    local tls_dir=/var/lib/bunkerweb/ui-tls
+    local cert="$tls_dir/cert.pem"
+    local key="$tls_dir/key.pem"
+    local ui_env=/etc/bunkerweb/ui.env
+    local fqdn short cn primary_ip san
+
+    # Resolve and sanitize the names that go into the cert.
+    # CN must be DN-safe; DNS SANs must match RFC 1035 (alnum/dot/dash only).
+    fqdn=$(hostname -f 2>/dev/null || true)
+    short=$(hostname 2>/dev/null || true)
+    fqdn=${fqdn//[^A-Za-z0-9.-]/}
+    short=${short//[^A-Za-z0-9.-]/}
+    cn="${fqdn:-${short:-bunkerweb-manager}}"
+
+    primary_ip=$(get_primary_ipv4)
+
+    # Build a SAN list covering every plausible address the operator might use.
+    san="DNS:${cn},DNS:localhost,IP:127.0.0.1,IP:::1"
+    if [ -n "$short" ] && [ "$short" != "$cn" ]; then
+        san="${san},DNS:${short}"
+    fi
+    if [ -n "$primary_ip" ] && [ "$primary_ip" != "127.0.0.1" ]; then
+        san="${san},IP:${primary_ip}"
+    fi
+
+    if ! command -v openssl >/dev/null 2>&1; then
+        case "$DISTRO_ID" in
+            "debian"|"ubuntu") run_cmd apt install -y openssl ;;
+            "fedora"|"rhel"|"rocky"|"almalinux") run_cmd dnf install -y openssl ;;
+            "freebsd") run_cmd pkg install -y openssl ;;
+        esac
+    fi
+
+    mkdir -p "$tls_dir"
+    chmod 750 "$tls_dir"
+    chown root:nginx "$tls_dir" 2>/dev/null || true
+
+    print_step "Generating self-signed TLS certificate (CN=${cn}, SAN=${san})"
+    run_cmd openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+        -subj "/CN=${cn}" \
+        -addext "subjectAltName=${san}" \
+        -addext "basicConstraints=critical,CA:FALSE" \
+        -addext "keyUsage=critical,digitalSignature,keyEncipherment" \
+        -addext "extendedKeyUsage=serverAuth" \
+        -keyout "$key" \
+        -out "$cert"
+
+    chown root:nginx "$cert" "$key" 2>/dev/null || true
+    chmod 640 "$cert" "$key" 2>/dev/null || true
+
+    write_default_ui_env_template "$ui_env"
+    set_config_kv "$ui_env" "UI_SSL_ENABLED" "yes"
+    set_config_kv "$ui_env" "UI_SSL_CERTFILE" "$cert"
+    set_config_kv "$ui_env" "UI_SSL_KEYFILE" "$key"
+
+    print_status "Self-signed HTTPS enabled for the manager Web UI"
+}
+
+# Apply manager UI hardening and start the UI service explicitly.
+# Called for manager mode after configure_manager_api_defaults.
+start_manager_ui() {
+    if [ "${SERVICE_UI:-yes}" = "no" ]; then
+        return
+    fi
+
+    if [ "$UI_ADMIN_CREATE" = "yes" ]; then
+        create_ui_admin_user
+    fi
+
+    if [ "$UI_SELFSIGNED_INPUT" = "yes" ]; then
+        setup_ui_selfsigned_tls
+    fi
+
+    if [ "$DISTRO_ID" = "freebsd" ]; then
+        sysrc bunkerweb_ui_enable=YES >/dev/null 2>&1
+        service bunkerweb_ui restart || service bunkerweb_ui start || true
+    else
+        run_cmd systemctl enable --now bunkerweb-ui
+        # If hardening writes happened after a previous start, restart so they take effect.
+        if [ "$UI_ADMIN_CREATE" = "yes" ] || [ "$UI_SELFSIGNED_INPUT" = "yes" ]; then
+            run_cmd systemctl restart bunkerweb-ui
+        fi
+    fi
 }
 
 # Function to show final information
@@ -1700,14 +2850,26 @@ show_final_info() {
     fi
 
     # Display next steps based on installation type and wizard status
+    local _ui_scheme="http" _ui_host="your-server-ip"
+    if [ "$UI_SELFSIGNED_INPUT" = "yes" ]; then
+        _ui_scheme="https"
+        _ui_host="127.0.0.1"
+    fi
     case "$INSTALL_TYPE" in
         "manager")
             echo "Next steps:"
-            echo "  1. Configure database connection in /etc/bunkerweb/scheduler.env"
-            echo "     Set DATABASE_URI (e.g., sqlite:///var/lib/bunkerweb/db.sqlite3)"
+            if [ -n "$DB_DSN_GENERATED" ]; then
+                echo "  1. Database is already configured (see credentials block below)."
+            else
+                echo "  1. Configure database connection in /etc/bunkerweb/scheduler.env"
+                echo "     Set DATABASE_URI (e.g., sqlite:///var/lib/bunkerweb/db.sqlite3)"
+            fi
             echo "  2. Verify BUNKERWEB_INSTANCES is set to: $BUNKERWEB_INSTANCES_INPUT"
             if [ "${SERVICE_UI:-yes}" != "no" ]; then
-                echo "  3. Access the Web UI at: http://your-server-ip:7000"
+                echo "  3. Access the Web UI at: ${_ui_scheme}://${_ui_host}:7000"
+                if [ "$UI_SELFSIGNED_INPUT" = "yes" ] || [ "${REDIS_INSTALL}" = "yes" ]; then
+                    echo "     (UI is local-only by default; tunnel SSH or place a reverse proxy in front for remote access.)"
+                fi
                 echo "  4. Use the UI to manage your BunkerWeb workers"
             else
                 if [ "$DISTRO_ID" = "freebsd" ]; then
@@ -1715,7 +2877,7 @@ show_final_info() {
                 else
                     echo "  3. Start the Web UI: systemctl start bunkerweb-ui"
                 fi
-                echo "  4. Access the UI at: http://your-server-ip:7000"
+                echo "  4. Access the UI at: ${_ui_scheme}://${_ui_host}:7000"
             fi
             echo
             echo "📝 Manager mode information:"
@@ -1723,6 +2885,9 @@ show_final_info() {
             echo "  • Workers must have their API accessible on port 5000 (default)"
             echo "  • Ensure workers whitelist this manager's IP: $MANAGER_IP_INPUT"
             echo "  • Use multisite mode: MULTISITE=yes for multiple services"
+            if [ "$REDIS_INSTALL" = "yes" ]; then
+                echo "  • ${REDIS_FLAVOR:-redis} is configured: metrics and bans persist across restarts and are shared between workers"
+            fi
             ;;
         "worker")
             echo "Next steps:"
@@ -1815,7 +2980,14 @@ show_final_info() {
                 fi
                 echo
                 echo "📝 Manual configuration:"
-                echo "  • Default database: SQLite (upgrade to MariaDB/PostgreSQL for production)"
+                if [ -n "$DB_DSN_GENERATED" ]; then
+                    case "$DB_INSTALL" in
+                        "mariadb")    echo "  • Database: MariaDB (auto-installed; credentials below)" ;;
+                        "postgresql") echo "  • Database: PostgreSQL (auto-installed; credentials below)" ;;
+                    esac
+                else
+                    echo "  • Default database: SQLite (upgrade to MariaDB/PostgreSQL for production)"
+                fi
                 echo "  • Use 'bwcli' for command-line management"
                 if [ "$DISTRO_ID" = "freebsd" ]; then
                     echo "  • Check logs: tail -f /var/log/bunkerweb/*.log"
@@ -1823,17 +2995,71 @@ show_final_info() {
                     echo "  • Check logs: journalctl -u bunkerweb -f"
                 fi
                 echo "  • Access Web UI (if enabled): http://your-server-ip:7000"
+                if [ "$REDIS_INSTALL" = "yes" ]; then
+                    echo "  • ${REDIS_FLAVOR:-redis} is configured: metrics and bans persist across restarts and are shared between workers"
+                fi
             fi
             ;;
     esac
     echo
 
-    # Show RHEL database information if applicable
-    if [[ "$DISTRO_ID" =~ ^(rhel|centos|fedora|rocky|almalinux|redhat)$ ]]; then
+    # Show RHEL database information if applicable (only when no DB was auto-installed)
+    if [[ "$DISTRO_ID" =~ ^(rhel|centos|fedora|rocky|almalinux|redhat)$ ]] && [ -z "$DB_DSN_GENERATED" ]; then
         echo "💾 Database clients for external databases:"
         echo "  • MariaDB: dnf install mariadb"
         echo "  • MySQL: dnf install mysql"
         echo "  • PostgreSQL: dnf install postgresql"
+        echo
+    fi
+
+    # Auto-installed credentials (printed once — save now if needed)
+    if [ -n "$DB_DSN_GENERATED" ]; then
+        local _db_engine _db_port
+        case "$DB_INSTALL" in
+            "mariadb")    _db_engine="MariaDB";    _db_port="3306" ;;
+            "postgresql") _db_engine="PostgreSQL"; _db_port="5432" ;;
+            *)            _db_engine="?";          _db_port="?" ;;
+        esac
+        echo "💾 Database (auto-installed):"
+        echo "  Engine:   ${_db_engine}"
+        echo "  Host:     127.0.0.1:${_db_port}"
+        echo "  Database: ${DB_NAME_INPUT}"
+        echo "  User:     ${DB_USER_INPUT}"
+        if [ -n "$DB_PASSWORD_GENERATED" ]; then
+            echo "  Password: ${DB_PASSWORD_GENERATED}"
+            echo "  ⚠️  This password is stored in /etc/bunkerweb/variables.env. Save it now if you need it elsewhere."
+        else
+            echo "  Password: (the value you provided)"
+        fi
+        echo "  DSN:      written to /etc/bunkerweb/variables.env"
+        echo
+    fi
+
+    if [ -n "$UI_ADMIN_PASSWORD_GENERATED" ] || [ "$UI_ADMIN_CREATE" = "yes" ]; then
+        echo "👤 Manager Web UI admin user:"
+        echo "  Username: ${UI_ADMIN_USERNAME_INPUT:-admin}"
+        if [ -n "$UI_ADMIN_PASSWORD_GENERATED" ]; then
+            echo "  Password: ${UI_ADMIN_PASSWORD_GENERATED}"
+            echo "  ⚠️  Save this password now."
+        else
+            echo "  Password: (the value you provided)"
+        fi
+        echo
+    fi
+
+    if [ "$UI_SELFSIGNED_INPUT" = "yes" ]; then
+        echo "🔒 Web UI HTTPS (self-signed):"
+        echo "  URL:  https://127.0.0.1:7000/   (accept the self-signed warning in your browser)"
+        echo "  Cert: /var/lib/bunkerweb/ui-tls/cert.pem"
+        echo "  Key:  /var/lib/bunkerweb/ui-tls/key.pem"
+        echo
+    fi
+
+    if [ -n "$REDIS_REQUIREPASS_LOCAL" ]; then
+        echo "🔑 ${REDIS_FLAVOR:-redis} REQUIREPASS (auto-generated):"
+        echo "  Password: ${REDIS_REQUIREPASS_LOCAL}"
+        echo "  Stored in the ${REDIS_FLAVOR:-redis} config and in /etc/bunkerweb/variables.env."
+        echo "  ⚠️  Save it now and restrict port 6379 to your worker subnet."
         echo
     fi
 
@@ -1874,8 +3100,22 @@ usage() {
     echo "  --crowdsec               Install and configure CrowdSec"
     echo "  --no-crowdsec            Skip CrowdSec installation"
     echo "  --crowdsec-appsec        Install CrowdSec with AppSec component"
-    echo "  --redis                  Install and configure Redis"
+    echo "  --redis                  Install and configure Redis (or Valkey, see --redis-flavor)"
     echo "  --no-redis               Skip Redis installation"
+    echo "  --redis-flavor FLAVOR    Local install flavor: redis (default) or valkey"
+    echo
+    echo "Database (full + manager):"
+    echo "  --database ENGINE        Auto-install local DB: mariadb, postgresql, or none"
+    echo "  --db-name NAME           Database name (default: ${DB_NAME_INPUT})"
+    echo "  --db-user USER           Database user (default: ${DB_USER_INPUT})"
+    echo "  --db-password PASS       Database password (default: auto-generated)"
+    echo
+    echo "Manager UI hardening:"
+    echo "  --ui-admin-user NAME     Create the first manager Web UI admin user with this name"
+    echo "  --ui-admin-password PASS Password for --ui-admin-user (default: auto-generated)"
+    echo "  --no-ui-admin            Skip the admin-user creation prompt"
+    echo "  --ui-https-selfsigned    Generate a self-signed cert and enable UI HTTPS"
+    echo "  --no-ui-https-selfsigned Disable manager UI self-signed HTTPS"
     echo
     echo "Advanced options:"
     echo "  --instances \"IP1 IP2\"    Space-separated list of BunkerWeb instances"
@@ -1890,6 +3130,10 @@ usage() {
     echo "  --redis-database DB      Redis database number"
     echo "  --redis-username USER    Redis username"
     echo "  --redis-password PASS    Redis password"
+    echo "  --redis-bind IP          Redis bind address for local install (manager mode; default 0.0.0.0)"
+    echo "  --redis-no-password      Skip the auto-generated REQUIREPASS when binding ≠ loopback"
+    echo "  --redis-maxmemory MB     Memory cap in MB (e.g. 128, 256, 512, 1024); 0/unlimited keeps distro default"
+    echo "  --redis-maxmemory-policy POLICY  Eviction policy (default allkeys-lru). Other valid: volatile-lru, volatile-ttl, noeviction, …"
     echo "  --redis-ssl              Enable SSL/TLS for Redis connection"
     echo "  --redis-no-ssl           Disable SSL/TLS for Redis connection"
     echo "  --redis-ssl-verify       Verify Redis SSL certificate"
@@ -2040,6 +3284,94 @@ while [[ $# -gt 0 ]]; do
             REDIS_INSTALL="no"
             shift
             ;;
+        --redis-flavor)
+            case "$2" in
+                redis|valkey) REDIS_FLAVOR="$2" ;;
+                *) print_error "--redis-flavor must be 'redis' or 'valkey'"; exit 1 ;;
+            esac
+            shift 2
+            ;;
+        --redis-bind)
+            REDIS_BIND_INPUT="$2"
+            shift 2
+            ;;
+        --redis-no-password)
+            REDIS_AUTOPASS="no"
+            shift
+            ;;
+        --redis-maxmemory)
+            # Accept "0", "unlimited", "256", or "256mb" (case-insensitive); store as MB integer.
+            case "$2" in
+                0|none|unlimited|skip)
+                    REDIS_MAXMEMORY_MB="0"
+                    ;;
+                *)
+                    _mm_value="${2%[mM][bB]}"
+                    if [[ "$_mm_value" =~ ^[1-9][0-9]*$ ]]; then
+                        REDIS_MAXMEMORY_MB="$_mm_value"
+                    else
+                        print_error "--redis-maxmemory must be a positive integer in MB (e.g. 256, 1024) or 0/unlimited"
+                        exit 1
+                    fi
+                    ;;
+            esac
+            shift 2
+            ;;
+        --redis-maxmemory-policy)
+            case "$2" in
+                noeviction|allkeys-lru|allkeys-lfu|allkeys-random|volatile-lru|volatile-lfu|volatile-random|volatile-ttl)
+                    REDIS_MAXMEMORY_POLICY="$2"
+                    ;;
+                *)
+                    print_error "--redis-maxmemory-policy must be a valid Redis/Valkey eviction policy"
+                    exit 1
+                    ;;
+            esac
+            shift 2
+            ;;
+        --database)
+            case "$2" in
+                mariadb|MariaDB)       DB_INSTALL="mariadb" ;;
+                postgresql|postgres|PostgreSQL) DB_INSTALL="postgresql" ;;
+                none|skip|sqlite|SQLite) DB_INSTALL="none" ;;
+                *) print_error "--database must be one of: mariadb, postgresql, none"; exit 1 ;;
+            esac
+            shift 2
+            ;;
+        --db-name)
+            DB_NAME_INPUT="$2"
+            shift 2
+            ;;
+        --db-user)
+            DB_USER_INPUT="$2"
+            shift 2
+            ;;
+        --db-password)
+            DB_PASSWORD_INPUT="$2"
+            shift 2
+            ;;
+        --ui-admin-user)
+            UI_ADMIN_USERNAME_INPUT="$2"
+            UI_ADMIN_CREATE="yes"
+            shift 2
+            ;;
+        --ui-admin-password)
+            UI_ADMIN_PASSWORD_INPUT="$2"
+            UI_ADMIN_CREATE="yes"
+            shift 2
+            ;;
+        --no-ui-admin)
+            UI_ADMIN_CREATE="no"
+            shift
+            ;;
+        --ui-https-selfsigned)
+            UI_SELFSIGNED_INPUT="yes"
+            shift
+            ;;
+        --no-ui-https-selfsigned)
+            UI_SELFSIGNED_INPUT="no"
+            shift
+            ;;
         --instances)
             BUNKERWEB_INSTANCES_INPUT="$2"
             shift 2
@@ -2088,7 +3420,11 @@ while [[ $# -gt 0 ]]; do
             echo "Setup wizard: ${ENABLE_WIZARD:-auto}"
             echo "CrowdSec: ${CROWDSEC_INSTALL:-no}"
             if [ "$REDIS_INSTALL" = "yes" ]; then
-                echo "Redis: yes (local install)"
+                echo "Redis: yes (local install, flavor=${REDIS_FLAVOR:-redis})"
+                if [ -n "$REDIS_BIND_INPUT" ]; then
+                    echo "Redis bind: $REDIS_BIND_INPUT"
+                fi
+                echo "Redis auto-password: ${REDIS_AUTOPASS}"
             elif [ -n "$REDIS_HOST_INPUT" ]; then
                 echo "Redis: yes (existing server)"
             else
@@ -2096,6 +3432,22 @@ while [[ $# -gt 0 ]]; do
             fi
             if [ -n "$REDIS_HOST_INPUT" ]; then
                 echo "Redis host: $REDIS_HOST_INPUT"
+            fi
+            echo "Database: ${DB_INSTALL:-prompt}"
+            if [ "$DB_INSTALL" = "mariadb" ] || [ "$DB_INSTALL" = "postgresql" ]; then
+                echo "  db name: $DB_NAME_INPUT"
+                echo "  db user: $DB_USER_INPUT"
+                if [ -n "$DB_PASSWORD_INPUT" ]; then
+                    echo "  db password: <provided>"
+                else
+                    echo "  db password: <auto-generate>"
+                fi
+            fi
+            if [ -n "$UI_ADMIN_CREATE" ]; then
+                echo "UI admin user: ${UI_ADMIN_CREATE}${UI_ADMIN_USERNAME_INPUT:+ ($UI_ADMIN_USERNAME_INPUT)}"
+            fi
+            if [ -n "$UI_SELFSIGNED_INPUT" ]; then
+                echo "UI HTTPS self-signed: $UI_SELFSIGNED_INPUT"
             fi
             if [ -n "$BUNKERWEB_INSTANCES_INPUT" ]; then
                 echo "BunkerWeb instances: $BUNKERWEB_INSTANCES_INPUT"
@@ -2151,9 +3503,28 @@ if [[ "$CROWDSEC_INSTALL" = "yes" || "$CROWDSEC_APPSEC_INSTALL" = "yes" ]] && [[
     exit 1
 fi
 
-if { [ "$REDIS_INSTALL" = "yes" ] || [ -n "$REDIS_HOST_INPUT" ] || [ -n "$REDIS_PORT_INPUT" ] || [ -n "$REDIS_DATABASE_INPUT" ] || [ -n "$REDIS_USERNAME_INPUT" ] || [ -n "$REDIS_PASSWORD_INPUT" ] || [ -n "$REDIS_SSL_INPUT" ] || [ -n "$REDIS_SSL_VERIFY_INPUT" ]; } \
+if { [ "$REDIS_INSTALL" = "yes" ] || [ -n "$REDIS_HOST_INPUT" ] || [ -n "$REDIS_PORT_INPUT" ] || [ -n "$REDIS_DATABASE_INPUT" ] || [ -n "$REDIS_USERNAME_INPUT" ] || [ -n "$REDIS_PASSWORD_INPUT" ] || [ -n "$REDIS_SSL_INPUT" ] || [ -n "$REDIS_SSL_VERIFY_INPUT" ] || [ -n "$REDIS_FLAVOR" ] || [ -n "$REDIS_BIND_INPUT" ]; } \
     && [[ "$INSTALL_TYPE" != "full" && "$INSTALL_TYPE" != "manager" && -n "$INSTALL_TYPE" ]]; then
     print_error "Redis options (--redis, --redis-*) can only be used with --full or --manager installation types"
+    exit 1
+fi
+
+# --redis-bind is meaningful only for manager mode (full stack stays on loopback).
+if [ -n "$REDIS_BIND_INPUT" ] && [ "$INSTALL_TYPE" != "manager" ] && [ -n "$INSTALL_TYPE" ]; then
+    print_error "The --redis-bind option only applies to --manager installations"
+    exit 1
+fi
+
+# --database family — only allowed for full/manager
+if [ -n "$DB_INSTALL" ] && [[ "$INSTALL_TYPE" != "full" && "$INSTALL_TYPE" != "manager" && -n "$INSTALL_TYPE" ]]; then
+    print_error "The --database / --db-* options only apply to --full or --manager installations"
+    exit 1
+fi
+
+# Manager UI hardening — only meaningful for manager mode
+if { [ -n "$UI_ADMIN_CREATE" ] || [ -n "$UI_ADMIN_USERNAME_INPUT" ] || [ -n "$UI_ADMIN_PASSWORD_INPUT" ] || [ -n "$UI_SELFSIGNED_INPUT" ]; } \
+    && [ "$INSTALL_TYPE" != "manager" ] && [ -n "$INSTALL_TYPE" ]; then
+    print_error "Manager UI hardening options (--ui-admin-*, --ui-https-selfsigned) only apply to --manager installations"
     exit 1
 fi
 
@@ -2478,17 +3849,38 @@ main() {
         install_redis
     fi
 
+    # Auto-install a local DB before BunkerWeb so DATABASE_URI lands in variables.env
+    # in time for the postinstall (and our own configure_*_config) to start the scheduler.
+    if [ "$DB_INSTALL" = "mariadb" ] || [ "$DB_INSTALL" = "postgresql" ]; then
+        install_database
+    fi
+
     # Install BunkerWeb based on distribution
     # Set environment variables to prevent postinstall from starting services we'll configure
     if [ "$INSTALL_TYPE" = "manager" ]; then
         export SERVICE_SCHEDULER=no
+        # Defer UI start when we still need to provision admin creds or self-signed TLS.
+        if [ "$UI_ADMIN_CREATE" = "yes" ] || [ "$UI_SELFSIGNED_INPUT" = "yes" ]; then
+            export SERVICE_UI=no
+            MANAGER_UI_DEFERRED="yes"
+        fi
     elif [ "$INSTALL_TYPE" = "worker" ]; then
         export SERVICE_BUNKERWEB=no
     elif [ "$INSTALL_TYPE" = "full" ] || [ -z "$INSTALL_TYPE" ]; then
+        # Propagate the user's API-service choice to the deb/rpm postinstall.
+        # (Without this export the postinstall reads ${SERVICE_API:-no} and
+        # leaves bunkerweb-api disabled even when the user passed --api.)
+        export SERVICE_API="${SERVICE_API:-no}"
         # Only prevent start if we have configuration to apply
-        if [ -n "$DNS_RESOLVERS_INPUT" ] || [ -n "$API_LISTEN_HTTPS_INPUT" ] || [ -n "$REDIS_HOST_INPUT" ] || [ "$REDIS_INSTALL" = "yes" ] || [ -n "$REDIS_PORT_INPUT" ] || [ -n "$REDIS_DATABASE_INPUT" ] || [ -n "$REDIS_USERNAME_INPUT" ] || [ -n "$REDIS_PASSWORD_INPUT" ] || [ -n "$REDIS_SSL_INPUT" ] || [ -n "$REDIS_SSL_VERIFY_INPUT" ] || [ "$CROWDSEC_INSTALL" = "yes" ] || [ "$CROWDSEC_APPSEC_INSTALL" = "yes" ]; then
+        if [ -n "$DNS_RESOLVERS_INPUT" ] || [ -n "$API_LISTEN_HTTPS_INPUT" ] || [ -n "$REDIS_HOST_INPUT" ] || [ "$REDIS_INSTALL" = "yes" ] || [ -n "$REDIS_PORT_INPUT" ] || [ -n "$REDIS_DATABASE_INPUT" ] || [ -n "$REDIS_USERNAME_INPUT" ] || [ -n "$REDIS_PASSWORD_INPUT" ] || [ -n "$REDIS_SSL_INPUT" ] || [ -n "$REDIS_SSL_VERIFY_INPUT" ] || [ "$CROWDSEC_INSTALL" = "yes" ] || [ "$CROWDSEC_APPSEC_INSTALL" = "yes" ] || [ "$DB_INSTALL" = "mariadb" ] || [ "$DB_INSTALL" = "postgresql" ]; then
             export SERVICE_BUNKERWEB=no
             export SERVICE_SCHEDULER=no
+            # Defer the API start too so it boots after we've finished writing
+            # /etc/bunkerweb/variables.env (DSN, Redis settings, etc.).
+            if [ "$SERVICE_API" = "yes" ]; then
+                FULL_API_DEFERRED="yes"
+                export SERVICE_API=no
+            fi
         fi
     fi
 
@@ -2509,6 +3901,14 @@ main() {
 
     if [ "$INSTALL_TYPE" = "manager" ]; then
         configure_manager_api_defaults
+        # Apply UI hardening + start the UI explicitly when deferred.
+        if [ "$MANAGER_UI_DEFERRED" = "yes" ]; then
+            unset SERVICE_UI
+            start_manager_ui
+        elif [ "$UI_ADMIN_CREATE" = "yes" ] || [ "$UI_SELFSIGNED_INPUT" = "yes" ]; then
+            # Hardening was opted in via flags after the UI already started — apply + restart.
+            start_manager_ui
+        fi
     elif [ "$INSTALL_TYPE" = "worker" ]; then
         configure_worker_api_whitelist
     elif [ "$INSTALL_TYPE" = "full" ] || [ -z "$INSTALL_TYPE" ]; then
