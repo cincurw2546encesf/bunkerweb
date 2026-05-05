@@ -53,16 +53,34 @@ def _flatten_table_increments(raw_increments):
     return []
 
 
-def _build_counter_data(entries, field_name, label):
-    counter = Counter()
-    for entry in entries:
-        value = entry.get(field_name)
-        if value in (None, ""):
-            value = "N/A"
-        counter[str(value)] += 1
+def _coalesce_topn(metrics, dim):
+    """Coalesce a Top-N list returned by the Lua metrics:api() across instances.
 
+    metrics:api() emits one `topn_<dim>` list per instance. When we aggregate
+    across multiple BunkerWeb instances the lists get extended (see
+    aggregate_metrics in instance.py), which leaves us with duplicate `value`
+    entries that need re-summing. Returns a list of (value, count) tuples
+    sorted by count descending.
+    """
+    raw = metrics.get(f"topn_{dim}")
+    if not isinstance(raw, list) or not raw:
+        return []
+    counter = Counter()
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        value = entry.get("value")
+        count = entry.get("count")
+        if value in (None, "") or not isinstance(count, (int, float)):
+            continue
+        counter[str(value)] += int(count)
+    return counter.most_common()
+
+
+def _format_topn(metrics, dim, label):
+    """Format coalesced Top-N data for the dashboard panel."""
     formatted = {label: [], "count": []}
-    for value, count in counter.most_common():
+    for value, count in _coalesce_topn(metrics, dim):
         formatted[label].append(value)
         formatted["count"].append(count)
     return formatted
@@ -117,7 +135,36 @@ def pre_render(**kwargs):
         )
         apply_service_filter = bool(service_filter)
 
-        filtered_events = []
+        # Status counter is bounded (~60 HTTP codes), still surfaced as a flat
+        # `counter_status_<code>` set by badbehavior.lua:106. Keep parsing it
+        # as before.
+        format_data = [
+            {
+                "code": int(key.split("_")[2]),
+                "count": int(value),
+            }
+            for key, value in metrics.items()
+            if key.startswith("counter_status_")
+        ]
+        format_data.sort(key=itemgetter("count"), reverse=True)
+        data = {"code": [], "count": []}
+        for item in format_data:
+            data["code"].append(item["code"])
+            data["count"].append(item["count"])
+        ret["top_bad_behavior_status"]["data"] = data
+
+        # Top-N IPs / URLs come from bounded Space-Saving trackers in the
+        # metrics_datastore shdict (see badbehavior.lua + bunkerweb.top_n).
+        # The Lua API surfaces them under `topn_ip` and `topn_url`; if multiple
+        # instances are aggregated their lists are concatenated and need to be
+        # re-coalesced here.
+        ret["top_bad_behavior_ips"]["data"] = _format_topn(metrics, "ip", "ip")
+        ret["top_bad_behavior_urls"]["data"] = _format_topn(metrics, "url", "url")
+
+        # Bad-behavior history list now rebuilds from the global blocked
+        # `requests` stream (filtered by reason) instead of the dropped
+        # per-IP `tables/increments_<ip>` entries. The data is structurally
+        # identical - same fields, just bounded by METRICS_MAX_BLOCKED_REQUESTS.
         list_fields = [
             "date",
             "id",
@@ -134,93 +181,42 @@ def pre_render(**kwargs):
             "count_time",
         ]
         list_data = {field: [] for field in list_fields}
-        table_sources = []
-        if "table_increments" in metrics:
-            table_sources.append(metrics["table_increments"])
-        for key, value in metrics.items():
-            if key.startswith("table_increments_"):
-                table_sources.append(value)
 
-        if table_sources:
-            seen_ids = set()
-            for source in table_sources:
-                for increment in _flatten_table_increments(source):
-                    entry_service = _normalize_service_name(increment.get("server_name"))
-                    if apply_service_filter and entry_service != service_filter:
-                        continue
+        requests_payload = kwargs["bw_instances_utils"].get_metrics("requests")
+        request_stream = []
+        if isinstance(requests_payload, dict):
+            request_stream = requests_payload.get("requests") or []
 
-                    increment_id = increment.get("id")
-                    if increment_id and increment_id in seen_ids:
-                        continue
+        seen_ids = set()
+        for request in _flatten_table_increments(request_stream):
+            reason = str(request.get("reason") or "").lower()
+            if reason not in ("bad-behavior", "badbehavior"):
+                continue
+            entry_service = _normalize_service_name(request.get("server_name"))
+            if apply_service_filter and entry_service != service_filter:
+                continue
 
-                    if increment_id:
-                        seen_ids.add(increment_id)
+            request_id = request.get("id")
+            if request_id and request_id in seen_ids:
+                continue
+            if request_id:
+                seen_ids.add(request_id)
 
-                    filtered_events.append(increment)
-                    list_data["date"].append(_format_increment_date(increment.get("date", 0)))
-                    list_data["id"].append(increment_id or "")
-                    list_data["ip"].append(increment.get("ip", ""))
-                    list_data["country"].append(increment.get("country", ""))
-                    list_data["server_name"].append(increment.get("server_name", ""))
-                    list_data["method"].append(increment.get("method", ""))
-                    list_data["url"].append(increment.get("url", ""))
-                    list_data["status"].append(increment.get("status", ""))
-                    list_data["security_mode"].append(increment.get("security_mode", ""))
-                    list_data["ban_scope"].append(increment.get("ban_scope", ""))
-                    list_data["ban_time"].append(str(increment.get("ban_time", "")))
-                    list_data["threshold"].append(str(increment.get("threshold", "")))
-                    list_data["count_time"].append(str(increment.get("count_time", "")))
+            list_data["date"].append(_format_increment_date(request.get("date", 0)))
+            list_data["id"].append(request_id or "")
+            list_data["ip"].append(request.get("ip", ""))
+            list_data["country"].append(request.get("country", ""))
+            list_data["server_name"].append(request.get("server_name", ""))
+            list_data["method"].append(request.get("method", ""))
+            list_data["url"].append(request.get("url", ""))
+            list_data["status"].append(request.get("status", ""))
+            list_data["security_mode"].append(request.get("security_mode", ""))
+            list_data["ban_scope"].append(request.get("ban_scope", ""))
+            list_data["ban_time"].append(str(request.get("ban_time", "")))
+            list_data["threshold"].append(str(request.get("threshold", "")))
+            list_data["count_time"].append(str(request.get("count_time", "")))
+
         ret["list_bad_behavior_history"]["data"] = list_data
-
-        if filtered_events or apply_service_filter:
-            ret["top_bad_behavior_status"]["data"] = _build_counter_data(filtered_events, "status", "code")
-            ret["top_bad_behavior_ips"]["data"] = _build_counter_data(filtered_events, "ip", "ip")
-            ret["top_bad_behavior_urls"]["data"] = _build_counter_data(filtered_events, "url", "url")
-        else:
-            format_data = [
-                {
-                    "code": int(key.split("_")[2]),
-                    "count": int(value),
-                }
-                for key, value in metrics.items()
-                if key.startswith("counter_status_")
-            ]
-            format_data.sort(key=itemgetter("count"), reverse=True)
-            data = {"code": [], "count": []}
-            for item in format_data:
-                data["code"].append(item["code"])
-                data["count"].append(item["count"])
-            ret["top_bad_behavior_status"]["data"] = data
-
-            format_data = [
-                {
-                    "ip": key.split("_")[2],
-                    "count": int(value),
-                }
-                for key, value in metrics.items()
-                if key.startswith("counter_ip_")
-            ]
-            format_data.sort(key=itemgetter("count"), reverse=True)
-            data = {"ip": [], "count": []}
-            for item in format_data:
-                data["ip"].append(item["ip"])
-                data["count"].append(item["count"])
-            ret["top_bad_behavior_ips"]["data"] = data
-
-            format_data = [
-                {
-                    "url": key.split("_", 2)[2],
-                    "count": int(value),
-                }
-                for key, value in metrics.items()
-                if key.startswith("counter_url_")
-            ]
-            format_data.sort(key=itemgetter("count"), reverse=True)
-            data = {"url": [], "count": []}
-            for item in format_data:
-                data["url"].append(item["url"])
-                data["count"].append(item["count"])
-            ret["top_bad_behavior_urls"]["data"] = data
 
     except BaseException as e:
         logger.debug(format_exc())

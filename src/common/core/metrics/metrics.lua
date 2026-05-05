@@ -12,10 +12,47 @@ local INFO = ngx.INFO
 local null = ngx.null
 local unescape_uri = ngx.unescape_uri
 
-local lru, err_lru = lrucache.new(100000)
+-- lrucache.new() allocates upfront and is not resizable, so the cap has to
+-- be picked at module load before the internalstore variables map exists -
+-- that's why we read variables.env directly below.
+local LRU_DEFAULT = 10000
+local LRU_MIN = 100
+local LRU_MAX = 100000
+
+local function resolve_lru_size()
+	local size = LRU_DEFAULT
+	local f = io.open("/etc/nginx/variables.env", "r")
+	if f then
+		for line in f:lines() do
+			local k, v = line:match("^([^=]+)=(.*)$")
+			if k == "METRICS_LRU_SIZE" then
+				local n = tonumber(v)
+				if n then
+					size = n
+				end
+				break
+			end
+		end
+		f:close()
+	end
+	if size < LRU_MIN then
+		size = LRU_MIN
+	elseif size > LRU_MAX then
+		size = LRU_MAX
+	end
+	return size
+end
+
+local lru, err_lru = lrucache.new(resolve_lru_size())
 if not lru then
 	require "bunkerweb.logger":new("METRICS"):log(ERR, "failed to instantiate LRU cache : " .. err_lru)
 end
+
+-- Defense in depth against a future producer accidentally re-introducing a
+-- per-key event log under tables/*.
+local TABLE_VALUE_CAP = 100
+
+local TOP_N_RANKS_API = 50
 
 local shared = ngx.shared
 local subsystem = ngx.config.subsystem
@@ -206,28 +243,115 @@ local function enforce_redis_requests_cap(self)
 			clear_request_facets(self)
 		end
 	else
+		-- Decrement facets for the entries about to be evicted before we trim
+		-- them - once LTRIM runs we lose the payloads needed to rebuild the
+		-- correct facet counts. The LRANGE here is bounded by `to_remove`
+		-- (computed from LLEN above) so it never reads more than we intend
+		-- to trim, and is replaced by an O(1) LTRIM regardless of magnitude.
 		local to_remove = nb_requests - max_requests
-		ok = true
-		for _ = 1, to_remove do
-			local removed_raw, pop_err = self:redis_call("lpop", "requests")
-			if removed_raw == nil or removed_raw == false then
-				self:log_throttled(ERR, "cap_lpop", "Can't trim Redis requests list: " .. (pop_err or "unknown error"))
-				ok = false
-				break
-			end
-			if removed_raw == null then
-				break
-			end
-			local decoded_ok, removed_request = pcall(decode, removed_raw)
-			if decoded_ok and type(removed_request) == "table" then
-				decr_request_facets(self, removed_request)
+		local evicted, range_err = self:redis_call("lrange", "requests", 0, to_remove - 1)
+		if evicted == nil or evicted == false then
+			self:log_throttled(
+				ERR,
+				"cap_lrange",
+				"Can't preview Redis requests trim window: " .. (range_err or "unknown error")
+			)
+		elseif evicted ~= null and type(evicted) == "table" then
+			for _, removed_raw in ipairs(evicted) do
+				if removed_raw ~= nil and removed_raw ~= false and removed_raw ~= null then
+					local decoded_ok, removed_request = pcall(decode, removed_raw)
+					if decoded_ok and type(removed_request) == "table" then
+						decr_request_facets(self, removed_request)
+					end
+				end
 			end
 		end
+		-- O(1) trim regardless of how far we are over cap. Replaces the prior
+		-- per-entry LPOP loop that produced the customer's "LRANGE requests
+		-- 0 …465999" / sustained-LPOP slowlog signature.
+		ok, err = self:redis_call("ltrim", "requests", to_remove, -1)
 	end
 
 	if not ok then
 		self:log_throttled(ERR, "cap_enforce", "Can't enforce Redis requests cap: " .. (err or "unknown error"))
 	end
+end
+
+-- One-shot 1.6.9 -> 1.6.10 cleanup of unbounded per-IP/per-user event lists.
+local LEGACY_TABLE_PATTERNS = {
+	"metrics:*_table_increments_*",
+	"metrics:*_table_authentications*",
+}
+local LEGACY_CLEANUP_DONE_KEY = "metrics:cleanup_v2_done"
+local LEGACY_CLEANUP_LOCK_KEY = "metrics:cleanup_v2_in_progress"
+-- Bounded by Redis command arg count and LuaJIT's stack on unpack().
+local UNLINK_CHUNK_SIZE = 500
+local function cleanup_legacy_table_keys(self)
+	-- Already done? skip.
+	local done = self:redis_call("get", LEGACY_CLEANUP_DONE_KEY)
+	if done and done ~= ngx.null and done ~= false then
+		return
+	end
+	-- Try to claim the lock. SET NX EX is atomic.
+	local lock_ok = self:redis_call("set", LEGACY_CLEANUP_LOCK_KEY, "1", "NX", "EX", 3600)
+	if not lock_ok or lock_ok == false or lock_ok == ngx.null then
+		-- Another instance is running the cleanup, or Redis returned an
+		-- error. Either way, don't proceed.
+		return
+	end
+	local clean_completed = true
+	for _, pattern in ipairs(LEGACY_TABLE_PATTERNS) do
+		local cursor = "0"
+		repeat
+			local res, scan_err = self:redis_call("scan", cursor, "MATCH", pattern, "COUNT", 1000)
+			if not res or type(res) ~= "table" then
+				self:log_throttled(
+					ERR,
+					"cleanup_v2_scan",
+					"Can't SCAN for legacy table keys (pattern=" .. pattern .. "): " .. (scan_err or "unknown error")
+				)
+				clean_completed = false
+				break
+			end
+			cursor = res[1] or "0"
+			local keys = res[2]
+			if type(keys) == "table" and #keys > 0 then
+				-- Chunked unlink to stay within LuaJIT's call-stack budget on
+				-- real customer keyspaces that may carry tens of thousands of
+				-- legacy keys per pattern.
+				local total = #keys
+				for i = 1, total, UNLINK_CHUNK_SIZE do
+					local last = i + UNLINK_CHUNK_SIZE - 1
+					if last > total then
+						last = total
+					end
+					local ok, unlink_err = self:redis_call("unlink", unpack(keys, i, last))
+					if not ok then
+						self:log_throttled(
+							ERR,
+							"cleanup_v2_unlink",
+							"Can't UNLINK legacy table keys: " .. (unlink_err or "unknown error")
+						)
+						clean_completed = false
+						break
+					end
+				end
+				if not clean_completed then
+					break
+				end
+			end
+		until cursor == "0"
+		if not clean_completed then
+			break
+		end
+	end
+	if clean_completed then
+		-- Promote: mark done permanently (30 days), drop the lock.
+		self:redis_call("set", LEGACY_CLEANUP_DONE_KEY, "1", "EX", 86400 * 30)
+		self:redis_call("del", LEGACY_CLEANUP_LOCK_KEY)
+		self.logger:log(INFO, "[METRICS] legacy 1.6.9 table-key migration completed")
+	end
+	-- On failure: leave the lock TTL to expire so another retry can pick up.
 end
 
 function metrics:initialize(ctx)
@@ -345,6 +469,12 @@ function metrics:log(bypass_checks)
 						local metric_table = lru:get(lru_key) or {}
 						-- Add value to table
 						table_insert(metric_table, metric_value)
+						-- Bound the per-key array. Without this cap a misbehaving
+						-- producer (or a high-rate attacker) can grow individual
+						-- entries without bound between timer flushes.
+						while #metric_table > TABLE_VALUE_CAP do
+							table_remove(metric_table, 1)
+						end
 						-- Update LRU cache
 						lru:set(lru_key, metric_table)
 					end
@@ -399,7 +529,18 @@ function metrics:timer()
 					if ok then
 						value = decoded
 					end
-					lru:set(key:gsub("_" .. wid .. "$", ""), value)
+					-- Drop legacy table-style entries that 1.6.9 wrote: they
+					-- were per-IP/per-user unbounded event arrays. New code
+					-- replaces them with bounded Top-N gauges; keeping the
+					-- old values in the LRU would re-pollute the SHM dict on
+					-- the next sync.
+					local local_key = key:gsub("_" .. wid .. "$", "")
+					if not local_key:match("_table_increments_") and not local_key:match("_table_authentications") then
+						lru:set(local_key, value)
+					else
+						-- Surgical purge from SHM too.
+						self.metrics_datastore:delete(key)
+					end
 				end
 			end
 		end
@@ -419,6 +560,14 @@ function metrics:timer()
 			)
 		else
 			initialize_request_facets(self)
+			-- One-shot upgrade migration: clean up the legacy unbounded
+			-- per-IP / per-user event lists from 1.6.9 (badbehavior wrote
+			-- `metrics:badbehavior_table_increments_<ip>:<wid>`, authbasic
+			-- wrote `metrics:authbasic_table_authentications:<wid>`). Gated
+			-- on a SETNX flag so this runs at most once cluster-wide. Uses
+			-- SCAN+UNLINK so a multi-million-key keyspace doesn't block the
+			-- Redis event loop.
+			cleanup_legacy_table_keys(self)
 		end
 	end
 
@@ -525,6 +674,22 @@ function metrics:timer()
 	return self:ret(ret, ret_err)
 end
 
+local function escape_lua_pattern(s)
+	return (s:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1"))
+end
+
+-- Must stay in sync with bunkerweb.top_n's internal state keys.
+local TOPN_BOOKKEEPING_SUFFIXES = { "__count", "__min", "__min_key" }
+local function is_topn_bookkeeping_key(key)
+	for _, suffix in ipairs(TOPN_BOOKKEEPING_SUFFIXES) do
+		local slen = #suffix
+		if #key >= slen and key:sub(-slen) == suffix then
+			return true
+		end
+	end
+	return false
+end
+
 function metrics:api()
 	-- Match request
 	if not match(self.ctx.bw.uri, "^/metrics/.+$") or self.ctx.bw.request_method ~= "GET" then
@@ -538,40 +703,76 @@ function metrics:api()
 		return self:api_requests_query()
 	end
 
-	-- Loop on keys
+	if not filter:match("^[%w_]+$") then
+		return self:ret(false, "invalid metrics filter")
+	end
+	local filter_pat = escape_lua_pattern(filter)
+	-- Prefix-stripping (not regex) so IPv6 values with embedded colons round-trip cleanly.
+	local topn_prefix = filter .. "_topn_"
+	local topn_prefix_len = #topn_prefix
+
 	local metrics_data = {}
+	local topn_buckets = {}
 	for _, key in ipairs(self.metrics_datastore:keys()) do
-		-- Check if key starts with our filter
-		if key:match("^" .. filter .. "_") then
-			-- Get the value
-			local data, err = self.metrics_datastore:get(key)
-			if not data then
-				return self:ret(true, "error while fetching metric : " .. err, HTTP_INTERNAL_SERVER_ERROR)
-			end
-			local metric_key = key:gsub("_[0-9]+$", ""):gsub("^" .. filter .. "_", "")
-			if metric_key == "" then
-				metric_key = filter
-			end
-			-- Table case
-			local ok, decoded = pcall(decode, data)
-			if ok then
-				data = decoded
-			end
-			if type(data) == "table" then
-				if not metrics_data[metric_key] then
-					metrics_data[metric_key] = {}
-				end
-				for _, metric_value in ipairs(data) do
-					table_insert(metrics_data[metric_key], metric_value)
+		if key:match("^" .. filter_pat .. "_") and not is_topn_bookkeeping_key(key) then
+			if #key > topn_prefix_len and key:sub(1, topn_prefix_len) == topn_prefix then
+				local rest = key:sub(topn_prefix_len + 1)
+				local colon = rest:find(":", 1, true)
+				if colon and colon > 1 and colon < #rest then
+					local dim = rest:sub(1, colon - 1)
+					local value = rest:sub(colon + 1)
+					local count = self.metrics_datastore:get(key)
+					if type(count) == "number" and count > 0 then
+						if not topn_buckets[dim] then
+							topn_buckets[dim] = {}
+						end
+						table_insert(topn_buckets[dim], { value = value, count = count })
+					end
 				end
 			else
-				-- Counter case
-				if not metrics_data[metric_key] then
-					metrics_data[metric_key] = 0
+				local data, err = self.metrics_datastore:get(key)
+				if not data then
+					return self:ret(true, "error while fetching metric : " .. err, HTTP_INTERNAL_SERVER_ERROR)
 				end
-				metrics_data[metric_key] = metrics_data[metric_key] + data
+				local metric_key = key:gsub("_[0-9]+$", ""):gsub("^" .. filter_pat .. "_", "")
+				if metric_key == "" then
+					metric_key = filter
+				end
+				local ok, decoded = pcall(decode, data)
+				if ok then
+					data = decoded
+				end
+				if type(data) == "table" then
+					if not metrics_data[metric_key] then
+						metrics_data[metric_key] = {}
+					end
+					for _, metric_value in ipairs(data) do
+						table_insert(metrics_data[metric_key], metric_value)
+					end
+				else
+					-- Counter case
+					if not metrics_data[metric_key] then
+						metrics_data[metric_key] = 0
+					end
+					metrics_data[metric_key] = metrics_data[metric_key] + data
+				end
 			end
 		end
+	end
+	-- Finalise Top-N buckets: sort each dim by count desc, cap at TOP_N_RANKS.
+	for dim, rows in pairs(topn_buckets) do
+		table.sort(rows, function(a, b)
+			return a.count > b.count
+		end)
+		local capped = {}
+		local cap = TOP_N_RANKS_API
+		if #rows < cap then
+			cap = #rows
+		end
+		for i = 1, cap do
+			capped[i] = rows[i]
+		end
+		metrics_data["topn_" .. dim] = capped
 	end
 	return self:ret(true, metrics_data, HTTP_OK)
 end

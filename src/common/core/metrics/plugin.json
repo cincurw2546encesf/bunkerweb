@@ -43,7 +43,7 @@
     },
     "METRICS_MAX_BLOCKED_REQUESTS_REDIS": {
       "context": "global",
-      "default": "100000",
+      "default": "10000",
       "help": "Maximum number of blocked requests to store in Redis.",
       "id": "metrics-max-blocked-requests-redis",
       "label": "Metrics max blocked requests Redis",
@@ -58,6 +58,15 @@
       "label": "Save metrics to Redis",
       "regex": "^(yes|no)$",
       "type": "check"
+    },
+    "METRICS_LRU_SIZE": {
+      "context": "global",
+      "default": "10000",
+      "help": "Per-worker metrics LRU capacity. Clamped to [100, 100000].",
+      "id": "metrics-lru-size",
+      "label": "Metrics LRU size",
+      "regex": "^\\d+$",
+      "type": "number"
     }
   }
 }
