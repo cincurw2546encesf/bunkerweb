@@ -1971,7 +1971,7 @@ Les distributions Linux prises en charge par BunkerWeb (architectures amd64/x86_
 - Debian 13 "Trixie"
 - Ubuntu 22.04 "Jammy"
 - Ubuntu 24.04 "Noble"
-- Fedora 42 et 43
+- Fedora 42, 43 et 44
 - Red Hat Enterprise Linux (RHEL) 8, 9 et 10
 
 ### Script d'installation facile
