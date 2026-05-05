@@ -1,23 +1,14 @@
 local cjson = require "cjson"
 local class = require "middleclass"
 local plugin = require "bunkerweb.plugin"
-local top_n = require "bunkerweb.top_n"
 local utils = require "bunkerweb.utils"
 
 local limit = class("limit", plugin)
 
-local topn_uri
-local function ensure_topn()
-	if topn_uri then
-		return
-	end
-	topn_uri = top_n:new("metrics_datastore", "limit_topn_uri:", 5000, 50)
-end
-
 local ngx = ngx
 local ERR = ngx.ERR
 local HTTP_TOO_MANY_REQUESTS = ngx.HTTP_TOO_MANY_REQUESTS
-local worker = ngx.worker
+local get_phase = ngx.get_phase
 local has_variable = utils.has_variable
 local get_multiple_variables = utils.get_multiple_variables
 local is_whitelisted = utils.is_whitelisted
@@ -62,9 +53,8 @@ end
 function limit:initialize(ctx)
 	-- Call parent initialize
 	plugin.initialize(self, "limit", ctx)
-	-- Load rules if needed (only on request-time phases - init/init_worker
-	-- have no ctx and don't need server-scoped rules).
-	if self.is_request and self:is_needed() then
+	-- Load rules if needed
+	if get_phase() ~= "init" and self:is_needed() then
 		-- Get all rules from internalstore
 		local all_rules, err = self.internalstore:get("plugin_limit_rules", true)
 		if not all_rules then
@@ -102,18 +92,6 @@ function limit:is_needed()
 		self.logger:log(ngx.ERR, "can't check USE_LIMIT_REQ variable : " .. err)
 	end
 	return is_needed
-end
-
-function limit:init_worker()
-	if worker.id() ~= 0 then
-		return self:ret(true, "decay scheduled from worker 0 only")
-	end
-	ensure_topn()
-	local err = topn_uri:schedule_decay(3600)
-	if err then
-		self.logger:log(ERR, "couldn't schedule topn_uri decay: " .. err)
-	end
-	return self:ret(true, "topn decay timer scheduled")
 end
 
 function limit:init()
@@ -183,10 +161,7 @@ function limit:access()
 	local addr = self.ctx.bw.remote_addr
 
 	if limited then
-		ensure_topn()
-		if topn_uri then
-			topn_uri:incr(uri)
-		end
+		self:set_metric("counters", "limited_uri_" .. uri, 1)
 		local security_mode = get_security_mode(self.ctx)
 		local msg
 		if security_mode == "block" then

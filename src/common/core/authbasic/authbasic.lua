@@ -3,35 +3,23 @@ local class = require "middleclass"
 local kdf = require "resty.openssl.kdf"
 local plugin = require "bunkerweb.plugin"
 local random = require "resty.random"
-local top_n = require "bunkerweb.top_n"
 local utils = require "bunkerweb.utils"
 
 local authbasic = class("authbasic", plugin)
-
-local topn_failed_ip
-local topn_failed_user
-local topn_passed_user
-local function ensure_topn()
-	if topn_failed_ip then
-		return
-	end
-	topn_failed_ip = top_n:new("metrics_datastore", "authbasic_topn_failed_ip:", 5000, 50)
-	topn_failed_user = top_n:new("metrics_datastore", "authbasic_topn_failed_user:", 5000, 50)
-	topn_passed_user = top_n:new("metrics_datastore", "authbasic_topn_passed_user:", 5000, 50)
-end
 
 local ngx = ngx
 local ERR = ngx.ERR
 local WARN = ngx.WARN
 local HTTP_UNAUTHORIZED = ngx.HTTP_UNAUTHORIZED
 local get_phase = ngx.get_phase
-local worker = ngx.worker
 local req_get_headers = ngx.req.get_headers
 local decode_base64 = ngx.decode_base64
 local encode_base64 = ngx.encode_base64
 local get_multiple_variables = utils.get_multiple_variables
 local has_variable = utils.has_variable
 local regex_match = utils.regex_match
+local time = os.time
+local date = os.date
 local tostring = tostring
 local random_bytes = random.bytes
 local bor = bit.bor
@@ -232,24 +220,6 @@ function authbasic:is_needed()
 	return enabled
 end
 
-function authbasic:init_worker()
-	if worker.id() ~= 0 then
-		return self:ret(true, "decay scheduled from worker 0 only")
-	end
-	ensure_topn()
-	for _, tracker in ipairs({
-		{ name = "topn_failed_ip", instance = topn_failed_ip },
-		{ name = "topn_failed_user", instance = topn_failed_user },
-		{ name = "topn_passed_user", instance = topn_passed_user },
-	}) do
-		local err = tracker.instance:schedule_decay(3600)
-		if err then
-			self.logger:log(ERR, "couldn't schedule " .. tracker.name .. " decay: " .. err)
-		end
-	end
-	return self:ret(true, "topn decay timers scheduled")
-end
-
 function authbasic:init()
 	local variables, err = get_multiple_variables({
 		"USE_AUTH_BASIC",
@@ -438,28 +408,43 @@ function authbasic:access()
 
 	local ok, result = self:validate_credentials()
 	local remote_addr = self.ctx.bw.remote_addr
+	local server_name = self.ctx.bw.server_name
+	local uri = self.ctx.bw.uri or ""
 
-	ensure_topn()
 	if ok then
 		self:set_metric("counters", "passed_authbasic", 1)
-		if topn_passed_user then
-			topn_passed_user:incr(result)
-		end
+		self:set_metric("counters", "passed_user_" .. result, 1)
+		self:set_metric("tables", "authentications", {
+			date = time(date("!*t")),
+			ip = remote_addr,
+			server_name = server_name,
+			uri = uri,
+			username = result,
+			success = true,
+		})
 		ngx.var.auth_user = result
 		ngx.var.remote_user = result
 		return self:ret(true, "authenticated user " .. result)
 	end
 
 	self:set_metric("counters", "failed_authbasic", 1)
-	if topn_failed_ip then
-		topn_failed_ip:incr(remote_addr)
-	end
+	self:set_metric("counters", "failed_ip_" .. remote_addr, 1)
 
 	-- Extract attempted username from result message if available
 	local attempted_user = result:match("unknown user (.+)$") or result:match("invalid password for user (.+)$")
-	if attempted_user and topn_failed_user then
-		topn_failed_user:incr(attempted_user)
+	if attempted_user then
+		self:set_metric("counters", "failed_user_" .. attempted_user, 1)
 	end
+
+	self:set_metric("tables", "authentications", {
+		date = time(date("!*t")),
+		ip = remote_addr,
+		server_name = server_name,
+		uri = uri,
+		username = attempted_user or "unknown",
+		success = false,
+		reason = result,
+	})
 
 	ngx.header["WWW-Authenticate"] =
 		string.format('Basic realm="%s", charset="UTF-8"', self.current_config.realm or "Restricted area")

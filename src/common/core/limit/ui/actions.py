@@ -1,5 +1,5 @@
-from collections import Counter
 from logging import getLogger
+from operator import itemgetter
 from traceback import format_exc
 
 
@@ -16,26 +16,15 @@ def pre_render(**kwargs):
         },
     }
     try:
-        # Top-limited URIs come from the bounded `topn_uri` Space-Saving tracker
-        # in metrics_datastore (see src/common/core/limit/limit.lua and
-        # bunkerweb.top_n). When metrics are aggregated across instances the
-        # `topn_uri` lists are concatenated, so we coalesce per URL here.
-        metrics = kwargs["bw_instances_utils"].get_metrics("limit")
-        raw = metrics.get("topn_uri") if isinstance(metrics, dict) else None
-        counter: Counter = Counter()
-        if isinstance(raw, list):
-            for entry in raw:
-                if not isinstance(entry, dict):
-                    continue
-                value = entry.get("value")
-                count = entry.get("count")
-                if value in (None, "") or not isinstance(count, (int, float)):
-                    continue
-                counter[str(value)] += int(count)
+        format_data = [
+            {"URL": f"/{key.split('/', 1)[1] if '/' in key else ''}", "count": int(value)}
+            for key, value in kwargs["bw_instances_utils"].get_metrics("limit").items()
+        ]
+        format_data.sort(key=itemgetter("count"), reverse=True)
         data = {"URL": [], "count": []}
-        for url, count in counter.most_common():
-            data["URL"].append(url)
-            data["count"].append(count)
+        for item in format_data:
+            data["URL"].append(item["URL"])
+            data["count"].append(item["count"])
         ret["top_limit"]["data"] = data
     except BaseException as e:
         logger.debug(format_exc())

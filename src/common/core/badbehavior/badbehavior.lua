@@ -1,20 +1,9 @@
 local cjson = require "cjson"
 local class = require "middleclass"
 local plugin = require "bunkerweb.plugin"
-local top_n = require "bunkerweb.top_n"
 local utils = require "bunkerweb.utils"
 
 local badbehavior = class("badbehavior", plugin)
-
-local topn_ip
-local topn_url
-local function ensure_topn()
-	if topn_ip then
-		return
-	end
-	topn_ip = top_n:new("metrics_datastore", "badbehavior_topn_ip:", 5000, 50)
-	topn_url = top_n:new("metrics_datastore", "badbehavior_topn_url:", 5000, 50)
-end
 
 local ngx = ngx
 local var = ngx.var
@@ -38,22 +27,6 @@ local decode = cjson.decode
 function badbehavior:initialize(ctx)
 	-- Call parent initialize
 	plugin.initialize(self, "badbehavior", ctx)
-end
-
-function badbehavior:init_worker()
-	if worker.id() ~= 0 then
-		return self:ret(true, "decay scheduled from worker 0 only")
-	end
-	ensure_topn()
-	local err = topn_ip:schedule_decay(3600)
-	if err then
-		self.logger:log(ERR, "couldn't schedule topn_ip decay: " .. err)
-	end
-	err = topn_url:schedule_decay(3600)
-	if err then
-		self.logger:log(ERR, "couldn't schedule topn_url decay: " .. err)
-	end
-	return self:ret(true, "topn decay timers scheduled")
 end
 
 function badbehavior:log()
@@ -131,16 +104,24 @@ function badbehavior:log()
 		return self:ret(false, "can't add incr operation : " .. err)
 	end
 	self:set_metric("counters", "status_" .. status, 1)
-	ensure_topn()
+	self:set_metric("counters", "ip_" .. self.ctx.bw.remote_addr, 1)
 	local request_uri = self.ctx.bw.request_uri or "-"
-	-- Strip query string so attackers can't blow past max_track with random ?id= payloads.
-	local request_path = request_uri:gsub("%?.*", "")
-	if topn_ip then
-		topn_ip:incr(self.ctx.bw.remote_addr)
-	end
-	if topn_url then
-		topn_url:incr(request_path)
-	end
+	self:set_metric("counters", "url_" .. request_uri, 1)
+	self:set_metric("tables", "increments_" .. self.ctx.bw.remote_addr, {
+		date = self.ctx.bw.start_time,
+		id = self.ctx.bw.request_id,
+		ip = self.ctx.bw.remote_addr,
+		country = country,
+		server_name = self.ctx.bw.server_name,
+		status = status,
+		method = self.ctx.bw.request_method or "-",
+		url = request_uri,
+		security_mode = security_mode,
+		ban_scope = ban_scope,
+		ban_time = ban_time,
+		threshold = tonumber(self.variables["BAD_BEHAVIOR_THRESHOLD"]) or 0,
+		count_time = tonumber(self.variables["BAD_BEHAVIOR_COUNT_TIME"]) or 0,
+	})
 	return self:ret(true, "success")
 end
 
