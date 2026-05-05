@@ -17,6 +17,14 @@
 		<img src="https://www.bestpractices.dev/projects/8001/badge">
 	</a>
 	<a href="https://gitrated.com/bunkerity/bunkerweb"><img src="https://gitrated.com/bunkerity/bunkerweb/badge" alt="GitRated rating" /></a>
+	<br />
+	<a href="https://www.star-history.com/bunkerity/bunkerweb">
+		<picture>
+		<source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/badge?repo=bunkerity/bunkerweb&theme=dark" />
+		<source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/badge?repo=bunkerity/bunkerweb" />
+		<img alt="Star History Rank" src="https://api.star-history.com/badge?repo=bunkerity/bunkerweb" width=140 />
+		</picture>
+	</a>
 </p>
 
 <p align="center">
@@ -265,6 +273,7 @@ List of supported Linux distros:
 - Ubuntu 24.04 "Noble"
 - Fedora 42
 - Fedora 43
+- Fedora 44
 - RHEL 8.10
 - RHEL 9.6
 - RHEL 10.0
