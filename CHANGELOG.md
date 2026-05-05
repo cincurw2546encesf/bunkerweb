@@ -7,6 +7,7 @@
 - [BUGFIX] `errors`: revert the rc4 `return 444;` short-circuit on `@bwerror*` handlers. Those locations only fire for legitimate intercepted 4xx/5xx (missing path, upstream 502, etc.); the deny path bypasses `error_page` entirely via `ngx.exit(get_deny_status())` in `access-lua.conf`, so gating the handlers on `DENY_HTTP_STATUS=444` only broke real error rendering (HTTP/2 stream protocol error) without changing the deny behavior. Operators who want full stealth on intercepted errors can already opt out by setting `INTERCEPTED_ERROR_CODES=""` or mapping each code to a blank page via `ERRORS=`. (Fixes #3490, reverts #3448)
 - [UI] Reports and Bans pages: CSV/Excel exports now include every column and honor the active search and SearchPanes filters (was: exporting an unfiltered, partial-column dump). (Fixes #3489)
 - [UI] Service edit page: defense-in-depth restoration of non-UI-method settings (and template defaults) on advanced/raw save so a form post that omits keys can't roll the service back to defaults; the raw-mode draft toggle and the `IS_DRAFT=` line in the raw editor are now kept in sync both ways.
+- [LINUX] Support Fedora 44
 - [DEPS] Updated NGINX version to v1.30.0 for all integrations.
 - [DEPS] Updated Modsecurity version to v3.0.15
 - [DEPS] Updated Mbed TLS version to v4.1.0
