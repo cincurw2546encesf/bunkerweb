@@ -10,9 +10,11 @@ echo "ℹ️ Cloning CrowdSec from $URL (commit $COMMIT)"
 git_clone_commit crowdsec "$URL" "$COMMIT"
 
 echo "ℹ️ Patching CrowdSec Go dependencies for CVE fixes"
-go get google.golang.org/grpc@v1.79.3         # CVE-2026-33186
-go get github.com/buger/jsonparser@v1.1.2      # GHSA-6g7g-w4f8-9c9x
-go get golang.org/x/crypto@v0.46.0             # CVE-2025-47913
+go get go.opentelemetry.io/otel@v1.41.0                             # CVE-2026-29181
+go get github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs@v1.65.0  # GHSA-xmrv-pmrh-hhx2
+go get github.com/aws/aws-sdk-go-v2/service/kinesis@v1.43.5         # GHSA-xmrv-pmrh-hhx2
+go get github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3              # GHSA-xmrv-pmrh-hhx2
+go get github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 # GHSA-xmrv-pmrh-hhx2
 go mod tidy
 
 echo "ℹ️ Building CrowdSec"

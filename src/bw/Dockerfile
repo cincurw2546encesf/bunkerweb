@@ -78,9 +78,7 @@ RUN umask 027
 RUN apk add --no-cache openssl pcre2 bash python3 yajl geoip libxml2 libgd curl tzdata brotli lmdb libfuzzy2
 
 # Fix CVEs
-RUN apk add --no-cache "zlib>=1.3.2-r0" # CVE-2026-22184, CVE-2026-27171
-RUN apk add --no-cache "openssl>=3.5.6-r0" # CVE-2026-31790, CVE-2026-2673
-RUN apk add --no-cache "musl>=1.2.5-r23" && apk upgrade --no-cache --available musl # CVE-2026-40200
+# There are no CVEs for the following packages
 
 # Copy dependencies
 COPY --from=builder --chown=0:101 --chmod=550 /usr/share/bunkerweb /usr/share/bunkerweb
