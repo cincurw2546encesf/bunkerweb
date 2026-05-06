@@ -74,6 +74,17 @@
       "type": "check",
       "multiple": "reverse-proxy"
     },
+    "REVERSE_PROXY_HTTP_VERSION": {
+      "context": "multisite",
+      "default": "1.1",
+      "help": "HTTP protocol version used to talk to the upstream (1.0, 1.1, or 2). Set to 2 to enable HTTP/2 multiplexing on the upstream leg for compatible backends. WebSocket locations are pinned to 1.1 regardless.",
+      "id": "reverse-proxy-http-version",
+      "label": "Reverse proxy HTTP version",
+      "regex": "^(1\\.0|1\\.1|2)$",
+      "type": "select",
+      "select": ["1.0", "1.1", "2"],
+      "multiple": "reverse-proxy"
+    },
     "REVERSE_PROXY_CUSTOM_HOST": {
       "context": "multisite",
       "default": "",

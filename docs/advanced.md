@@ -2579,11 +2579,11 @@ There are two main categories of logs to configure:
 
 Service logs are controlled by the `LOG_TYPES` setting, which can accept multiple values separated by spaces (e.g., `LOG_TYPES="stderr syslog"`).
 
-| Value    | Description                                                                             |
-| :------- | :-------------------------------------------------------------------------------------- |
+| Value    | Description                                                                                                                                                                   |
+| :------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `file`   | Writes logs to a plain file. External rotation is handled by `logrotate` on Linux installs or by your container logging driver on Docker. Required for the Web UI log viewer. |
-| `stderr` | Writes logs to standard error. Standard for containerized environments (`docker logs`). |
-| `syslog` | Sends logs to a syslog server. Requires `LOG_SYSLOG_ADDRESS` to be set.                 |
+| `stderr` | Writes logs to standard error. Standard for containerized environments (`docker logs`).                                                                                       |
+| `syslog` | Sends logs to a syslog server. Requires `LOG_SYSLOG_ADDRESS` to be set.                                                                                                       |
 
 When using `file`, you should also configure:
 
@@ -3452,7 +3452,7 @@ kubectl port-forward svc/mcp-bunkerweb 8080:8080
 
 For full documentation, visit the [BunkerWeb MCP repository](https://github.com/bunkerity/mcp-bunkerweb).
 
-## Migration <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## Migration <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#migration-pro}
 
 STREAM support :white_check_mark:
 
@@ -3566,7 +3566,7 @@ To manually initialize a migration, execute the following command:
 
 This command seamlessly migrates your BunkerWeb data to precisely match the configuration outlined in the migration file.
 
-## Anti DDoS <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## Anti DDoS <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#anti-ddos-pro}
 
 STREAM support :x:
 
@@ -3603,7 +3603,7 @@ Customize the plugin behavior using the following settings:
 - **Status Code Review:** Regularly update `ANTIDDOS_STATUS_CODES` to capture new or evolving suspicious behaviors.
 - **Monitoring:** Analyze logs and metrics periodically to fine-tune settings and improve overall protection.
 
-## User Manager <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## User Manager <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#user-manager-pro}
 
 STREAM support :x:
 
@@ -3644,7 +3644,7 @@ With this plugin, administrators can effortlessly create, update, and disable us
   <figcaption>User Manager - Activities page</figcaption>
 </figure>
 
-## UI Single Sign-On <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## UI Single Sign-On <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#ui-single-sign-on-pro}
 
 STREAM support :x:
 
@@ -3701,7 +3701,7 @@ Instead of managing separate credentials for BunkerWeb, administrators can deleg
 - Keep `UI_SSO_UPDATE_USER_ON_LOGIN` at its default (`yes`) to ensure roles stay synchronized with IdP group changes.
 - When using `UI_SSO_ACCOUNT_LINKING=username_or_email`, existing local accounts are automatically linked on first SSO login if the username or email matches. Use `username_only` if your IdP allows users to set arbitrary email addresses, to prevent account takeover via email spoofing.
 
-## Easy Resolve <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## Easy Resolve <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#easy-resolve-pro}
 
 <p align="center">
     <iframe style="display: block;" width="560" height="315" data-src="https://www.youtube-nocookie.com/embed/45vX0WJqjxo" title="Easy Resolve" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -3722,7 +3722,7 @@ The Easy Resolve Plugin lets you quickly remediate false positives and recurring
   <figcaption>Reports page - with Easy Resolve</figcaption>
 </figure>
 
-## Load Balancer <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## Load Balancer <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#load-balancer-pro}
 
 <p align="center">
     <iframe style="display: block;" width="560" height="315" data-src="https://www.youtube-nocookie.com/embed/cOVp0rAt5nw?si=iVhDio8o8S4F_uag" title="Load Balancer" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -3784,7 +3784,7 @@ The Load Balancer Plugin turns BunkerWeb into a traffic director with guardrails
 - Enable `LOADBALANCER_UPSTREAM_RESOLVE` when pointing to hostnames that may change via DNS.
 - Tune keepalive values to mirror backend capacity and connection reuse goals.
 
-## Custom Pages <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## Custom Pages <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#custom-pages-pro}
 
 The Custom Pages plugin lets you replace BunkerWeb's built-in pages (error pages, default server page, and antibot challenge pages) with your own custom HTML or Lua templates. This allows you to maintain consistent branding across all user-facing pages served by BunkerWeb.
 
@@ -3899,9 +3899,9 @@ These variables are available in antibot challenge page templates:
 
 **Cap.js (`CUSTOM_ANTIBOT_CAPJS_PAGE`):**
 
-| Variable        | Type   | Description                  |
-| --------------- | ------ | ---------------------------- |
-| `capjs_sitekey` | string | Your Cap.js site key         |
+| Variable        | Type   | Description                   |
+| --------------- | ------ | ----------------------------- |
+| `capjs_sitekey` | string | Your Cap.js site key          |
 | `capjs_url`     | string | Your Cap.js frontend base URL |
 
 ### Template Syntax
@@ -4311,7 +4311,7 @@ Templates use Lua template syntax with the following delimiters:
 - **CSP compliance**: Always use the `nonce_script` and `nonce_style` variables for inline scripts and styles to ensure proper Content Security Policy handling.
 - **Testing templates**: You can test your templates locally by rendering them with a Lua template engine before deploying to BunkerWeb.
 
-## OpenID Connect <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## OpenID Connect <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#openid-connect-pro}
 
 <p align="center">
     <iframe style="display: block;" width="560" height="315" data-src="https://www.youtube-nocookie.com/embed/0e4lcXTIIfs" title="OpenID Connect" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -4523,7 +4523,7 @@ Common hardening/tuning options:
 - **No user header injected**: verify the claim name in `OPENIDC_USER_HEADER_CLAIM` exists in the ID token/userinfo.
 - **Multi-instance deployments**: enable `USE_REDIS=yes` and configure `REDIS_HOST` (or Sentinel) so sessions are shared.
 
-## LDAP SSO <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## LDAP SSO <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#ldap-sso-pro}
 
 STREAM support :x:
 
@@ -4627,7 +4627,7 @@ The plugin supports two authentication modes:
 - Tune `LDAP_KEEPALIVE_POOL_SIZE` to match expected concurrent user volume and reduce LDAP connection overhead.
 - Set `LDAP_USER_HEADER` to an empty value to disable identity forwarding to upstreams.
 
-## OpenAPI Validator <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## OpenAPI Validator <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#openapi-validator-pro}
 
 <p align="center">
     <iframe style="display: block;" width="560" height="315" data-src="https://www.youtube-nocookie.com/embed/3oZOO1XdSlc" title="OpenAPI Validator" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -4682,7 +4682,7 @@ Optionally allow unknown paths during rollout:
 
 - `OPENAPI_ALLOW_UNSPECIFIED=yes`
 
-## Cache <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## Cache <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#cache-pro}
 
 STREAM support :x:
 
@@ -4761,7 +4761,7 @@ The Cache PRO plugin enables response caching at the reverse proxy level using N
     - Keep authenticated or user-specific traffic out of cache unless your `CACHE_KEY` explicitly varies on that state.
     - `CACHE_LOCK=yes` and `CACHE_BACKGROUND_UPDATE=yes` help reduce origin stampedes on hot keys.
 
-## ACME <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO)
+## ACME <img src='../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style="transform : translateY(3px);"> (PRO) {#acme}
 
 STREAM support :white_check_mark:
 
@@ -4946,7 +4946,7 @@ app2.example.com_AUTO_LETS_ENCRYPT: "yes"
 - **DNS-01 challenge failing**: verify the DNS provider credentials in `ACME_DNS_CREDENTIAL_ITEM` and adjust `ACME_DNS_PROPAGATION` if your provider is slow to propagate records.
 - **Certificate not renewing**: check `ACME_RENEWAL_DAYS` and scheduler logs. The `acme-renew` job runs daily and renews certificates that are within the configured threshold.
 
-## Wildcard <img src="../assets/img/pro-icon.svg" alt="crown pro icon" height="24px" width="24px" style="transform: translateY(3px);"> (PRO)
+## Wildcard <img src="../assets/img/pro-icon.svg" alt="crown pro icon" height="24px" width="24px" style="transform: translateY(3px);"> (PRO) {#wildcard-pro}
 
 STREAM support :x:
 
