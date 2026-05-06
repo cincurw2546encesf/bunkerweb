@@ -1,6 +1,10 @@
 # Changelog
 
-## v1.6.10~rc5 - 2026/??/??
+## v1.6.10 - 2026/??/??
+
+- [FEATURE] `misc`: new `MAX_HEADERS` setting (default `100`) caps header lines per request, leveraging the `max_headers` directive shipped with the NGINX 1.30.0 bump.
+
+## v1.6.10~rc5 - 2026/05/06
 
 - [BUGFIX] `modsecurity`/`ui`/`antibot`: stop `USE_MODSECURITY_GLOBAL_CRS=yes` from 403'ing UI POSTs and antibot challenges. Move UI exclusions to phase 1 (so phase-1 CRS rules like `920440` can be disabled), tolerate uppercase hostnames and `:port` in the `Host` chain regex, `re.escape()` hostnames in `antibot.modsec-crs`, and emit `modsecurity off;` on default-server UI proxy locations. Other defenses (limit, badbehavior, crowdsec, allowlists) still run. (Fixes #3118)
 - [BUGFIX] `database`: back-fill `bw_settings` defaults from `settings.json` at read time when the catalogue row is missing or has a NULL/empty `default`, so directives like `client_body_timeout` no longer render empty after a desynced upgrade. Logs one WARNING per affected setting. (Fixes #3450)
