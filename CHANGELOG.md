@@ -1,6 +1,20 @@
 # Changelog
 
-## v1.6.10~rc4 - 2026/04/??
+## v1.6.10~rc5 - 2026/??/??
+
+- [BUGFIX] `modsecurity`/`ui`/`antibot`: stop `USE_MODSECURITY_GLOBAL_CRS=yes` from 403'ing UI POSTs and antibot challenges. Move UI exclusions to phase 1 (so phase-1 CRS rules like `920440` can be disabled), tolerate uppercase hostnames and `:port` in the `Host` chain regex, `re.escape()` hostnames in `antibot.modsec-crs`, and emit `modsecurity off;` on default-server UI proxy locations. Other defenses (limit, badbehavior, crowdsec, allowlists) still run. (Fixes #3118)
+- [BUGFIX] `database`: back-fill `bw_settings` defaults from `settings.json` at read time when the catalogue row is missing or has a NULL/empty `default`, so directives like `client_body_timeout` no longer render empty after a desynced upgrade. Logs one WARNING per affected setting. (Fixes #3450)
+- [BUGFIX] `errors`: revert the rc4 `return 444;` short-circuit on `@bwerror*` handlers. The deny path already exits via `ngx.exit(get_deny_status())`, so the gate only broke real 4xx/5xx rendering. Use `INTERCEPTED_ERROR_CODES=""` or `ERRORS=` for stealth. (Fixes #3490, reverts #3448)
+- [UI] Reports and Bans pages: CSV/Excel exports now include every column and honor the active search and SearchPanes filters. (Fixes #3489)
+- [UI] Service edit page: restore non-UI-method settings and template defaults on advanced/raw save so omitted keys can't roll a service back to defaults; raw-mode draft toggle and the `IS_DRAFT=` line stay in sync both ways.
+- [LINUX] Support Fedora 44.
+- [DEPS] Updated NGINX version to v1.30.0 for all integrations.
+- [DEPS] Updated Modsecurity version to v3.0.15.
+- [DEPS] Updated Mbed TLS version to v4.1.0.
+- [DEPS] Updated libinjection version to v4.0.0.
+- [DEPS] Update coreruleset-v4 version to v4.26.0.
+
+## v1.6.10~rc4 - 2026/04/29
 
 - [SECURITY] Harden AIO log wrapper: strip C0/C1 control chars from service output to prevent terminal injection in `docker logs`, disable pathname expansion around `HIDE_SERVICE_LOGS` word splitting, and reject `..` path-traversal segments in `LOG_FILE_PATH` validation.
 - [SECURITY] Harden the AIO `logstream.sh` nginx/ModSecurity log forwarder with the same C0/DEL control-character strip as `service-log-wrapper.sh`, so attacker-controlled `access.log`/`error.log`/`modsec_audit.log` content cannot inject ANSI/CSI/OSC escape sequences into `docker logs` output.

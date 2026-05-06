@@ -386,20 +386,27 @@ def services_service_page(service: str):
                 if data.get("method") == "default" and data.get("template"):
                     removed_custom_configs.add(db_custom_config)
 
-            # Force-refresh template-derived settings to prevent stale form values
-            # from being stored as explicit overrides (applies to all UI modes).
-            # Skip when the user is switching templates — the old template's values
-            # must not overwrite the new template's defaults.
-            # Only restore the template default if the user did not change it
-            # (i.e., the submitted value still matches the template default).
-            if service != "new":
+            # Defense-in-depth: in advanced/raw modes the form may omit keys (multi-value
+            # rebuild dropping a suffix, conditional Jinja branch, plugin tab not in DOM,
+            # JS race). Without this restoration the cleanup pass in Database.save_config
+            # would delete the corresponding DB rows. Only restore values whose method is
+            # NOT editable from the UI — legitimate user clears of a ui-method setting
+            # still go through (the form rebuild posts an empty value, not absence).
+            # Skip transient/form-managed keys plus the existing blacklist.
+            restore_skip = get_blacklisted_settings() | {"SERVER_NAME", "OLD_SERVER_NAME", "USE_TEMPLATE", "USE_UI"}
+            if service != "new" and mode != "easy":
                 old_template = db_config.get("USE_TEMPLATE", {}).get("value", "")
                 new_template = variables.get("USE_TEMPLATE", "")
-                if old_template == new_template:
-                    for setting, value in db_config.items():
-                        if value.get("template") and value["method"] == "default":
-                            if variables.get(setting) == value["value"]:
-                                variables[setting] = value["value"]
+                template_unchanged = old_template == new_template
+                for setting, value in db_config.items():
+                    if setting in variables or setting in restore_skip:
+                        continue
+                    setting_method = value.get("method")
+                    if not is_editable_method(setting_method, allow_default=False):
+                        # Don't carry old-template defaults forward when switching templates.
+                        if setting_method == "default" and value.get("template") and not template_unchanged:
+                            continue
+                        variables[setting] = value["value"]
 
             variables_to_check = variables.copy()
             has_file_name_changes = False

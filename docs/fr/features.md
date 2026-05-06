@@ -1651,7 +1651,7 @@ Les sections suivantes détaillent chacune de ces étapes.
     services:
       bunkerweb:
         # C'est le nom qui sera utilisé pour identifier l'instance dans le planificateur
-        image: bunkerity/bunkerweb:1.6.10-rc4
+        image: bunkerity/bunkerweb:1.6.10-rc5
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1668,7 +1668,7 @@ Les sections suivantes détaillent chacune de ces étapes.
             syslog-address: "udp://10.20.30.254:514" # L'adresse IP du service syslog
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc4
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc5
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Assurez-vous de définir le nom correct de l'instance
@@ -1825,10 +1825,10 @@ Les sections suivantes détaillent chacune de ces étapes.
     CROWDSEC_APPSEC_URL=http://127.0.0.1:7422
     ```
 
-    Enfin, rechargez le service BunkerWeb :
+    Enfin, rechargez le scheduler BunkerWeb pour qu'il prenne en compte les nouveaux paramètres :
 
     ```shell
-    sudo systemctl reload bunkerweb
+    sudo systemctl reload bunkerweb-scheduler
     ```
 
 === "All-in-one"
