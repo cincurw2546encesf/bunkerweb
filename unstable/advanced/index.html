@@ -4417,8 +4417,8 @@ USE_IPV6=yes
 <p>Let's check the status of BunkerWeb :</p>
 <div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>status<span class="w"> </span>bunkerweb
 </code></pre></div>
-<p>If they are already running, we can restart it :</p>
-<div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>restart<span class="w"> </span>bunkerweb
+<p>If they are already running, we can restart the scheduler so it re-renders the NGINX config with IPv6 enabled:</p>
+<div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>restart<span class="w"> </span>bunkerweb-scheduler
 </code></pre></div>
 <p>Otherwise, we will need to start it :</p>
 <div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>start<span class="w"> </span>bunkerweb
@@ -6583,8 +6583,8 @@ CUSTOM_ANTIBOT_CAPTCHA_PAGE=/opt/bunkerweb/templates/captcha.html
 </code></pre></div>
 </li>
 <li>
-<p>Reload BunkerWeb:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>reload<span class="w"> </span>bunkerweb
+<p>Reload the BunkerWeb scheduler so it picks up the new templates:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>reload<span class="w"> </span>bunkerweb-scheduler
 </code></pre></div>
 </li>
 </ol>

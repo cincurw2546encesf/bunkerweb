@@ -4417,8 +4417,8 @@ USE_IPV6=yes
 <p>Vérifions maintenant l'état de BunkerWeb :</p>
 <div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>status<span class="w"> </span>bunkerweb
 </code></pre></div>
-<p>S'il est déjà en cours d'exécution, nous pouvons le redémarrer :</p>
-<div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>restart<span class="w"> </span>bunkerweb
+<p>S'il est déjà en cours d'exécution, nous pouvons redémarrer le scheduler pour qu'il régénère la configuration NGINX avec IPv6 activé :</p>
+<div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>restart<span class="w"> </span>bunkerweb-scheduler
 </code></pre></div>
 <p>Sinon, nous devrons le démarrer :</p>
 <div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>start<span class="w"> </span>bunkerweb
@@ -6588,8 +6588,8 @@ CUSTOM_ANTIBOT_CAPTCHA_PAGE=/opt/bunkerweb/templates/captcha.html
 </code></pre></div>
 </li>
 <li>
-<p>Rechargez BunkerWeb :</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>reload<span class="w"> </span>bunkerweb
+<p>Rechargez le scheduler BunkerWeb pour qu'il prenne en compte les nouveaux modèles :</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>reload<span class="w"> </span>bunkerweb-scheduler
 </code></pre></div>
 </li>
 </ol>

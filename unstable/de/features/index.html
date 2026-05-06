@@ -6499,8 +6499,8 @@ CROWDSEC_API_KEY=&lt;Der von cscli bereitgestellte Schlüssel&gt;
 # Auskommentieren, wenn Sie die AppSec-Komponente nicht verwenden möchten
 CROWDSEC_APPSEC_URL=http://127.0.0.1:7422
 </code></pre></div>
-<p>Laden Sie schließlich den BunkerWeb-Dienst neu:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>reload<span class="w"> </span>bunkerweb
+<p>Laden Sie schließlich den BunkerWeb-Scheduler neu, damit er die neuen Einstellungen übernimmt:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>reload<span class="w"> </span>bunkerweb-scheduler
 </code></pre></div>
 </div>
 <div class="tabbed-block">

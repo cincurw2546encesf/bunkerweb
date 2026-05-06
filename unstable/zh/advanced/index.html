@@ -4416,8 +4416,8 @@ USE_IPV6=yes
 <p>让我们检查 BunkerWeb 的状态：</p>
 <div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>status<span class="w"> </span>bunkerweb
 </code></pre></div>
-<p>如果它们已经在运行，我们可以重启它：</p>
-<div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>restart<span class="w"> </span>bunkerweb
+<p>如果它们已经在运行，我们可以重启调度器，让它在启用 IPv6 的情况下重新生成 NGINX 配置：</p>
+<div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>restart<span class="w"> </span>bunkerweb-scheduler
 </code></pre></div>
 <p>否则，我们需要启动它：</p>
 <div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>start<span class="w"> </span>bunkerweb
@@ -6590,8 +6590,8 @@ CUSTOM_ANTIBOT_CAPTCHA_PAGE=/opt/bunkerweb/templates/captcha.html
 </code></pre></div>
 </li>
 <li>
-<p>重新加载 BunkerWeb：</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>reload<span class="w"> </span>bunkerweb
+<p>重新加载 BunkerWeb 调度器，使其加载新的模板：</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>reload<span class="w"> </span>bunkerweb-scheduler
 </code></pre></div>
 </li>
 </ol>
