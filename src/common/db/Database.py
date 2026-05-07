@@ -387,6 +387,11 @@ class Database:
         if getattr(self, "sql_engine", None):
             self.sql_engine.dispose(close=True)
 
+    def __del__(self) -> None:
+        """Best-effort close on GC so reloaded jobs still send COM_QUIT."""
+        with suppress(Exception):
+            self.close()
+
     def _empty_if_none(self, value: Any) -> Any:
         """Return an empty string if the value is None or convert None values in collections"""
         if value is None:
@@ -642,7 +647,7 @@ class Database:
                 metadata = session.query(Metadata).with_entities(Metadata.version).filter_by(id=1).first()
                 if metadata:
                     return metadata.version
-                return "1.6.10~rc5"
+                return "1.6.10~rc6"
             except BaseException as e:
                 return f"Error: {e}"
 
@@ -676,7 +681,7 @@ class Database:
             "last_instances_change": None,
             "reload_ui_plugins": False,
             "integration": "unknown",
-            "version": "1.6.10~rc5",
+            "version": "1.6.10~rc6",
             "database_version": "Unknown",  # ? Extracted from the database
             "default": True,  # ? Extra field to know if the returned data is the default one
         }

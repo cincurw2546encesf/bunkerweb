@@ -28,6 +28,7 @@ from logger import getLogger  # type: ignore
 from jinja2 import Environment, FileSystemBytecodeCache, FileSystemLoader, Undefined
 
 logger = getLogger("TEMPLATOR")
+_ssl_ecdh_curve_resolution_logged = False
 
 
 @lru_cache(maxsize=32)
@@ -75,15 +76,21 @@ def _best_ssl_ecdh_curve() -> Optional[str]:
 
 
 def resolve_ssl_ecdh_curve(value: str, fallback: str = "X25519:prime256v1:secp384r1") -> str:
+    global _ssl_ecdh_curve_resolution_logged
+
     if value and value != "auto":
         return value
 
     best_curve = _best_ssl_ecdh_curve()
     if best_curve:
-        logger.debug(f"Resolved ssl_ecdh_curve (auto-detect): {best_curve}")
+        if not _ssl_ecdh_curve_resolution_logged:
+            logger.debug(f"Resolved ssl_ecdh_curve (auto-detect): {best_curve}")
+            _ssl_ecdh_curve_resolution_logged = True
         return best_curve
 
-    logger.warning(f"Resolved ssl_ecdh_curve (fallback): {fallback}")
+    if not _ssl_ecdh_curve_resolution_logged:
+        logger.warning(f"Resolved ssl_ecdh_curve (fallback): {fallback}")
+        _ssl_ecdh_curve_resolution_logged = True
     return fallback
 
 
@@ -375,7 +382,12 @@ class Templator:
 
     def render(self) -> None:
         """Render the templates based on the provided configuration."""
+        global _ssl_ecdh_curve_resolution_logged
+
         _ensure_fork_start_method()
+        _ssl_ecdh_curve_resolution_logged = False
+        if self._uses_auto_ssl_ecdh_curve():
+            resolve_ssl_ecdh_curve("auto")
         self._render_global()
         servers = [self._config.get("SERVER_NAME", "www.example.com").strip()]
         if self._config.get("MULTISITE", "no") == "yes":
@@ -430,6 +442,25 @@ class Templator:
                 base = basename(template)
                 if base in self._global_templates:
                     self._template_basename_map[template] = base
+
+    @staticmethod
+    def _is_auto_ssl_ecdh_curve(value: Any) -> bool:
+        return not value or value == "auto"
+
+    def _uses_auto_ssl_ecdh_curve(self) -> bool:
+        global_value = self._config.get("SSL_ECDH_CURVE", self._default_config.get("SSL_ECDH_CURVE"))
+        if Templator._is_auto_ssl_ecdh_curve(global_value):
+            return True
+
+        if self._config.get("MULTISITE", "no") != "yes":
+            return False
+
+        global_default = self._global_only_config.get("SSL_ECDH_CURVE", self._global_only_default_config.get("SSL_ECDH_CURVE"))
+        for server_config in self._server_specific_config.values():
+            if Templator._is_auto_ssl_ecdh_curve(server_config.get("SSL_ECDH_CURVE", global_default)):
+                return True
+
+        return False
 
     @staticmethod
     def _normalize_memory_size(value: str) -> str:

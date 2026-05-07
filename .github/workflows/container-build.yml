@@ -134,7 +134,7 @@ jobs:
         with:
           command: cves,recommendations
           image: local/${{ inputs.IMAGE }}
-          only-severities: critical,high
+          only-package-types: apk,golang
           only-fixed: true
           exit-code: true
           summary: true
