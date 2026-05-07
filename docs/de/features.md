@@ -250,51 +250,56 @@ Das Umschalten in den `detect`-Modus kann Ihnen helfen, potenzielle Falsch-Posit
 ## ACME <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#acme).
+
 STREAM-Unterstützung :white_check_mark:
 
 Advanced ACME certificate management with custom CA support, certificate monitoring dashboard, expiry alerting, CT log monitoring, and enhanced OCSP stapling. Complements the built-in Let's Encrypt plugin.
 
-| Einstellung                         | Standardwert | Kontext   | Mehrfach | Beschreibung                                                                                                                                                             |
-| ----------------------------------- | ------------ | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `USE_ACME`                          | `no`         | multisite | nein     | Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.                                                                |
-| `ACME_PASSTHROUGH`                  | `no`         | multisite | nein     | Pass through ACME HTTP-01 challenge requests to the upstream server.                                                                                                     |
-| `ACME_DIRECTORY_URL`                |              | multisite | nein     | ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI). |
-| `ACME_EMAIL`                        |              | multisite | nein     | Email address for ACME account registration and notifications.                                                                                                           |
-| `ACME_EAB_KID`                      |              | multisite | nein     | External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).                                                                              |
-| `ACME_EAB_HMAC_KEY`                 |              | multisite | nein     | External Account Binding HMAC key (base64-encoded, required when EAB Key ID is set).                                                                                     |
-| `ACME_CA_CERT_PATH`                 |              | multisite | nein     | File path to the root CA certificate for private ACME servers (Step CA, Vault PKI). Required when the CA root is not in the system trust store.                          |
-| `ACME_CHALLENGE`                    | `http`       | multisite | nein     | ACME challenge type. HTTP-01 is simplest; DNS-01 is required for wildcard certificates; TLS-ALPN-01 works when port 80 is unavailable.                                   |
-| `ACME_DNS_PROVIDER`                 |              | multisite | nein     | DNS provider for DNS-01 challenges.                                                                                                                                      |
-| `ACME_DNS_CREDENTIAL_ITEM`          |              | multisite | ja       | Configuration item for the DNS provider credentials (e.g. 'cloudflare_api_token 123456'). Values can be base64 encoded.                                                  |
-| `ACME_DNS_CREDENTIAL_DECODE_BASE64` | `yes`        | multisite | ja       | Automatically decode base64 encoded DNS provider credentials.                                                                                                            |
-| `ACME_DNS_PROPAGATION`              | `default`    | multisite | nein     | Time to wait for DNS propagation in seconds for DNS challenges.                                                                                                          |
-| `ACME_KEY_TYPE`                     | `ecdsa`      | multisite | nein     | Key type for the certificate. ECDSA is smaller and faster; RSA has broader compatibility.                                                                                |
-| `ACME_KEY_SIZE`                     | `256`        | multisite | nein     | Key size in bits. For ECDSA: 256 or 384. For RSA: 2048 or 4096.                                                                                                          |
-| `ACME_PREFERRED_CHAIN`              |              | multisite | nein     | Preferred certificate chain issuer CN. Selects the preferred chain when the CA provides multiple.                                                                        |
-| `ACME_RENEWAL_DAYS`                 | `30`         | multisite | nein     | Renew the certificate when it has fewer than this many days until expiry.                                                                                                |
-| `ACME_SSL_VERIFY`                   | `yes`        | multisite | nein     | Verify SSL certificates when communicating with the ACME server. Disable only for testing with self-signed CA certs.                                                     |
-| `ACME_WILDCARD`                     | `no`         | multisite | nein     | Request wildcard certificate (requires DNS-01 challenge).                                                                                                                |
-| `ACME_MUST_STAPLE`                  | `no`         | multisite | nein     | Request the OCSP Must-Staple extension in the certificate.                                                                                                               |
-| `ACME_MAX_RETRIES`                  | `3`          | multisite | nein     | Number of times to retry certificate generation on failure (0 disables retries).                                                                                         |
-| `USE_ACME_MONITORING`               | `yes`        | global    | nein     | Enable certificate expiry monitoring and status tracking for all managed certificates (including OSS Let's Encrypt certificates).                                        |
-| `ACME_ALERT_DAYS`                   | `30 14 7 1`  | global    | nein     | Space-separated list of day thresholds that trigger expiry alerts.                                                                                                       |
-| `USE_ACME_ALERT_WEBHOOK`            | `no`         | global    | nein     | Send certificate alerts via webhook.                                                                                                                                     |
-| `ACME_ALERT_WEBHOOK_URLS`           |              | global    | nein     | Space-separated list of webhook URLs for certificate alerts.                                                                                                             |
-| `USE_ACME_ALERT_EMAIL`              | `no`         | global    | nein     | Send certificate alerts via email.                                                                                                                                       |
-| `ACME_ALERT_SMTP_EMAILS`            |              | global    | nein     | Space-separated list of email recipients for certificate alerts.                                                                                                         |
-| `ACME_ALERT_SMTP_HOST`              |              | global    | nein     | SMTP host for certificate alert emails.                                                                                                                                  |
-| `ACME_ALERT_SMTP_PORT`              | `465`        | global    | nein     | SMTP port for certificate alert emails (SSL=465, TLS=587).                                                                                                               |
-| `ACME_ALERT_SMTP_FROM_EMAIL`        |              | global    | nein     | Sender email address for certificate alerts.                                                                                                                             |
-| `ACME_ALERT_SMTP_FROM_USER`         |              | global    | nein     | SMTP authentication user for certificate alert emails.                                                                                                                   |
-| `ACME_ALERT_SMTP_FROM_PASSWORD`     |              | global    | nein     | SMTP authentication password for certificate alert emails.                                                                                                               |
-| `ACME_ALERT_SMTP_SSL`               | `SSL`        | global    | nein     | Connection type for certificate alert SMTP.                                                                                                                              |
-| `USE_ACME_CT_MONITORING`            | `no`         | global    | nein     | Enable Certificate Transparency log monitoring. Queries crt.sh to detect unauthorized certificate issuance for your domains.                                             |
-| `ACME_CT_MONITORED_DOMAINS`         |              | global    | nein     | Space-separated list of domains to monitor in CT logs. Leave empty to auto-detect from configured services.                                                              |
-| `USE_ACME_OCSP_STAPLING`            | `no`         | multisite | nein     | Enable enhanced OCSP stapling with proactive response fetching and caching.                                                                                              |
-| `ACME_OCSP_CACHE_SIZE`              | `1m`         | global    | nein     | Size of the shared dictionary for OCSP response caching.                                                                                                                 |
+| Einstellung                         | Standardwert | Kontext   | Mehrfach | Beschreibung                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------------------------- | ------------ | --------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_ACME`                          | `no`         | multisite | nein     | Enable ACME certificate management for this service using a custom ACME-compatible Certificate Authority.                                                                                                                                                                                                                                                                                                                                                                   |
+| `ACME_PASSTHROUGH`                  | `no`         | multisite | nein     | Pass through ACME HTTP-01 challenge requests to the upstream server.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `ACME_DIRECTORY_URL`                |              | multisite | nein     | ACME directory URL of the Certificate Authority (e.g. https://ca.example.com/acme/directory for Step CA, https://vault.example.com/v1/pki/acme/directory for Vault PKI).                                                                                                                                                                                                                                                                                                    |
+| `ACME_EMAIL`                        |              | multisite | nein     | Email address for ACME account registration and notifications.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `ACME_EAB_KID`                      |              | multisite | nein     | External Account Binding Key ID (required by some CAs like Sectigo, Google Trust Services).                                                                                                                                                                                                                                                                                                                                                                                 |
+| `ACME_EAB_HMAC_KEY`                 |              | multisite | nein     | External Account Binding HMAC key (base64-encoded, required when EAB Key ID is set).                                                                                                                                                                                                                                                                                                                                                                                        |
+| `ACME_CA_CERT_PATH`                 |              | multisite | nein     | File path to the root CA certificate for private ACME servers (Step CA, Vault PKI). Required when the CA root is not in the system trust store.                                                                                                                                                                                                                                                                                                                             |
+| `ACME_CHALLENGE`                    | `http`       | multisite | nein     | ACME challenge type. HTTP-01 is simplest; DNS-01 is required for wildcard certificates; TLS-ALPN-01 works when port 80 is unavailable.                                                                                                                                                                                                                                                                                                                                      |
+| `ACME_DNS_PROVIDER`                 |              | multisite | nein     | DNS provider for DNS-01 challenges.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `ACME_DNS_CREDENTIAL_ITEM`          |              | multisite | ja       | Configuration item for the DNS provider credentials (e.g. 'cloudflare_api_token 123456'). Values can be base64 encoded.                                                                                                                                                                                                                                                                                                                                                     |
+| `ACME_DNS_CREDENTIAL_DECODE_BASE64` | `yes`        | multisite | ja       | Automatically decode base64 encoded DNS provider credentials.                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `ACME_DNS_PROPAGATION`              | `default`    | multisite | nein     | Time to wait for DNS propagation in seconds for DNS challenges.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `ACME_DNS_ALIAS`                    |              | multisite | nein     | Target zone for DNS-01 CNAME delegation. Passed as --dns-<provider>-domain-alias to certbot and applied to every challenge for the cert, so DNS credentials only need to control the alias zone. Prerequisite: each cert domain must already have a CNAME `_acme-challenge.<domain>` -> `_acme-challenge.<target>` (and the target zone must resolve). Example: 'alias.acmeplay.org'. Silently ignored on older runtimes or with incompatible DNS providers (e.g. route53). |
+| `ACME_KEY_TYPE`                     | `ecdsa`      | multisite | nein     | Key type for the certificate. ECDSA is smaller and faster; RSA has broader compatibility.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `ACME_KEY_SIZE`                     | `256`        | multisite | nein     | Key size in bits. For ECDSA: 256 or 384. For RSA: 2048 or 4096.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `ACME_PREFERRED_CHAIN`              |              | multisite | nein     | Preferred certificate chain issuer CN. Selects the preferred chain when the CA provides multiple.                                                                                                                                                                                                                                                                                                                                                                           |
+| `ACME_RENEWAL_DAYS`                 | `30`         | multisite | nein     | Renew the certificate when it has fewer than this many days until expiry.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `ACME_SSL_VERIFY`                   | `yes`        | multisite | nein     | Verify SSL certificates when communicating with the ACME server. Disable only for testing with self-signed CA certs.                                                                                                                                                                                                                                                                                                                                                        |
+| `ACME_WILDCARD`                     | `no`         | multisite | nein     | Request wildcard certificate (requires DNS-01 challenge).                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `ACME_MUST_STAPLE`                  | `no`         | multisite | nein     | Request the OCSP Must-Staple extension in the certificate.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `ACME_MAX_RETRIES`                  | `3`          | multisite | nein     | Number of times to retry certificate generation on failure (0 disables retries).                                                                                                                                                                                                                                                                                                                                                                                            |
+| `USE_ACME_MONITORING`               | `yes`        | global    | nein     | Enable certificate expiry monitoring and status tracking for all managed certificates (including OSS Let's Encrypt certificates).                                                                                                                                                                                                                                                                                                                                           |
+| `ACME_ALERT_DAYS`                   | `30 14 7 1`  | global    | nein     | Space-separated list of day thresholds that trigger expiry alerts.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `USE_ACME_ALERT_WEBHOOK`            | `no`         | global    | nein     | Send certificate alerts via webhook.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `ACME_ALERT_WEBHOOK_URLS`           |              | global    | nein     | Space-separated list of webhook URLs for certificate alerts.                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `USE_ACME_ALERT_EMAIL`              | `no`         | global    | nein     | Send certificate alerts via email.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `ACME_ALERT_SMTP_EMAILS`            |              | global    | nein     | Space-separated list of email recipients for certificate alerts.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `ACME_ALERT_SMTP_HOST`              |              | global    | nein     | SMTP host for certificate alert emails.                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `ACME_ALERT_SMTP_PORT`              | `465`        | global    | nein     | SMTP port for certificate alert emails (SSL=465, TLS=587).                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `ACME_ALERT_SMTP_FROM_EMAIL`        |              | global    | nein     | Sender email address for certificate alerts.                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `ACME_ALERT_SMTP_FROM_USER`         |              | global    | nein     | SMTP authentication user for certificate alert emails.                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `ACME_ALERT_SMTP_FROM_PASSWORD`     |              | global    | nein     | SMTP authentication password for certificate alert emails.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `ACME_ALERT_SMTP_SSL`               | `SSL`        | global    | nein     | Connection type for certificate alert SMTP.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `USE_ACME_CT_MONITORING`            | `no`         | global    | nein     | Enable Certificate Transparency log monitoring. Queries crt.sh to detect unauthorized certificate issuance for your domains.                                                                                                                                                                                                                                                                                                                                                |
+| `ACME_CT_MONITORED_DOMAINS`         |              | global    | nein     | Space-separated list of domains to monitor in CT logs. Leave empty to auto-detect from configured services.                                                                                                                                                                                                                                                                                                                                                                 |
+| `USE_ACME_OCSP_STAPLING`            | `no`         | multisite | nein     | Enable enhanced OCSP stapling with proactive response fetching and caching.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `ACME_OCSP_CACHE_SIZE`              | `1m`         | global    | nein     | Size of the shared dictionary for OCSP response caching.                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ## Anti DDoS <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
+
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#anti-ddos-pro).
 
 STREAM-Unterstützung :x:
 
@@ -1385,6 +1390,8 @@ Profi-Tipp: Wenn Sie Ihre Warnungen anzeigen, klicken Sie auf die Option „Spal
 ## Cache <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#cache-pro).
+
 STREAM-Unterstützung :x:
 
 Provides caching functionality at the reverse proxy level.
@@ -1804,7 +1811,7 @@ Die folgenden Abschnitte führen diese Schritte im Detail durch.
     services:
       bunkerweb:
         # Dies ist der Name, der zur Identifizierung der Instanz im Scheduler verwendet wird
-        image: bunkerity/bunkerweb:1.6.10-rc5
+        image: bunkerity/bunkerweb:1.6.10-rc6
         ports:
           - "80:8080/tcp"
           - "443:8443/tcp"
@@ -1821,7 +1828,7 @@ Die folgenden Abschnitte führen diese Schritte im Detail durch.
             syslog-address: "udp://10.20.30.254:514" # Die IP-Adresse des syslog-Dienstes
 
       bw-scheduler:
-        image: bunkerity/bunkerweb-scheduler:1.6.10-rc5
+        image: bunkerity/bunkerweb-scheduler:1.6.10-rc6
         environment:
           <<: *bw-env
           BUNKERWEB_INSTANCES: "bunkerweb" # Stellen Sie sicher, dass Sie den richtigen Instanznamen festlegen
@@ -1977,10 +1984,10 @@ Die folgenden Abschnitte führen diese Schritte im Detail durch.
     CROWDSEC_APPSEC_URL=http://127.0.0.1:7422
     ```
 
-    Laden Sie schließlich den BunkerWeb-Scheduler neu, damit er die neuen Einstellungen übernimmt:
+    Laden Sie schließlich den BunkerWeb-Dienst neu:
 
     ```shell
-    sudo systemctl reload bunkerweb-scheduler
+    sudo systemctl reload bunkerweb
     ```
 
 === "All-in-one"
@@ -2064,6 +2071,8 @@ Wenden Sie die folgenden Umgebungsvariablen (oder Scheduler-Werte) an, damit die
 ## Custom Pages <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#custom-pages-pro).
+
 STREAM-Unterstützung :x:
 
 Tweak BunkerWeb error/antibot/default pages with custom HTML.
@@ -2078,6 +2087,7 @@ Tweak BunkerWeb error/antibot/default pages with custom HTML.
 | `CUSTOM_ANTIBOT_HCAPTCHA_PAGE`   |              | multisite | nein     | Full path of the custom antibot hcaptcha page (must be readable by the scheduler) (Can be a lua template).         |
 | `CUSTOM_ANTIBOT_TURNSTILE_PAGE`  |              | multisite | nein     | Full path of the custom antibot turnstile page (must be readable by the scheduler) (Can be a lua template).        |
 | `CUSTOM_ANTIBOT_MCAPTCHA_PAGE`   |              | multisite | nein     | Full path of the custom antibot mcaptcha page (must be readable by the scheduler) (Can be a lua template).         |
+| `CUSTOM_ANTIBOT_CAPJS_PAGE`      |              | multisite | nein     | Full path of the custom antibot Cap.js page (must be readable by the scheduler) (Can be a lua template).           |
 
 ## Custom SSL certificate
 
@@ -2348,6 +2358,10 @@ Führen Sie die folgenden Schritte aus, um die DNSBL-Funktion zu konfigurieren u
 
 ## Easy Resolve <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
+
+<p align='center'><iframe style='display: block;' width='560' height='315' data-src='https://www.youtube-nocookie.com/embed/45vX0WJqjxo' title='Easy Resolve' frameborder='0' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe></p>
+
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#easy-resolve-pro).
 
 STREAM-Unterstützung :x:
 
@@ -2982,6 +2996,8 @@ Führen Sie die folgenden Schritte aus, um die HTML-Injection-Funktion zu konfig
 ## LDAP SSO <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#ldap-sso-pro).
+
 STREAM-Unterstützung :x:
 
 LDAP-based single sign-on plugin with session-backed authentication.
@@ -3385,37 +3401,6 @@ Das Limit-Plugin in BunkerWeb bietet robuste Funktionen zur Durchsetzung von Beg
     LIMIT_CONN_MAX_STREAM: "20"
     ```
 
-## Load Balancer <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
-
-
-<p align='center'><iframe style='display: block;' width='560' height='315' data-src='https://www.youtube-nocookie.com/embed/cOVp0rAt5nw' title='Load Balancer' frameborder='0' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe></p>
-
-STREAM-Unterstützung :x:
-
-Provides load balancing feature to group of upstreams with optional healthchecks.
-
-| Einstellung                               | Standardwert  | Kontext | Mehrfach | Beschreibung                                                       |
-| ----------------------------------------- | ------------- | ------- | -------- | ------------------------------------------------------------------ |
-| `LOADBALANCER_HEALTHCHECK_DICT_SIZE`      | `10m`         | global  | nein     | Shared dict size (datastore for all healthchecks).                 |
-| `LOADBALANCER_UPSTREAM_NAME`              |               | global  | ja       | Name of the upstream (used in REVERSE_PROXY_HOST).                 |
-| `LOADBALANCER_UPSTREAM_SERVERS`           |               | global  | ja       | List of servers/IPs in the server group.                           |
-| `LOADBALANCER_UPSTREAM_MODE`              | `round-robin` | global  | ja       | Load balancing mode (round-robin or sticky).                       |
-| `LOADBALANCER_UPSTREAM_STICKY_METHOD`     | `ip`          | global  | ja       | Sticky session method (ip or cookie).                              |
-| `LOADBALANCER_UPSTREAM_RESOLVE`           | `no`          | global  | ja       | Dynamically resolve upstream hostnames.                            |
-| `LOADBALANCER_UPSTREAM_KEEPALIVE`         |               | global  | ja       | Number of keepalive connections to cache per worker.               |
-| `LOADBALANCER_UPSTREAM_KEEPALIVE_TIMEOUT` | `60s`         | global  | ja       | Keepalive timeout for upstream connections.                        |
-| `LOADBALANCER_UPSTREAM_KEEPALIVE_TIME`    | `1h`          | global  | ja       | Keepalive time for upstream connections.                           |
-| `LOADBALANCER_HEALTHCHECK_URL`            | `/status`     | global  | ja       | The healthcheck URL.                                               |
-| `LOADBALANCER_HEALTHCHECK_INTERVAL`       | `2000`        | global  | ja       | Healthcheck interval in milliseconds.                              |
-| `LOADBALANCER_HEALTHCHECK_TIMEOUT`        | `1000`        | global  | ja       | Healthcheck timeout in milliseconds.                               |
-| `LOADBALANCER_HEALTHCHECK_FALL`           | `3`           | global  | ja       | Number of failed healthchecks before marking the server as down.   |
-| `LOADBALANCER_HEALTHCHECK_RISE`           | `1`           | global  | ja       | Number of successful healthchecks before marking the server as up. |
-| `LOADBALANCER_HEALTHCHECK_VALID_STATUSES` | `200`         | global  | ja       | HTTP status considered valid in healthchecks.                      |
-| `LOADBALANCER_HEALTHCHECK_CONCURRENCY`    | `10`          | global  | ja       | Maximum number of concurrent healthchecks.                         |
-| `LOADBALANCER_HEALTHCHECK_TYPE`           | `http`        | global  | ja       | Type of healthcheck (http or https).                               |
-| `LOADBALANCER_HEALTHCHECK_SSL_VERIFY`     | `yes`         | global  | ja       | Verify SSL certificate in healthchecks.                            |
-| `LOADBALANCER_HEALTHCHECK_HOST`           |               | global  | ja       | Host header for healthchecks (useful for HTTPS).                   |
-
 ## Metrics
 
 STREAM-Unterstützung :warning:
@@ -3578,6 +3563,8 @@ Zum Beispiel gibt `/metrics/requests` Informationen über blockierte Anfragen zu
 ## Migration <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#migration-pro).
+
 STREAM-Unterstützung :white_check_mark:
 
 Migration of BunkerWeb configuration between instances made easy via the web UI
@@ -3693,9 +3680,10 @@ Ob Sie HTTP-Methoden einschränken, Anforderungsgrößen verwalten, das Datei-Ca
         - Verhindert Angriffe durch Datei-Uploads
         - Reduziert das Risiko der Erschöpfung von Serverressourcen
 
-    | Einstellung       | Standard | Kontext   | Mehrfach | Beschreibung                                                                                                     |
-    | ----------------- | -------- | --------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
-    | `MAX_CLIENT_SIZE` | `10m`    | multisite | nein     | **Maximale Anforderungsgröße:** Die maximal zulässige Größe für Client-Anforderungskörper (z. B. Datei-Uploads). |
+    | Einstellung       | Standard | Kontext   | Mehrfach | Beschreibung                                                                                                                                          |
+    | ----------------- | -------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `MAX_CLIENT_SIZE` | `10m`    | multisite | nein     | **Maximale Anforderungsgröße:** Die maximal zulässige Größe für Client-Anforderungskörper (z. B. Datei-Uploads).                                      |
+    | `MAX_HEADERS`     | `100`    | global    | nein     | **Maximale Header:** Maximale Anzahl an Header-Zeilen pro Anfrage. Anfragen, die dieses Limit überschreiten, werden mit `400 Bad Request` abgewiesen. |
 
     !!! tip "Best Practices für die Konfiguration der Anforderungsgröße"
         Wenn Sie einen Anforderungskörper von unbegrenzter Größe zulassen müssen, können Sie den Wert `MAX_CLIENT_SIZE` auf `0` setzen. Dies wird jedoch aufgrund potenzieller Sicherheits- und Leistungsrisiken **nicht empfohlen**.
@@ -4112,11 +4100,13 @@ STREAM-Unterstützung :x:
 
 BunkerWeb monitoring pro system. This plugin is a prerequisite for some other plugins.
 
-| Einstellung                    | Standardwert | Kontext | Mehrfach | Beschreibung                                                                |
-| ------------------------------ | ------------ | ------- | -------- | --------------------------------------------------------------------------- |
-| `USE_MONITORING`               | `yes`        | global  | nein     | Enable monitoring of BunkerWeb.                                             |
-| `MONITORING_METRICS_DICT_SIZE` | `10M`        | global  | nein     | Size of the dict to store monitoring metrics.                               |
-| `MONITORING_IGNORE_URLS`       |              | global  | nein     | List of URLs to ignore when monitoring separated with spaces (e.g. /health) |
+| Einstellung                    | Standardwert | Kontext | Mehrfach | Beschreibung                                                                                                                                                     |
+| ------------------------------ | ------------ | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_MONITORING`               | `yes`        | global  | nein     | Enable monitoring of BunkerWeb.                                                                                                                                  |
+| `MONITORING_METRICS_DICT_SIZE` | `10M`        | global  | nein     | Size of the dict to store monitoring metrics.                                                                                                                    |
+| `MONITORING_IGNORE_URLS`       |              | global  | nein     | List of URLs to ignore when monitoring separated with spaces (e.g. /health)                                                                                      |
+| `MONITORING_TOP_N_DECAY_HOURS` | `6`          | global  | nein     | How often (in hours) to halve attacker top-N counters and prune cold entries. Lower = top-N reflects more recent traffic; higher = old attackers persist longer. |
+| `MONITORING_TOP_N_TRACK_MAX`   | `5000`       | global  | nein     | Maximum tracked attacker IPs and URIs per prefix in the bounded top-N sketch. Caps memory under distributed attack via Space-Saving admission.                   |
 
 ## Mutual TLS
 
@@ -4209,6 +4199,10 @@ Gehen Sie diese Schritte durch, um Mutual TLS kontrolliert einzuführen:
 ## OpenAPI Validator <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
+<p align='center'><iframe style='display: block;' width='560' height='315' data-src='https://www.youtube-nocookie.com/embed/3oZOO1XdSlc' title='OpenAPI Validator' frameborder='0' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe></p>
+
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#openapi-validator-pro).
+
 STREAM-Unterstützung :x:
 
 Validates incoming HTTP requests against an OpenAPI / Swagger specification.
@@ -4226,6 +4220,10 @@ Validates incoming HTTP requests against an OpenAPI / Swagger specification.
 
 ## OpenID Connect <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
+
+<p align='center'><iframe style='display: block;' width='560' height='315' data-src='https://www.youtube-nocookie.com/embed/0e4lcXTIIfs' title='OpenID Connect' frameborder='0' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe></p>
+
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#openid-connect-pro).
 
 STREAM-Unterstützung :x:
 
@@ -4771,20 +4769,21 @@ STREAM-Unterstützung :x:
 
 Regular reporting of important data from BunkerWeb (global, attacks, bans, requests, reasons, AS...). Monitoring pro plugin needed to work.
 
-| Einstellung                    | Standardwert       | Kontext | Mehrfach | Beschreibung                                                                                                                       |
-| ------------------------------ | ------------------ | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `USE_REPORTING_SMTP`           | `no`               | global  | nein     | Enable sending the report via email.                                                                                               |
-| `USE_REPORTING_WEBHOOK`        | `no`               | global  | nein     | Enable sending the report via webhook.                                                                                             |
-| `REPORTING_SCHEDULE`           | `weekly`           | global  | nein     | The frequency at which reports are sent.                                                                                           |
-| `REPORTING_WEBHOOK_URLS`       |                    | global  | nein     | List of webhook URLs to receive the report in Markdown (separated by spaces).                                                      |
-| `REPORTING_SMTP_EMAILS`        |                    | global  | nein     | List of email addresses to receive the report in HTML format (separated by spaces).                                                |
-| `REPORTING_SMTP_HOST`          |                    | global  | nein     | The host server used for SMTP sending.                                                                                             |
-| `REPORTING_SMTP_PORT`          | `465`              | global  | nein     | The port used for SMTP. Please note that there are different standards depending on the type of connection (SSL = 465, TLS = 587). |
-| `REPORTING_SMTP_FROM_EMAIL`    |                    | global  | nein     | The email address used as the sender. Note that 2FA must be disabled for this email address.                                       |
-| `REPORTING_SMTP_FROM_USER`     |                    | global  | nein     | The user authentication value for sending via the from email address.                                                              |
-| `REPORTING_SMTP_FROM_PASSWORD` |                    | global  | nein     | The password authentication value for sending via the from email address.                                                          |
-| `REPORTING_SMTP_SSL`           | `SSL`              | global  | nein     | Determine whether or not to use a secure connection for SMTP.                                                                      |
-| `REPORTING_SMTP_SUBJECT`       | `BunkerWeb Report` | global  | nein     | The subject line of the email.                                                                                                     |
+| Einstellung                    | Standardwert       | Kontext | Mehrfach | Beschreibung                                                                                                                                                                           |
+| ------------------------------ | ------------------ | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `USE_REPORTING_SMTP`           | `no`               | global  | nein     | Enable sending the report via email.                                                                                                                                                   |
+| `USE_REPORTING_WEBHOOK`        | `no`               | global  | nein     | Enable sending the report via webhook.                                                                                                                                                 |
+| `REPORTING_SCHEDULE`           | `weekly`           | global  | nein     | The frequency at which reports are sent.                                                                                                                                               |
+| `REPORTING_TOP_N`              | `3`                | global  | nein     | Number of entries shown in 'Top' tables (IPs, AS, reasons, countries, URIs and offenders). Range: 1-50. Values are clamped at runtime; the upstream metric caps at rank 50 per server. |
+| `REPORTING_WEBHOOK_URLS`       |                    | global  | nein     | List of webhook URLs to receive the report in Markdown (separated by spaces).                                                                                                          |
+| `REPORTING_SMTP_EMAILS`        |                    | global  | nein     | List of email addresses to receive the report in HTML format (separated by spaces).                                                                                                    |
+| `REPORTING_SMTP_HOST`          |                    | global  | nein     | The host server used for SMTP sending.                                                                                                                                                 |
+| `REPORTING_SMTP_PORT`          | `465`              | global  | nein     | The port used for SMTP. Please note that there are different standards depending on the type of connection (SSL = 465, TLS = 587).                                                     |
+| `REPORTING_SMTP_FROM_EMAIL`    |                    | global  | nein     | The email address used as the sender. Note that 2FA must be disabled for this email address.                                                                                           |
+| `REPORTING_SMTP_FROM_USER`     |                    | global  | nein     | The user authentication value for sending via the from email address.                                                                                                                  |
+| `REPORTING_SMTP_FROM_PASSWORD` |                    | global  | nein     | The password authentication value for sending via the from email address.                                                                                                              |
+| `REPORTING_SMTP_SSL`           | `SSL`              | global  | nein     | Determine whether or not to use a secure connection for SMTP.                                                                                                                          |
+| `REPORTING_SMTP_SUBJECT`       | `BunkerWeb Report` | global  | nein     | The subject line of the email.                                                                                                                                                         |
 
 ## Reverse proxy
 
@@ -4824,16 +4823,17 @@ Führen Sie die folgenden Schritte aus, um die Reverse-Proxy-Funktion zu konfigu
         - **Protokollbehandlung:** Unterstützung für HTTP, HTTPS, WebSockets und andere Protokolle
         - **Fehlerabfang:** Passen Sie Fehlerseiten für ein einheitliches Benutzererlebnis an
 
-    | Einstellung                       | Standard | Kontext   | Mehrfach | Beschreibung                                                                                                      |
-    | --------------------------------- | -------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
-    | `USE_REVERSE_PROXY`               | `no`     | multisite | nein     | **Reverse-Proxy aktivieren:** Auf `yes` setzen, um die Reverse-Proxy-Funktionalität zu aktivieren.                |
-    | `REVERSE_PROXY_HOST`              |          | multisite | ja       | **Backend-Host:** Vollständige URL der weitergeleiteten Ressource (proxy_pass).                                   |
-    | `REVERSE_PROXY_URL`               | `/`      | multisite | ja       | **Standort-URL:** Pfad, der zum Backend-Server weitergeleitet wird.                                               |
-    | `REVERSE_PROXY_BUFFERING`         | `yes`    | multisite | ja       | **Antwort-Pufferung:** Aktiviert oder deaktiviert die Pufferung von Antworten von der weitergeleiteten Ressource. |
-    | `REVERSE_PROXY_REQUEST_BUFFERING` | `yes`    | multisite | ja       | **Anfrage-Pufferung:** Aktiviert oder deaktiviert die Pufferung von Anfragen an die weitergeleitete Ressource.    |
-    | `REVERSE_PROXY_KEEPALIVE`         | `no`     | multisite | ja       | **Keep-Alive:** Aktiviert oder deaktiviert Keep-Alive-Verbindungen mit der weitergeleiteten Ressource.            |
-    | `REVERSE_PROXY_CUSTOM_HOST`       |          | multisite | nein     | **Benutzerdefinierter Host:** Überschreibt den an den Upstream-Server gesendeten Host-Header.                     |
-    | `REVERSE_PROXY_INTERCEPT_ERRORS`  | `yes`    | multisite | nein     | **Fehler abfangen:** Ob Fehlerantworten vom Backend abgefangen und neu geschrieben werden sollen.                 |
+    | Einstellung                       | Standard | Kontext   | Mehrfach | Beschreibung                                                                                                                                     |
+    | --------------------------------- | -------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+    | `USE_REVERSE_PROXY`               | `no`     | multisite | nein     | **Reverse-Proxy aktivieren:** Auf `yes` setzen, um die Reverse-Proxy-Funktionalität zu aktivieren.                                               |
+    | `REVERSE_PROXY_HOST`              |          | multisite | ja       | **Backend-Host:** Vollständige URL der weitergeleiteten Ressource (proxy_pass).                                                                  |
+    | `REVERSE_PROXY_URL`               | `/`      | multisite | ja       | **Standort-URL:** Pfad, der zum Backend-Server weitergeleitet wird.                                                                              |
+    | `REVERSE_PROXY_BUFFERING`         | `yes`    | multisite | ja       | **Antwort-Pufferung:** Aktiviert oder deaktiviert die Pufferung von Antworten von der weitergeleiteten Ressource.                                |
+    | `REVERSE_PROXY_REQUEST_BUFFERING` | `yes`    | multisite | ja       | **Anfrage-Pufferung:** Aktiviert oder deaktiviert die Pufferung von Anfragen an die weitergeleitete Ressource.                                   |
+    | `REVERSE_PROXY_KEEPALIVE`         | `no`     | multisite | ja       | **Keep-Alive:** Aktiviert oder deaktiviert Keep-Alive-Verbindungen mit der weitergeleiteten Ressource.                                           |
+    | `REVERSE_PROXY_HTTP_VERSION`      | `1.1`    | multisite | ja       | **HTTP-Version:** HTTP-Protokollversion für die Kommunikation mit dem Upstream (`1.0`, `1.1` oder `2`). Der WebSocket-Zweig verwendet immer 1.1. |
+    | `REVERSE_PROXY_CUSTOM_HOST`       |          | multisite | nein     | **Benutzerdefinierter Host:** Überschreibt den an den Upstream-Server gesendeten Host-Header.                                                    |
+    | `REVERSE_PROXY_INTERCEPT_ERRORS`  | `yes`    | multisite | nein     | **Fehler abfangen:** Ob Fehlerantworten vom Backend abgefangen und neu geschrieben werden sollen.                                                |
 
     !!! tip "Bewährte Praktiken"
         - Geben Sie in `REVERSE_PROXY_HOST` immer die vollständige URL an, einschließlich des Protokolls (http:// oder https://)
@@ -5698,6 +5698,8 @@ Integrate easily the BunkerWeb UI.
 ## UI Single Sign-On <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#ui-single-sign-on-pro).
+
 STREAM-Unterstützung :x:
 
 Enable SSO authentication for the BunkerWeb web interface by reading headers set by upstream authentication proxies (Authentik, Authelia, Keycloak, Traefik Forward Auth, etc.)
@@ -5726,7 +5728,9 @@ Enable SSO authentication for the BunkerWeb web interface by reading headers set
 ## User Manager <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
 
-<p align='center'><iframe style='display: block;' width='560' height='315' data-src='https://www.youtube-nocookie.com/embed/EIohiUf9Fg4' title='Benutzer-Manager' frameborder='0' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe></p>
+<p align='center'><iframe style='display: block;' width='560' height='315' data-src='https://www.youtube-nocookie.com/embed/EIohiUf9Fg4' title='User Manager' frameborder='0' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe></p>
+
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#user-manager-pro).
 
 STREAM-Unterstützung :x:
 
@@ -5927,6 +5931,8 @@ TrustedMonitor/\d+\.\d+
 
 ## Wildcard <img src='../../assets/img/pro-icon.svg' alt='crown pro icon' height='24px' width='24px' style='transform : translateY(3px);'> (PRO)
 
+
+Eine ausführlichere Anleitung finden Sie in der Dokumentation zur [erweiterten Nutzung](advanced.md#wildcard-pro).
 
 STREAM-Unterstützung :x:
 

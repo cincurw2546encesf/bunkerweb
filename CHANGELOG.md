@@ -1,6 +1,15 @@
 # Changelog
 
-## v1.6.10~rc5 - 2026/??/??
+## v1.6.10~rc6 - 2026/??/??
+
+- [BUGFIX] `misc`: fix per-service HTTPS handshakes aborting with `no ssl_client_hello_by_lua* defined in server <name>` under `DISABLE_DEFAULT_SERVER_STRICT_SNI=yes` after the rc5 NGINX 1.30.0 bump, by emitting a no-op `ssl_client_hello_by_lua_block` in per-service blocks. Unknown-SNI rejection on the default server is unchanged.
+- [BUGFIX] `database`: add a `__del__` safety net on the SQLAlchemy `Database` wrapper so per-job engines dispose cleanly on GC. Without it, scheduler jobs reloaded via `importlib.reload` dropped their pool connections without sending `COM_QUIT` (MariaDB/MySQL) or the protocol `Terminate` (PostgreSQL), producing a burst of `Aborted connection ... (Got an error reading communication packets)` warnings every cycle.
+- [FEATURE] `misc`: new `MAX_HEADERS` setting (default `100`) caps header lines per request, leveraging the `max_headers` directive shipped with the NGINX 1.30.0 bump.
+- [FEATURE] `reverseproxy`: new per-backend `REVERSE_PROXY_HTTP_VERSION` setting (default `1.1`, accepts `1.0`/`1.1`/`2`) lets operators opt the upstream leg onto HTTP/2, leveraging the `proxy_http_version 2` support shipped with the NGINX 1.30.0 bump. The WebSocket branch stays pinned to 1.1 since WS Upgrade is incompatible with HTTP/2 upstream.
+- [FEATURE] `templates`: the bundled `ui` and `api` templates now pin `REVERSE_PROXY_KEEPALIVE=yes`, reusing the upstream TCP/TLS connection across admin clicks and API calls for lower click-to-render latency.
+- [PERF] `database`: add 18 missing single-column indexes. (Fixes #3368, addresses #3367)
+
+## v1.6.10~rc5 - 2026/05/06
 
 - [BUGFIX] `modsecurity`/`ui`/`antibot`: stop `USE_MODSECURITY_GLOBAL_CRS=yes` from 403'ing UI POSTs and antibot challenges. Move UI exclusions to phase 1 (so phase-1 CRS rules like `920440` can be disabled), tolerate uppercase hostnames and `:port` in the `Host` chain regex, `re.escape()` hostnames in `antibot.modsec-crs`, and emit `modsecurity off;` on default-server UI proxy locations. Other defenses (limit, badbehavior, crowdsec, allowlists) still run. (Fixes #3118)
 - [BUGFIX] `database`: back-fill `bw_settings` defaults from `settings.json` at read time when the catalogue row is missing or has a NULL/empty `default`, so directives like `client_body_timeout` no longer render empty after a desynced upgrade. Logs one WARNING per affected setting. (Fixes #3450)
