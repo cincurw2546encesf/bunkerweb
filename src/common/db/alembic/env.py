@@ -1,9 +1,13 @@
+import re
 from logging.config import fileConfig
 from os import environ
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from alembic.autogenerate import renderers
+from alembic.operations.ops import AlterColumnOp, CreateIndexOp, DropIndexOp, ExecuteSQLOp, OpContainer
+from alembic.script import ScriptDirectory
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -29,6 +33,105 @@ if "DATABASE_URI" in environ:
     config.set_main_option("version_locations", f"{database_type}_versions")
 
 
+# Pattern matching the canonical "Upgrade to version X.Y.Z" message used by
+# misc/migration/entrypoint.sh so the version-bump SQL gets auto-injected.
+_VERSION_MESSAGE_RE = re.compile(r"Upgrade to version (\S+)")
+
+# (table, column) pairs whose alter_column ops are spurious autogenerate noise
+# on MySQL/MariaDB (LONGBLOB <-> LargeBinary(2**32-1) round-trip, INT(11)
+# display-width, pre-applied nullability) and must be stripped from generated
+# migrations. Add a pair here when a recurring false-positive needs silencing.
+_IGNORED_ALTER_COLUMNS = frozenset(
+    {
+        ("bw_custom_configs", "data"),
+        ("bw_jobs_cache", "data"),
+        ("bw_plugin_pages", "data"),
+        ("bw_plugins", "data"),
+        ("bw_template_custom_configs", "step_id"),
+        ("bw_template_custom_configs", "data"),
+    }
+)
+
+# (table, index_name) pairs whose create/drop_index ops are spurious. Each
+# entry is a redundant named index that mirrors the PK and is bound to FKs
+# from child tables on MySQL/MariaDB — dropping it triggers errno 150.
+_IGNORED_INDEXES = frozenset(
+    {
+        ("bw_ui_users", "username"),
+        ("bw_settings", "id"),
+    }
+)
+
+
+class _VersionUpdateOp(ExecuteSQLOp):
+    """ExecuteSQLOp variant that renders with a leading explanatory comment."""
+
+    def __init__(self, sqltext: str, comment: str) -> None:
+        super().__init__(sqltext)
+        self.comment = comment
+
+
+@renderers.dispatch_for(_VersionUpdateOp)
+def _render_version_update(_autogen_context, op: _VersionUpdateOp):
+    return [op.comment, f"op.execute({op.sqltext!r})"]
+
+
+def _extract_version(text):
+    if not text:
+        return None
+    match = _VERSION_MESSAGE_RE.search(text)
+    return match.group(1) if match else None
+
+
+def _strip_ignored_ops(container):
+    if container is None:
+        return
+    kept = []
+    for op in container.ops:
+        if isinstance(op, AlterColumnOp) and (op.table_name, op.column_name) in _IGNORED_ALTER_COLUMNS:
+            continue
+        if isinstance(op, (DropIndexOp, CreateIndexOp)) and (op.table_name, op.index_name) in _IGNORED_INDEXES:
+            continue
+        if isinstance(op, OpContainer):
+            _strip_ignored_ops(op)
+            if not op.ops:
+                continue
+        kept.append(op)
+    container.ops = kept
+
+
+def _previous_version():
+    # Read the current head revision's docstring and recover its version label so
+    # the generated downgrade() can roll bw_metadata.version back to it.
+    try:
+        script_directory = ScriptDirectory.from_config(config)
+        head = script_directory.get_current_head()
+        if not head:
+            return None
+        revision = script_directory.get_revision(head)
+        return _extract_version(revision.doc) or _extract_version(revision.longdoc)
+    except Exception:
+        return None
+
+
+def process_revision_directives(context_, revision, directives):
+    if not directives:
+        return
+    for script in directives:
+        _strip_ignored_ops(script.upgrade_ops)
+        _strip_ignored_ops(script.downgrade_ops)
+        new_version = _extract_version(getattr(script, "message", None))
+        if not new_version:
+            continue
+        upgrade_sql = f"UPDATE bw_metadata SET version = '{new_version}' WHERE id = 1"
+        if script.upgrade_ops is not None:
+            script.upgrade_ops.ops.insert(0, _VersionUpdateOp(upgrade_sql, "# Update the version in bw_metadata"))
+        old_version = _previous_version()
+        if old_version and script.downgrade_ops is not None:
+            downgrade_sql = f"UPDATE bw_metadata SET version = '{old_version}' WHERE id = 1"
+            script.downgrade_ops.ops.insert(0, _VersionUpdateOp(downgrade_sql, "# Revert the version in bw_metadata"))
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -42,7 +145,13 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(url=url, target_metadata=target_metadata, literal_binds=True, dialect_opts={"paramstyle": "named"})
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+        process_revision_directives=process_revision_directives,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -58,7 +167,11 @@ def run_migrations_online() -> None:
     connectable = engine_from_config(config.get_section(config.config_ini_section, {}), prefix="sqlalchemy.", poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            process_revision_directives=process_revision_directives,
+        )
 
         with context.begin_transaction():
             context.run_migrations()
