@@ -387,6 +387,11 @@ class Database:
         if getattr(self, "sql_engine", None):
             self.sql_engine.dispose(close=True)
 
+    def __del__(self) -> None:
+        """Best-effort close on GC so reloaded jobs still send COM_QUIT."""
+        with suppress(Exception):
+            self.close()
+
     def _empty_if_none(self, value: Any) -> Any:
         """Return an empty string if the value is None or convert None values in collections"""
         if value is None:
